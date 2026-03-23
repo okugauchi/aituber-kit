@@ -22,8 +22,7 @@ export const DEFAULT_GAME_COMMENTARY_CONFIG: GameCommentarySettings = {
   gameCommentaryPlaying: false,
   gameCommentaryCaptureInterval: 15,
   gameCommentaryContextCount: 5,
-  gameCommentaryPromptTemplate:
-    'あなたはゲーム実況者です。画面に表示されているゲームの状況を見て、テンション高く実況してください。',
+  gameCommentaryPromptTemplate: '',
   gameCommentaryImageQuality: 0.7,
   gameCommentaryResizeWidth: 1024,
   gameCommentarySaveToChat: true,

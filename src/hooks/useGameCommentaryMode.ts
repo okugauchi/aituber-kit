@@ -59,8 +59,6 @@ export function useGameCommentaryMode({
     15
   const gameCommentaryContextCount =
     ((ss as Record<string, unknown>).gameCommentaryContextCount as number) || 5
-  const gameCommentarySaveToChat =
-    (ss as Record<string, unknown>).gameCommentarySaveToChat === true
   const gameCommentaryImageQuality =
     ((ss as Record<string, unknown>).gameCommentaryImageQuality as number) ||
     0.7
@@ -92,6 +90,8 @@ export function useGameCommentaryMode({
   const sessionIdRef = useRef<string | null>(null)
   const commentaryHistoryRef = useRef<string[]>([])
   const isProcessingRef = useRef(false)
+  const isRunningRef = useRef(isRunning)
+  isRunningRef.current = isRunning
 
   // Callback refs to avoid stale closures
   const callbackRefs = useRef({
@@ -225,7 +225,10 @@ export function useGameCommentaryMode({
       addToHistory(result.text)
 
       // chatLogに保存（YouTube/Mastraとの文脈共有用）
-      if (gameCommentarySaveToChat) {
+      const currentSaveToChat =
+        (settingsStore.getState() as Record<string, unknown>)
+          .gameCommentarySaveToChat === true
+      if (currentSaveToChat) {
         homeStore.getState().upsertMessage({
           role: 'assistant',
           content: `[実況] ${result.text}`,
@@ -256,23 +259,26 @@ export function useGameCommentaryMode({
         () => {
           // onComplete
           isProcessingRef.current = false
-          setState('waiting')
           callbackRefs.current.onCommentaryComplete?.()
-          scheduleNext()
+          if (isRunningRef.current) {
+            setState('waiting')
+            scheduleNext()
+          }
         }
       )
     } catch (error) {
       console.error('ゲーム実況コメント生成エラー:', error)
       isProcessingRef.current = false
-      setState('waiting')
-      scheduleNext()
+      if (isRunningRef.current) {
+        setState('waiting')
+        scheduleNext()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     canSpeak,
     gameCommentaryResizeWidth,
     gameCommentaryImageQuality,
-    gameCommentarySaveToChat,
     addToHistory,
   ])
 
@@ -310,6 +316,7 @@ export function useGameCommentaryMode({
     } else {
       setState('disabled')
       clearTimers()
+      SpeakQueue.stopAll()
       commentaryHistoryRef.current = []
       isProcessingRef.current = false
     }

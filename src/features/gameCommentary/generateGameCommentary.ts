@@ -3,16 +3,6 @@ import { THINKING_MARKER } from '@/features/chat/vercelAIChat'
 import { Message, EmotionType, EMOTIONS } from '@/features/messages/messages'
 import settingsStore from '@/features/stores/settings'
 
-const GAME_COMMENTARY_SYSTEM_PROMPT_SUFFIX = `
-
-感情の種類にはneutral, happy, angry, sad, relaxed, surprisedの6つがあります。
-回答は以下の書式で返してください。
-[{感情}]{セリフ}
-
-例: [happy]すごい！ここでまさかの大逆転だ！
-
-セリフを一つだけ返してください。`
-
 /**
  * ゲーム実況コメントを生成する
  *
@@ -30,11 +20,7 @@ export async function generateGameCommentary(
     ((ss as Record<string, unknown>).gameCommentaryPromptTemplate as string) ||
     ''
 
-  const systemPrompt =
-    characterPrompt +
-    '\n\n' +
-    commentaryPrompt +
-    GAME_COMMENTARY_SYSTEM_PROMPT_SUFFIX
+  const systemPrompt = characterPrompt + '\n\n' + commentaryPrompt
 
   const messages: Message[] = [{ role: 'system', content: systemPrompt }]
 
