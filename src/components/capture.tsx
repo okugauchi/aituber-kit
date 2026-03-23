@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import homeStore from '@/features/stores/home'
+import CaptureService from '@/features/gameCommentary/captureService'
 import { VideoDisplay } from './common/VideoDisplay'
 
 const Capture = () => {
@@ -23,6 +24,26 @@ const Capture = () => {
       videoRef.current.srcObject = stream
       await videoRef.current.play()
     }
+
+    // CaptureServiceにキャプチャ関数を登録
+    CaptureService.getInstance().registerCaptureFunction(() => {
+      const video = videoRef.current
+      if (!video || video.readyState < 2) return null
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return null
+      ctx.drawImage(video, 0, 0)
+      return canvas.toDataURL('image/jpeg', 0.9)
+    })
+
+    // track endedイベント監視（ブラウザ側で共有停止された時の検知）
+    stream.getVideoTracks().forEach((track) => {
+      track.addEventListener('ended', () => {
+        cleanupStream()
+      })
+    })
   }, [])
 
   // ストリームのクリーンアップを一元管理する関数
@@ -34,6 +55,9 @@ const Capture = () => {
     }
     captureStartedRef.current = false
     homeStore.setState({ captureStatus: false })
+
+    // CaptureServiceのキャプチャ関数を解除
+    CaptureService.getInstance().registerCaptureFunction(null)
 
     if (videoRef.current) {
       videoRef.current.srcObject = null

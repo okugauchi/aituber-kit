@@ -275,51 +275,80 @@ export const exclusionRules: ExclusionRule[] = [
     },
   },
 
-  // Rule 14: realtimeAPIMode ON → アイドル・人感検知OFF
+  // Rule 14: realtimeAPIMode ON → アイドル・人感検知・ゲーム実況OFF
   {
     id: 'realtimeAPI-on-disableIdlePresence',
     description:
-      'realtimeAPIMode ON時にidleModeEnabled, presenceDetectionEnabledをOFFにする',
+      'realtimeAPIMode ON時にidleModeEnabled, presenceDetectionEnabled, gameCommentaryEnabledをOFFにする',
     trigger: (_incoming, merged) => merged.realtimeAPIMode === true,
     apply: () => ({
       idleModeEnabled: false,
       presenceDetectionEnabled: false,
+      gameCommentaryEnabled: false,
     }),
   },
 
-  // Rule 15: audioMode ON → アイドル・人感検知OFF
+  // Rule 15: audioMode ON → アイドル・人感検知・ゲーム実況OFF
   {
     id: 'audioMode-on-disableIdlePresence',
     description:
-      'audioMode ON時にidleModeEnabled, presenceDetectionEnabledをOFFにする',
+      'audioMode ON時にidleModeEnabled, presenceDetectionEnabled, gameCommentaryEnabledをOFFにする',
     trigger: (_incoming, merged) => merged.audioMode === true,
     apply: () => ({
       idleModeEnabled: false,
       presenceDetectionEnabled: false,
+      gameCommentaryEnabled: false,
     }),
   },
 
-  // Rule 16: externalLinkageMode ON → アイドル・人感検知OFF
+  // Rule 16: externalLinkageMode ON → アイドル・人感検知・ゲーム実況OFF
   {
     id: 'externalLinkage-on-disableIdlePresence',
     description:
-      'externalLinkageMode ON時にidleModeEnabled, presenceDetectionEnabledをOFFにする',
+      'externalLinkageMode ON時にidleModeEnabled, presenceDetectionEnabled, gameCommentaryEnabledをOFFにする',
     trigger: (_incoming, merged) => merged.externalLinkageMode === true,
     apply: () => ({
       idleModeEnabled: false,
       presenceDetectionEnabled: false,
+      gameCommentaryEnabled: false,
     }),
   },
 
-  // Rule 17: slideMode ON → アイドル・人感検知OFF
+  // Rule 17: slideMode ON → アイドル・人感検知・ゲーム実況OFF
   {
     id: 'slideMode-on-disableIdlePresence',
     description:
-      'slideMode ON時にidleModeEnabled, presenceDetectionEnabledをOFFにする',
+      'slideMode ON時にidleModeEnabled, presenceDetectionEnabled, gameCommentaryEnabledをOFFにする',
     trigger: (_incoming, merged) => merged.slideMode === true,
     apply: () => ({
       idleModeEnabled: false,
       presenceDetectionEnabled: false,
+      gameCommentaryEnabled: false,
+    }),
+  },
+
+  // Rule 18: gameCommentaryEnabled ON → アイドル・人感検知・realtimeAPI・audioMode・externalLinkageOFF
+  {
+    id: 'gameCommentary-on',
+    description:
+      'gameCommentaryEnabled ON時にidleModeEnabled, presenceDetectionEnabled, realtimeAPIMode, audioMode, externalLinkageModeをOFFにする',
+    trigger: (_incoming, merged) => merged.gameCommentaryEnabled === true,
+    apply: () => ({
+      idleModeEnabled: false,
+      presenceDetectionEnabled: false,
+      realtimeAPIMode: false,
+      audioMode: false,
+      externalLinkageMode: false,
+    }),
+  },
+
+  // Rule 19: idleModeEnabled ON → ゲーム実況OFF
+  {
+    id: 'idleMode-on-disableGameCommentary',
+    description: 'idleModeEnabled ON時にgameCommentaryEnabledをOFFにする',
+    trigger: (_incoming, merged) => merged.idleModeEnabled === true,
+    apply: () => ({
+      gameCommentaryEnabled: false,
     }),
   },
 ]

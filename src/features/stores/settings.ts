@@ -18,6 +18,10 @@ import {
   DEFAULT_KIOSK_CONFIG,
 } from '@/features/kiosk/kioskTypes'
 import {
+  GameCommentarySettings,
+  DEFAULT_GAME_COMMENTARY_CONFIG,
+} from '@/features/gameCommentary/gameCommentaryTypes'
+import {
   AIService,
   AIVoice,
   Language,
@@ -288,7 +292,8 @@ export type SettingsState = APIKeys &
   MemoryConfig &
   PresenceDetectionSettings &
   IdleModeSettings &
-  KioskModeSettings
+  KioskModeSettings &
+  GameCommentarySettings
 
 // Function to get initial values from environment variables
 const getInitialValuesFromEnv = (): SettingsState => ({
@@ -782,6 +787,29 @@ const getInitialValuesFromEnv = (): SettingsState => ({
     DEFAULT_KIOSK_CONFIG.kioskGuidanceTimeout,
   kioskTemporaryUnlock: DEFAULT_KIOSK_CONFIG.kioskTemporaryUnlock,
 
+  // Game commentary settings
+  gameCommentaryEnabled:
+    process.env.NEXT_PUBLIC_GAME_COMMENTARY_ENABLED === 'true' ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryEnabled,
+  gameCommentaryCaptureInterval:
+    parseInt(process.env.NEXT_PUBLIC_GAME_COMMENTARY_CAPTURE_INTERVAL || '') ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryCaptureInterval,
+  gameCommentaryContextCount:
+    parseInt(process.env.NEXT_PUBLIC_GAME_COMMENTARY_CONTEXT_COUNT || '') ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryContextCount,
+  gameCommentaryPromptTemplate:
+    process.env.NEXT_PUBLIC_GAME_COMMENTARY_PROMPT_TEMPLATE ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryPromptTemplate,
+  gameCommentaryImageQuality:
+    parseFloat(process.env.NEXT_PUBLIC_GAME_COMMENTARY_IMAGE_QUALITY || '') ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryImageQuality,
+  gameCommentaryResizeWidth:
+    parseInt(process.env.NEXT_PUBLIC_GAME_COMMENTARY_RESIZE_WIDTH || '') ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryResizeWidth,
+  gameCommentarySaveToChat:
+    process.env.NEXT_PUBLIC_GAME_COMMENTARY_SAVE_TO_CHAT === 'true' ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentarySaveToChat,
+
   // Live2D settings
   neutralEmotions: process.env.NEXT_PUBLIC_NEUTRAL_EMOTIONS?.split(',') || [],
   happyEmotions: process.env.NEXT_PUBLIC_HAPPY_EMOTIONS?.split(',') || [],
@@ -834,6 +862,16 @@ const migratePersistedSettings = (
         : []
     }
     delete migrated.presenceDepartureMessage
+  }
+
+  // Game commentary migration: ensure defaults for new fields
+  if (migrated.gameCommentaryEnabled === undefined) {
+    migrated.gameCommentaryEnabled =
+      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryEnabled
+  }
+  if (migrated.gameCommentaryPromptTemplate === undefined) {
+    migrated.gameCommentaryPromptTemplate =
+      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryPromptTemplate
   }
 
   return migrated
@@ -1083,6 +1121,14 @@ const settingsStore = create<SettingsState>()(
         kioskNgWordEnabled: state.kioskNgWordEnabled,
         thinkingPoseEnabled: state.thinkingPoseEnabled,
         thinkingPoseId: state.thinkingPoseId,
+        // Game commentary settings
+        gameCommentaryEnabled: state.gameCommentaryEnabled,
+        gameCommentaryCaptureInterval: state.gameCommentaryCaptureInterval,
+        gameCommentaryContextCount: state.gameCommentaryContextCount,
+        gameCommentaryPromptTemplate: state.gameCommentaryPromptTemplate,
+        gameCommentaryImageQuality: state.gameCommentaryImageQuality,
+        gameCommentaryResizeWidth: state.gameCommentaryResizeWidth,
+        gameCommentarySaveToChat: state.gameCommentarySaveToChat,
       }),
     })
   )

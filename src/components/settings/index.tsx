@@ -18,6 +18,7 @@ import Images from './images'
 import MemorySettings from './memorySettings'
 import PresenceSettings from './presenceSettings'
 import IdleSettings from './idleSettings'
+import GameCommentarySettings from './gameCommentarySettings'
 import KioskSettings from './kioskSettings'
 
 type Props = {
@@ -62,6 +63,7 @@ type TabKey =
   | 'memory'
   | 'presence'
   | 'idle'
+  | 'gameCommentary'
   | 'kiosk'
   | 'other'
   | 'speechInput'
@@ -79,6 +81,7 @@ const tabIconMapping: Record<TabKey, string> = {
   memory: '/images/setting-icons/memory-settings.svg',
   presence: '/images/setting-icons/presence-settings.svg',
   idle: '/images/setting-icons/idle-settings.svg',
+  gameCommentary: '/images/setting-icons/gamecommentary-settings.svg',
   kiosk: '/images/setting-icons/kiosk-settings.svg',
   other: '/images/setting-icons/other-settings.svg',
   speechInput: '/images/setting-icons/microphone-settings.svg',
@@ -165,6 +168,10 @@ const Main = () => {
       label: t('IdleSettings'),
     },
     {
+      key: 'gameCommentary',
+      label: t('GameCommentarySettings'),
+    },
+    {
       key: 'kiosk',
       label: t('KioskSettings'),
     },
@@ -198,6 +205,8 @@ const Main = () => {
         return <PresenceSettings />
       case 'idle':
         return <IdleSettings />
+      case 'gameCommentary':
+        return <GameCommentarySettings />
       case 'kiosk':
         return <KioskSettings />
       case 'other':
