@@ -52,8 +52,7 @@ export function useGameCommentaryMode({
   const ss = settingsStore.getState()
   const gameCommentaryEnabled = ss.gameCommentaryEnabled
   const gameCommentaryPlaying = ss.gameCommentaryPlaying
-  const gameCommentaryCaptureInterval =
-    ss.gameCommentaryCaptureInterval || 15
+  const gameCommentaryCaptureInterval = ss.gameCommentaryCaptureInterval || 15
   const gameCommentaryContextCount = ss.gameCommentaryContextCount || 5
   const gameCommentaryImageQuality = ss.gameCommentaryImageQuality || 0.7
   const gameCommentaryResizeWidth = ss.gameCommentaryResizeWidth || 1024
