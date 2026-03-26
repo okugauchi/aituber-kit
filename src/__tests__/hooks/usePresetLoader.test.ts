@@ -18,6 +18,7 @@ const PROMPT_PRESET_KEYS = [
   'conversationContinuityPromptNewTopic',
   'conversationContinuityPromptSelectComment',
   'multiModalAiDecisionPrompt',
+  'gameCommentaryPromptTemplate',
 ] as const
 
 const PROMPT_PRESET_FILES = [
@@ -28,6 +29,7 @@ const PROMPT_PRESET_FILES = [
   'youtube-prompt-new-topic.txt',
   'youtube-prompt-select-comment.txt',
   'multimodal-ai-decision-prompt.txt',
+  'game-commentary-prompt.txt',
 ]
 
 describe('usePresetLoader', () => {
@@ -46,6 +48,7 @@ describe('usePresetLoader', () => {
       conversationContinuityPromptNewTopic: '',
       conversationContinuityPromptSelectComment: '',
       multiModalAiDecisionPrompt: '',
+      gameCommentaryPromptTemplate: '',
     })
   })
 
@@ -64,7 +67,7 @@ describe('usePresetLoader', () => {
     renderHook(() => usePresetLoader())
 
     await waitFor(() => {
-      expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+      expect(mockLoadPreset).toHaveBeenCalledTimes(13)
     })
 
     expect(mockLoadPreset).toHaveBeenCalledWith('preset1.txt')
@@ -92,7 +95,7 @@ describe('usePresetLoader', () => {
     renderHook(() => usePresetLoader())
 
     await waitFor(() => {
-      expect(mockLoadPreset).toHaveBeenCalledTimes(10)
+      expect(mockLoadPreset).toHaveBeenCalledTimes(11)
     })
 
     // Should skip preset1 and preset3 since they have existing values
@@ -113,7 +116,7 @@ describe('usePresetLoader', () => {
     renderHook(() => usePresetLoader())
 
     await waitFor(() => {
-      expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+      expect(mockLoadPreset).toHaveBeenCalledTimes(13)
     })
 
     const state = settingsStore.getState()
@@ -133,7 +136,7 @@ describe('usePresetLoader', () => {
     renderHook(() => usePresetLoader())
 
     await waitFor(() => {
-      expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+      expect(mockLoadPreset).toHaveBeenCalledTimes(13)
     })
 
     const state = settingsStore.getState()
@@ -150,7 +153,7 @@ describe('usePresetLoader', () => {
     renderHook(() => usePresetLoader())
 
     await waitFor(() => {
-      expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+      expect(mockLoadPreset).toHaveBeenCalledTimes(13)
     })
 
     // Empty string is falsy, so setState should not be called
@@ -164,13 +167,13 @@ describe('usePresetLoader', () => {
     const { rerender } = renderHook(() => usePresetLoader())
 
     await waitFor(() => {
-      expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+      expect(mockLoadPreset).toHaveBeenCalledTimes(13)
     })
 
     rerender()
 
     // Should still be 12 calls total, not 24
-    expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+    expect(mockLoadPreset).toHaveBeenCalledTimes(13)
   })
 
   describe('prompt presets', () => {
@@ -191,7 +194,7 @@ describe('usePresetLoader', () => {
       renderHook(() => usePresetLoader())
 
       await waitFor(() => {
-        expect(mockLoadPreset).toHaveBeenCalledTimes(12)
+        expect(mockLoadPreset).toHaveBeenCalledTimes(13)
       })
 
       PROMPT_PRESET_FILES.forEach((filename) => {

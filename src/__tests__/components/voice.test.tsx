@@ -55,6 +55,14 @@ jest.mock('@/features/constants/aiModels', () => ({
   getOpenAITTSModels: jest.fn(() => ['tts-1', 'tts-1-hd']),
 }))
 
+// Mock global fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve([]),
+  })
+) as jest.Mock
+
 const mockSettingsStore = settingsStore as jest.MockedFunction<
   typeof settingsStore
 >
