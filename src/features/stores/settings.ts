@@ -836,7 +836,7 @@ type PersistedSettingsState = Omit<Partial<SettingsState>, 'multiModalMode'> & {
 
 const migratePersistedSettings = (
   state?: PersistedSettingsState
-): PersistedSettingsState | undefined => {
+): Partial<SettingsState> | undefined => {
   if (!state) return state
 
   const migrated = { ...state }
