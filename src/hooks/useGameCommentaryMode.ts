@@ -5,7 +5,10 @@ import { speakCharacter } from '@/features/messages/speakCharacter'
 import { SpeakQueue } from '@/features/messages/speakQueue'
 import { Talk } from '@/features/messages/messages'
 import CaptureService from '@/features/gameCommentary/captureService'
-import { generateGameCommentary } from '@/features/gameCommentary/generateGameCommentary'
+import {
+  generateGameCommentary,
+  CommentaryHistoryEntry,
+} from '@/features/gameCommentary/generateGameCommentary'
 
 /**
  * ゲーム実況モードの状態型
@@ -52,7 +55,7 @@ export function useGameCommentaryMode({
   const ss = settingsStore.getState()
   const gameCommentaryEnabled = ss.gameCommentaryEnabled
   const gameCommentaryPlaying = ss.gameCommentaryPlaying
-  const gameCommentaryCaptureInterval = ss.gameCommentaryCaptureInterval || 15
+  const gameCommentaryCaptureInterval = ss.gameCommentaryCaptureInterval ?? 5
   const gameCommentaryContextCount = ss.gameCommentaryContextCount || 5
   const gameCommentaryImageQuality = ss.gameCommentaryImageQuality || 0.7
   const gameCommentaryResizeWidth = ss.gameCommentaryResizeWidth || 1024
@@ -79,10 +82,12 @@ export function useGameCommentaryMode({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sessionIdRef = useRef<string | null>(null)
-  const commentaryHistoryRef = useRef<string[]>([])
+  const commentaryHistoryRef = useRef<CommentaryHistoryEntry[]>([])
   const isProcessingRef = useRef(false)
   const isRunningRef = useRef(isRunning)
   isRunningRef.current = isRunning
+  const captureIntervalRef = useRef(gameCommentaryCaptureInterval)
+  captureIntervalRef.current = gameCommentaryCaptureInterval
 
   // Callback refs to avoid stale closures
   const callbackRefs = useRef({
@@ -118,8 +123,8 @@ export function useGameCommentaryMode({
 
   // ----- ring bufferに追加 -----
   const addToHistory = useCallback(
-    (text: string) => {
-      commentaryHistoryRef.current.push(text)
+    (entry: CommentaryHistoryEntry) => {
+      commentaryHistoryRef.current.push(entry)
       if (commentaryHistoryRef.current.length > gameCommentaryContextCount) {
         commentaryHistoryRef.current = commentaryHistoryRef.current.slice(
           -gameCommentaryContextCount
@@ -144,17 +149,20 @@ export function useGameCommentaryMode({
   // ----- 次回キャプチャのスケジュール -----
   const scheduleNext = useCallback(() => {
     clearTimers()
-    setSecondsUntilNextCapture(gameCommentaryCaptureInterval)
+    const interval = captureIntervalRef.current
+    setSecondsUntilNextCapture(interval)
 
-    countdownRef.current = setInterval(() => {
-      setSecondsUntilNextCapture((prev) => Math.max(prev - 1, 0))
-    }, 1000)
+    if (interval > 0) {
+      countdownRef.current = setInterval(() => {
+        setSecondsUntilNextCapture((prev) => Math.max(prev - 1, 0))
+      }, 1000)
+    }
 
     timerRef.current = setTimeout(() => {
       triggerCommentary()
-    }, gameCommentaryCaptureInterval * 1000)
+    }, interval * 1000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameCommentaryCaptureInterval, clearTimers])
+  }, [clearTimers])
 
   // ----- 実況トリガー -----
   const triggerCommentary = useCallback(async () => {
@@ -212,8 +220,11 @@ export function useGameCommentaryMode({
         return
       }
 
-      // ring bufferに追加
-      addToHistory(result.text)
+      // ring bufferに追加（実況テキスト + 情景描写）
+      addToHistory({
+        commentary: result.text,
+        sceneDescription: result.sceneDescription,
+      })
 
       // chatLogに保存（YouTube/Mastraとの文脈共有用）
       const currentSaveToChat =
@@ -275,17 +286,11 @@ export function useGameCommentaryMode({
   // ----- タイマーリセット -----
   const resetTimer = useCallback(() => {
     clearTimers()
-    setSecondsUntilNextCapture(gameCommentaryCaptureInterval)
+    setSecondsUntilNextCapture(captureIntervalRef.current)
     if (isRunning && state !== 'disabled') {
       scheduleNext()
     }
-  }, [
-    gameCommentaryCaptureInterval,
-    isRunning,
-    state,
-    clearTimers,
-    scheduleNext,
-  ])
+  }, [isRunning, state, clearTimers, scheduleNext])
 
   // ----- 実況停止 -----
   const stopCommentary = useCallback(() => {
@@ -293,15 +298,15 @@ export function useGameCommentaryMode({
     isProcessingRef.current = false
     SpeakQueue.stopAll()
     setState('waiting')
-    setSecondsUntilNextCapture(gameCommentaryCaptureInterval)
+    setSecondsUntilNextCapture(captureIntervalRef.current)
     callbackRefs.current.onCommentaryInterrupted?.()
-  }, [gameCommentaryCaptureInterval, clearTimers])
+  }, [clearTimers])
 
   // ----- 有効/無効の監視 -----
   useEffect(() => {
     if (isRunning) {
       setState('waiting')
-      setSecondsUntilNextCapture(gameCommentaryCaptureInterval)
+      setSecondsUntilNextCapture(captureIntervalRef.current)
       scheduleNext()
     } else {
       setState('disabled')
@@ -314,7 +319,7 @@ export function useGameCommentaryMode({
     return () => {
       clearTimers()
     }
-  }, [isRunning, gameCommentaryCaptureInterval, clearTimers, scheduleNext])
+  }, [isRunning, clearTimers, scheduleNext])
 
   // ----- chatLog変更の監視（ユーザー入力検知） -----
   useEffect(() => {

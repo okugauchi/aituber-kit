@@ -20,7 +20,7 @@ export interface GameCommentarySettings {
 export const DEFAULT_GAME_COMMENTARY_CONFIG: GameCommentarySettings = {
   gameCommentaryEnabled: false,
   gameCommentaryPlaying: false,
-  gameCommentaryCaptureInterval: 15,
+  gameCommentaryCaptureInterval: 5,
   gameCommentaryContextCount: 5,
   gameCommentaryPromptTemplate: '',
   gameCommentaryImageQuality: 0.7,
@@ -29,7 +29,7 @@ export const DEFAULT_GAME_COMMENTARY_CONFIG: GameCommentarySettings = {
 }
 
 // Interval validation constants
-export const GAME_COMMENTARY_INTERVAL = { MIN: 10, MAX: 60 }
+export const GAME_COMMENTARY_INTERVAL = { MIN: 0, MAX: 20 }
 
 // Context count validation constants
 export const GAME_COMMENTARY_CONTEXT_COUNT = { MIN: 1, MAX: 20 }
