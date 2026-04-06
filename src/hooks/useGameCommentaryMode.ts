@@ -56,7 +56,7 @@ export function useGameCommentaryMode({
   const gameCommentaryEnabled = ss.gameCommentaryEnabled
   const gameCommentaryPlaying = ss.gameCommentaryPlaying
   const gameCommentaryCaptureInterval = ss.gameCommentaryCaptureInterval ?? 5
-  const gameCommentaryContextCount = ss.gameCommentaryContextCount || 5
+  const gameCommentaryContextCount = ss.gameCommentaryContextCount ?? 5
   const gameCommentaryImageQuality = ss.gameCommentaryImageQuality || 0.7
   const gameCommentaryResizeWidth = ss.gameCommentaryResizeWidth || 1024
 
@@ -124,6 +124,7 @@ export function useGameCommentaryMode({
   // ----- ring bufferに追加 -----
   const addToHistory = useCallback(
     (entry: CommentaryHistoryEntry) => {
+      if (gameCommentaryContextCount <= 0) return
       commentaryHistoryRef.current.push(entry)
       if (commentaryHistoryRef.current.length > gameCommentaryContextCount) {
         commentaryHistoryRef.current = commentaryHistoryRef.current.slice(

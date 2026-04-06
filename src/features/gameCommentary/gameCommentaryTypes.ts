@@ -9,7 +9,7 @@ export interface GameCommentarySettings {
   gameCommentaryEnabled: boolean
   gameCommentaryPlaying: boolean // メインページのボタンで制御（YouTubeのyoutubePlayingと同じ）
   gameCommentaryCaptureInterval: number // 秒 (10-60)
-  gameCommentaryContextCount: number // 実況履歴参照数 (1-20)
+  gameCommentaryContextCount: number // 実況履歴参照数 (0-20)
   gameCommentaryPromptTemplate: string
   gameCommentaryImageQuality: number // JPEG品質 (0.3-1.0)
   gameCommentaryResizeWidth: number // リサイズ幅px (0=なし)
@@ -32,7 +32,7 @@ export const DEFAULT_GAME_COMMENTARY_CONFIG: GameCommentarySettings = {
 export const GAME_COMMENTARY_INTERVAL = { MIN: 0, MAX: 20 }
 
 // Context count validation constants
-export const GAME_COMMENTARY_CONTEXT_COUNT = { MIN: 1, MAX: 20 }
+export const GAME_COMMENTARY_CONTEXT_COUNT = { MIN: 0, MAX: 20 }
 
 // Validate and clamp capture interval value
 export function clampCaptureInterval(value: number): number {

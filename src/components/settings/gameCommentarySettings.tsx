@@ -263,7 +263,7 @@ const GameCommentarySettings = () => {
                 gameCommentaryPromptTemplate: e.target.value,
               })
             }
-            className="w-full h-24 px-4 py-2 bg-white border border-gray-300 rounded-lg resize-none"
+            className="w-full h-24 px-4 py-2 bg-white border border-gray-300 rounded-lg resize-y"
           />
         </div>
 

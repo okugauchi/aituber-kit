@@ -44,7 +44,7 @@ export async function generateGameCommentary(
 
   // 実況履歴を文脈メッセージとして追加（情景描写 + 実況テキストのペア）
   for (const history of commentaryHistory) {
-    // 情景描写をユーザーメッセージとして追加（前回の画面状況）
+    // 情景描写がある場合のみユーザーメッセージとして追加
     if (history.sceneDescription) {
       messages.push({
         role: 'user',
