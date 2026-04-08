@@ -13,6 +13,7 @@ import {
   clampContextCount,
   GAME_COMMENTARY_INTERVAL,
   GAME_COMMENTARY_CONTEXT_COUNT,
+  GAME_COMMENTARY_VIDEO_DELAY,
 } from '@/features/gameCommentary/gameCommentaryTypes'
 import { isMultiModalModel } from '@/features/constants/aiModels'
 
@@ -45,6 +46,9 @@ const GameCommentarySettings = () => {
   )
   const gameCommentarySaveToChat = settingsStore(
     (s) => s.gameCommentarySaveToChat
+  )
+  const gameCommentaryVideoDelay = settingsStore(
+    (s) => s.gameCommentaryVideoDelay
   )
 
   // 排他制御による無効化判定
@@ -146,6 +150,39 @@ const GameCommentarySettings = () => {
             />
             <span className="w-16 text-right">
               {gameCommentaryCaptureInterval}s
+            </span>
+          </div>
+        </div>
+
+        {/* 映像遅延 */}
+        <div className="my-6">
+          <div className="my-4 text-xl font-bold">
+            {t('GameCommentary.VideoDelay')}
+          </div>
+          <div className="my-2 text-sm whitespace-pre-wrap">
+            {t('GameCommentary.VideoDelayInfo', {
+              min: GAME_COMMENTARY_VIDEO_DELAY.MIN,
+              max: GAME_COMMENTARY_VIDEO_DELAY.MAX,
+            })}
+          </div>
+          <div className="my-4 flex items-center gap-4">
+            <input
+              type="range"
+              min={GAME_COMMENTARY_VIDEO_DELAY.MIN}
+              max={GAME_COMMENTARY_VIDEO_DELAY.MAX}
+              step={1}
+              value={gameCommentaryVideoDelay}
+              onChange={(e) =>
+                settingsStore.setState({
+                  gameCommentaryVideoDelay: parseInt(e.target.value, 10),
+                })
+              }
+              className="flex-1"
+            />
+            <span className="w-16 text-right">
+              {gameCommentaryVideoDelay === 0
+                ? t('GameCommentary.VideoDelayOff')
+                : `${gameCommentaryVideoDelay}s`}
             </span>
           </div>
         </div>

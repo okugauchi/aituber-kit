@@ -802,6 +802,9 @@ const getInitialValuesFromEnv = (): SettingsState => ({
   gameCommentarySaveToChat:
     process.env.NEXT_PUBLIC_GAME_COMMENTARY_SAVE_TO_CHAT === 'true' ||
     DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentarySaveToChat,
+  gameCommentaryVideoDelay:
+    parseInt(process.env.NEXT_PUBLIC_GAME_COMMENTARY_VIDEO_DELAY || '') ||
+    DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryVideoDelay,
 
   // Live2D settings
   neutralEmotions: process.env.NEXT_PUBLIC_NEUTRAL_EMOTIONS?.split(',') || [],
@@ -824,6 +827,7 @@ type PersistedSettingsState = Partial<SettingsState> & {
   multiModalMode?: 'always' | 'never' | 'ai-decide'
   presenceGreetingMessage?: string
   presenceDepartureMessage?: string
+  gameCommentaryVideoBufferWidth?: number
 }
 
 const migratePersistedSettings = (
@@ -873,6 +877,11 @@ const migratePersistedSettings = (
     migrated.gameCommentaryPromptTemplate =
       DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryPromptTemplate
   }
+  if (migrated.gameCommentaryVideoDelay === undefined) {
+    migrated.gameCommentaryVideoDelay =
+      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryVideoDelay
+  }
+  delete migrated.gameCommentaryVideoBufferWidth
 
   return migrated as Partial<SettingsState>
 }
@@ -1128,6 +1137,7 @@ const settingsStore = create<SettingsState>()(
         gameCommentaryImageQuality: state.gameCommentaryImageQuality,
         gameCommentaryResizeWidth: state.gameCommentaryResizeWidth,
         gameCommentarySaveToChat: state.gameCommentarySaveToChat,
+        gameCommentaryVideoDelay: state.gameCommentaryVideoDelay,
       }),
     })
   )

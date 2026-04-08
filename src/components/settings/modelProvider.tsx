@@ -526,7 +526,6 @@ const ModelProvider = () => {
               </>
             )}
 
-
           {(state.realtimeAPIMode || state.audioMode) && (
             <div className="my-6 p-4 bg-white rounded-lg text-sm ">
               {t('CannotUseParameters')}

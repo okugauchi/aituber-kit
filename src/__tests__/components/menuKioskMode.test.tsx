@@ -253,7 +253,7 @@ describe('Menu - Kiosk Mode', () => {
           selectAIService: 'openai',
           selectAIModel: 'gpt-4',
           enableMultiModal: false,
-            customModel: false,
+          customModel: false,
           youtubeMode: false,
           youtubePlaying: false,
           slideMode: false,

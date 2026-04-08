@@ -191,7 +191,7 @@ describe('排他エンジン (computeExclusions)', () => {
         selectAIService: 'openai',
         slideMode: true,
         conversationContinuityMode: true,
-          })
+      })
       // difyはマルチモーダル非対応
       const incoming = { selectAIService: 'dify' as const }
       const { corrections, crossStoreEffects } = computeExclusions(

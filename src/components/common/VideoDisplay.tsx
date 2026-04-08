@@ -10,6 +10,7 @@ import settingsStore from '@/features/stores/settings'
 import { IconButton } from '../iconButton'
 import { useDraggable } from '@/hooks/useDraggable'
 import { useResizable } from '@/hooks/useResizable'
+import { fitDimensionsWithinBounds } from '@/utils/mediaDisplay'
 
 interface VideoDisplayProps {
   videoRef: React.RefObject<HTMLVideoElement>
@@ -20,6 +21,9 @@ interface VideoDisplayProps {
   toggleSourceDisabled?: boolean
   showToggleButton?: boolean
   className?: string
+  delayCanvasRef?: React.RefObject<HTMLCanvasElement>
+  isVideoDelayed?: boolean
+  delayedFrameRef?: React.RefObject<ImageBitmap | null>
 }
 
 export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
@@ -33,12 +37,18 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
       toggleSourceDisabled = false,
       showToggleButton = true,
       className = '',
+      delayCanvasRef,
+      isVideoDelayed = false,
+      delayedFrameRef,
     },
     ref
   ) => {
+    const MINI_VIDEO_MAX_WIDTH = 512
+    const MINI_VIDEO_MAX_HEIGHT = 384
     const triggerShutter = homeStore((s) => s.triggerShutter)
     const useVideoAsBackground = settingsStore((s) => s.useVideoAsBackground)
     const backgroundVideoRef = useRef<HTMLVideoElement>(null)
+    const delayBackgroundCanvasRef = useRef<HTMLCanvasElement>(null)
     const [isExpanded, setIsExpanded] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
     const [videoBounds, setVideoBounds] = useState({
@@ -53,12 +63,31 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
       resetPosition,
       style: dragStyle,
     } = useDraggable()
-    const { size, isResizing, handleResizeStart, resetSize } = useResizable({
+    const { size, isResizing, handleResizeStart, setSize } = useResizable({
+      initialWidth: MINI_VIDEO_MAX_WIDTH,
+      initialHeight: MINI_VIDEO_MAX_HEIGHT,
+      maxWidth: MINI_VIDEO_MAX_WIDTH,
+      maxHeight: MINI_VIDEO_MAX_HEIGHT,
       aspectRatio: true,
     })
 
-    // Handle background video sync
+    const syncSizeToVideo = useCallback(() => {
+      const video = videoRef.current
+      if (!video || video.videoWidth === 0 || video.videoHeight === 0) return
+
+      setSize(
+        fitDimensionsWithinBounds(
+          video.videoWidth,
+          video.videoHeight,
+          MINI_VIDEO_MAX_WIDTH,
+          MINI_VIDEO_MAX_HEIGHT
+        )
+      )
+    }, [setSize, videoRef])
+
+    // Handle background video sync (skip when delayed - uses canvas instead)
     useEffect(() => {
+      if (isVideoDelayed) return
       if (useVideoAsBackground && videoRef.current?.srcObject) {
         if (backgroundVideoRef.current) {
           backgroundVideoRef.current.srcObject = videoRef.current.srcObject
@@ -74,17 +103,77 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
           backgroundVideoRef.current.srcObject = null
         }
       }
-    }, [useVideoAsBackground, videoRef])
+    }, [useVideoAsBackground, videoRef, isVideoDelayed])
 
-    // Handle media stream updates
+    // Handle media stream updates (skip when delayed)
     useEffect(() => {
+      if (isVideoDelayed) return
       if (mediaStream && useVideoAsBackground && backgroundVideoRef.current) {
         backgroundVideoRef.current.srcObject = mediaStream
         backgroundVideoRef.current.play().catch(console.error)
       }
-    }, [mediaStream, useVideoAsBackground])
+    }, [mediaStream, useVideoAsBackground, isVideoDelayed])
+
+    // 遅延映像を背景canvasに直接描画（ImageBitmapから直接描画で高画質）
+    useEffect(() => {
+      if (!isVideoDelayed || !useVideoAsBackground) return
+      const bgCanvas = delayBackgroundCanvasRef.current
+      if (!bgCanvas) return
+
+      let animId: number
+      const copy = () => {
+        const frame = delayedFrameRef?.current
+        if (frame) {
+          const dpr = window.devicePixelRatio || 1
+          const w = Math.round(window.innerWidth * dpr)
+          const h = Math.round(window.innerHeight * dpr)
+          if (bgCanvas.width !== w || bgCanvas.height !== h) {
+            bgCanvas.width = w
+            bgCanvas.height = h
+          }
+          const ctx = bgCanvas.getContext('2d')
+          if (ctx) {
+            // object-cover 的な描画（画面全体を埋める）
+            const srcAspect = frame.width / frame.height
+            const dstAspect = w / h
+            let sx, sy, sw, sh
+            if (srcAspect > dstAspect) {
+              sh = frame.height
+              sw = frame.height * dstAspect
+              sx = (frame.width - sw) / 2
+              sy = 0
+            } else {
+              sw = frame.width
+              sh = frame.width / dstAspect
+              sx = 0
+              sy = (frame.height - sh) / 2
+            }
+            ctx.drawImage(frame, sx, sy, sw, sh, 0, 0, w, h)
+          }
+        }
+        animId = requestAnimationFrame(copy)
+      }
+      animId = requestAnimationFrame(copy)
+      return () => cancelAnimationFrame(animId)
+    }, [isVideoDelayed, useVideoAsBackground, delayedFrameRef])
 
     const handleCapture = useCallback(() => {
+      // 遅延表示中はcanvasからキャプチャ
+      if (isVideoDelayed && delayCanvasRef?.current) {
+        const delayCanvas = delayCanvasRef.current
+        if (delayCanvas.width > 0 && delayCanvas.height > 0) {
+          const data = delayCanvas.toDataURL('image/png')
+          if (data !== '') {
+            homeStore.setState({
+              modalImage: data,
+              triggerShutter: false,
+            })
+          }
+        }
+        onCapture?.()
+        return
+      }
+
       if (!videoRef.current) return
       if (
         videoRef.current.videoWidth === 0 ||
@@ -112,7 +201,7 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
       }
 
       onCapture?.()
-    }, [videoRef, onCapture])
+    }, [videoRef, onCapture, isVideoDelayed, delayCanvasRef])
 
     useEffect(() => {
       if (triggerShutter) {
@@ -121,11 +210,14 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
     }, [triggerShutter, handleCapture])
 
     const handleExpand = useCallback(() => {
-      setIsExpanded(!isExpanded)
-      settingsStore.setState({ useVideoAsBackground: !isExpanded })
+      const nextExpanded = !isExpanded
+      setIsExpanded(nextExpanded)
+      settingsStore.setState({ useVideoAsBackground: nextExpanded })
       resetPosition()
-      resetSize()
-    }, [isExpanded, resetPosition, resetSize])
+      if (!nextExpanded) {
+        syncSizeToVideo()
+      }
+    }, [isExpanded, resetPosition, syncSizeToVideo])
 
     // Calculate actual video bounds within container
     const updateVideoBounds = useCallback(() => {
@@ -170,16 +262,18 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
       if (!video) return
 
       const handleLoadedMetadata = () => {
+        syncSizeToVideo()
         updateVideoBounds()
       }
 
       video.addEventListener('loadedmetadata', handleLoadedMetadata)
+      syncSizeToVideo()
       updateVideoBounds()
 
       return () => {
         video.removeEventListener('loadedmetadata', handleLoadedMetadata)
       }
-    }, [videoRef, size, updateVideoBounds])
+    }, [videoRef, syncSizeToVideo, updateVideoBounds])
 
     // Update bounds on resize
     useEffect(() => {
@@ -188,13 +282,19 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
 
     return (
       <>
-        {useVideoAsBackground && (
+        {useVideoAsBackground && !isVideoDelayed && (
           <video
             ref={backgroundVideoRef}
             autoPlay
             playsInline
             muted
             className="fixed top-0 left-0 w-full h-full object-cover -z-10"
+          />
+        )}
+        {useVideoAsBackground && isVideoDelayed && (
+          <canvas
+            ref={delayBackgroundCanvasRef}
+            className="fixed top-0 left-0 w-full h-full -z-10"
           />
         )}
         <div
@@ -224,10 +324,18 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
               autoPlay
               playsInline
               muted
-              className={`w-full h-full object-top ${
-                useVideoAsBackground ? 'invisible' : ''
+              className={`w-full h-full object-contain object-top bg-black ${
+                useVideoAsBackground || isVideoDelayed ? 'invisible' : ''
               }`}
             />
+            {isVideoDelayed && (
+              <canvas
+                ref={delayCanvasRef}
+                className={`absolute top-0 left-0 w-full h-full bg-black ${
+                  useVideoAsBackground ? 'invisible' : ''
+                }`}
+              />
+            )}
             {/* Resize handles */}
             {!isExpanded &&
               !isMobile &&

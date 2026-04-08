@@ -255,12 +255,12 @@ describe('aiModels', () => {
     })
 
     it('should respect customModel flag', () => {
-      expect(
-        isMultiModalAvailable('openai', 'custom-model', true, true)
-      ).toBe(true)
-      expect(
-        isMultiModalAvailable('openai', 'custom-model', false, true)
-      ).toBe(false)
+      expect(isMultiModalAvailable('openai', 'custom-model', true, true)).toBe(
+        true
+      )
+      expect(isMultiModalAvailable('openai', 'custom-model', false, true)).toBe(
+        false
+      )
     })
   })
 
