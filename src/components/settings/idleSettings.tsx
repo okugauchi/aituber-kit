@@ -62,8 +62,13 @@ const IdleSettings = () => {
   const audioMode = settingsStore((s) => s.audioMode)
   const externalLinkageMode = settingsStore((s) => s.externalLinkageMode)
   const slideMode = settingsStore((s) => s.slideMode)
+  const gameCommentaryEnabled = settingsStore((s) => s.gameCommentaryEnabled)
   const isIdleModeDisabled =
-    realtimeAPIMode || audioMode || externalLinkageMode || slideMode
+    realtimeAPIMode ||
+    audioMode ||
+    externalLinkageMode ||
+    slideMode ||
+    gameCommentaryEnabled
 
   // Local state for new phrase input
   const [newPhraseText, setNewPhraseText] = useState('')

@@ -564,6 +564,50 @@ describe('排他エンジン (computeExclusions)', () => {
       expect(corrections.idleModeEnabled).toBe(false)
       expect(corrections.presenceDetectionEnabled).toBe(false)
     })
+
+    it('slideMode ON で gameCommentaryEnabled が OFF', () => {
+      const prev = createBaseState({
+        gameCommentaryEnabled: true,
+      })
+      const incoming = { slideMode: true }
+      const { corrections } = computeExclusions(incoming, prev)
+
+      expect(corrections.gameCommentaryEnabled).toBe(false)
+    })
+  })
+
+  describe('Rule 18: gameCommentary-on', () => {
+    it('gameCommentaryEnabled ON で idleModeEnabled, presenceDetectionEnabled, realtimeAPIMode, audioMode, externalLinkageMode, slideMode が OFF', () => {
+      const prev = createBaseState({
+        idleModeEnabled: true,
+        presenceDetectionEnabled: true,
+        realtimeAPIMode: true,
+        audioMode: true,
+        externalLinkageMode: true,
+        slideMode: true,
+      })
+      const incoming = { gameCommentaryEnabled: true }
+      const { corrections } = computeExclusions(incoming, prev)
+
+      expect(corrections.idleModeEnabled).toBe(false)
+      expect(corrections.presenceDetectionEnabled).toBe(false)
+      expect(corrections.realtimeAPIMode).toBe(false)
+      expect(corrections.audioMode).toBe(false)
+      expect(corrections.externalLinkageMode).toBe(false)
+      expect(corrections.slideMode).toBe(false)
+    })
+  })
+
+  describe('Rule 20: presenceDetection-on-disableGameCommentary', () => {
+    it('presenceDetectionEnabled ON で gameCommentaryEnabled が OFF', () => {
+      const prev = createBaseState({
+        gameCommentaryEnabled: true,
+      })
+      const incoming = { presenceDetectionEnabled: true }
+      const { corrections } = computeExclusions(incoming, prev)
+
+      expect(corrections.gameCommentaryEnabled).toBe(false)
+    })
   })
 
   describe('新モード間の非排他', () => {

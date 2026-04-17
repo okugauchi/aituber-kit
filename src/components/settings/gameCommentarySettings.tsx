@@ -67,8 +67,17 @@ const GameCommentarySettings = () => {
   const audioMode = settingsStore((s) => s.audioMode)
   const externalLinkageMode = settingsStore((s) => s.externalLinkageMode)
   const idleModeEnabled = settingsStore((s) => s.idleModeEnabled)
+  const slideMode = settingsStore((s) => s.slideMode)
+  const presenceDetectionEnabled = settingsStore(
+    (s) => s.presenceDetectionEnabled
+  )
   const isDisabledByExclusion =
-    realtimeAPIMode || audioMode || externalLinkageMode || idleModeEnabled
+    realtimeAPIMode ||
+    audioMode ||
+    externalLinkageMode ||
+    idleModeEnabled ||
+    slideMode ||
+    presenceDetectionEnabled
 
   // マルチモーダル対応チェック
   const selectAIService = settingsStore((s) => s.selectAIService)

@@ -331,7 +331,7 @@ export const exclusionRules: ExclusionRule[] = [
   {
     id: 'gameCommentary-on',
     description:
-      'gameCommentaryEnabled ON時にidleModeEnabled, presenceDetectionEnabled, realtimeAPIMode, audioMode, externalLinkageModeをOFFにする',
+      'gameCommentaryEnabled ON時にidleModeEnabled, presenceDetectionEnabled, realtimeAPIMode, audioMode, externalLinkageMode, slideModeをOFFにする',
     trigger: (_incoming, merged) => merged.gameCommentaryEnabled === true,
     apply: () => ({
       idleModeEnabled: false,
@@ -339,6 +339,7 @@ export const exclusionRules: ExclusionRule[] = [
       realtimeAPIMode: false,
       audioMode: false,
       externalLinkageMode: false,
+      slideMode: false,
     }),
   },
 
@@ -347,6 +348,17 @@ export const exclusionRules: ExclusionRule[] = [
     id: 'idleMode-on-disableGameCommentary',
     description: 'idleModeEnabled ON時にgameCommentaryEnabledをOFFにする',
     trigger: (_incoming, merged) => merged.idleModeEnabled === true,
+    apply: () => ({
+      gameCommentaryEnabled: false,
+    }),
+  },
+
+  // Rule 20: presenceDetectionEnabled ON → ゲーム実況OFF
+  {
+    id: 'presenceDetection-on-disableGameCommentary',
+    description:
+      'presenceDetectionEnabled ON時にgameCommentaryEnabledをOFFにする',
+    trigger: (_incoming, merged) => merged.presenceDetectionEnabled === true,
     apply: () => ({
       gameCommentaryEnabled: false,
     }),
