@@ -94,3 +94,6 @@ promo-video/*
 .mypy_cache
 .swc
 .wrangler
+
+.team/*
+.claude/scheduled_tasks.lock
