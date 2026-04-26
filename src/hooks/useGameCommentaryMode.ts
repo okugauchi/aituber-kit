@@ -478,13 +478,7 @@ export function useGameCommentaryMode({
     if (isRunning && state !== 'disabled') {
       scheduleNext()
     }
-  }, [
-    isRunning,
-    state,
-    clearTimers,
-    getEffectiveCaptureInterval,
-    scheduleNext,
-  ])
+  }, [isRunning, state, clearTimers, getEffectiveCaptureInterval, scheduleNext])
 
   // ----- 実況停止 -----
   const stopCommentary = useCallback(() => {
