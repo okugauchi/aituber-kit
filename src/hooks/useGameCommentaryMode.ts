@@ -14,6 +14,7 @@ import {
 import { GAME_COMMENTARY_BACKGROUND_ANALYSIS } from '@/features/gameCommentary/gameCommentaryTypes'
 
 const MIN_SCHEDULED_CAPTURE_INTERVAL_SECONDS = 3
+const MIN_BACKGROUND_ANALYSIS_INTERVAL_SECONDS = 1
 
 /**
  * ゲーム実況モードの状態型
@@ -63,7 +64,7 @@ export function useGameCommentaryMode({
   const gameCommentaryCaptureInterval = ss.gameCommentaryCaptureInterval ?? 5
   const gameCommentaryContextCount = ss.gameCommentaryContextCount ?? 5
   const gameCommentaryImageQuality = ss.gameCommentaryImageQuality || 0.7
-  const gameCommentaryResizeWidth = ss.gameCommentaryResizeWidth || 1024
+  const gameCommentaryResizeWidth = ss.gameCommentaryResizeWidth ?? 1024
   const gameCommentaryBackgroundAnalysisEnabled =
     ss.gameCommentaryBackgroundAnalysisEnabled === true
   const gameCommentaryBackgroundAnalysisInterval =
@@ -108,6 +109,7 @@ export function useGameCommentaryMode({
   captureIntervalRef.current = gameCommentaryCaptureInterval
   const backgroundAnalysisGenerationRef = useRef(0)
   const queueNextBackgroundAnalysisRef = useRef<() => void>(() => {})
+  const triggerCommentaryRef = useRef<() => void>(() => {})
 
   const getEffectiveCaptureInterval = useCallback(() => {
     return Math.max(
@@ -115,6 +117,13 @@ export function useGameCommentaryMode({
       MIN_SCHEDULED_CAPTURE_INTERVAL_SECONDS
     )
   }, [])
+
+  const getEffectiveBackgroundAnalysisInterval = useCallback(() => {
+    return Math.max(
+      gameCommentaryBackgroundAnalysisInterval,
+      MIN_BACKGROUND_ANALYSIS_INTERVAL_SECONDS
+    )
+  }, [gameCommentaryBackgroundAnalysisInterval])
 
   // Callback refs to avoid stale closures
   const callbackRefs = useRef({
@@ -278,12 +287,12 @@ export function useGameCommentaryMode({
 
       backgroundAnalysisTimerRef.current = setTimeout(() => {
         void runBackgroundSceneAnalysis()
-      }, gameCommentaryBackgroundAnalysisInterval * 1000)
+      }, getEffectiveBackgroundAnalysisInterval() * 1000)
     }
   }, [
     clearBackgroundAnalysisTimer,
     gameCommentaryBackgroundAnalysisEnabled,
-    gameCommentaryBackgroundAnalysisInterval,
+    getEffectiveBackgroundAnalysisInterval,
     runBackgroundSceneAnalysis,
   ])
 
@@ -300,9 +309,8 @@ export function useGameCommentaryMode({
     }
 
     timerRef.current = setTimeout(() => {
-      triggerCommentary()
+      triggerCommentaryRef.current()
     }, interval * 1000)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearTimers, getEffectiveCaptureInterval])
 
   // ----- 実況トリガー -----
@@ -470,6 +478,12 @@ export function useGameCommentaryMode({
     resetBackgroundSceneAnalyses,
     scheduleNext,
   ])
+
+  useEffect(() => {
+    triggerCommentaryRef.current = () => {
+      void triggerCommentary()
+    }
+  }, [triggerCommentary])
 
   // ----- タイマーリセット -----
   const resetTimer = useCallback(() => {

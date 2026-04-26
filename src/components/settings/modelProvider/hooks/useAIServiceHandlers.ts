@@ -3,6 +3,14 @@ import settingsStore from '@/features/stores/settings'
 import { isMultiModalModel, defaultModels } from '@/features/constants/aiModels'
 import { AIService } from '@/features/constants/settings'
 
+const multiModalToggleOnlyServices = new Set<AIService>([
+  'azure',
+  'openrouter',
+  'lmstudio',
+  'ollama',
+  'custom-api',
+])
+
 export const useAIServiceHandlers = () => {
   const updateMultiModalModeForModel = useCallback(
     (service: AIService, model: string) => {
@@ -10,6 +18,10 @@ export const useAIServiceHandlers = () => {
 
       // カスタムモデルの場合は、ユーザーの設定を尊重してマルチモーダルモードを変更しない
       if (currentState.customModel) {
+        return
+      }
+
+      if (multiModalToggleOnlyServices.has(service)) {
         return
       }
 

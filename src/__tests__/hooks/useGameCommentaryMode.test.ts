@@ -6,11 +6,13 @@ import { useGameCommentaryMode } from '@/hooks/useGameCommentaryMode'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import { generateGameCommentary } from '@/features/gameCommentary/generateGameCommentary'
+import { analyzeGameCommentaryScene } from '@/features/gameCommentary/analyzeGameCommentaryScene'
 import { SpeakQueue } from '@/features/messages/speakQueue'
 
 const mockCaptureFrame = jest.fn(() => 'data:image/jpeg;base64,test')
 const mockCaptureAvailable = jest.fn(() => true)
 const mockGenerateGameCommentary = generateGameCommentary as jest.Mock
+const mockAnalyzeGameCommentaryScene = analyzeGameCommentaryScene as jest.Mock
 const mockStopSession = SpeakQueue.stopSession as jest.Mock
 const mockSpeakCharacter = jest.fn()
 
@@ -19,6 +21,7 @@ let homeState: Record<string, unknown>
 let homeSubscriber:
   | ((state: typeof homeState, prevState: typeof homeState) => void)
   | undefined
+let settingsSubscriber: (() => void) | undefined
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -37,7 +40,10 @@ jest.mock('@/features/stores/settings', () => {
     default: Object.assign(mockFn, {
       getState: jest.fn(),
       setState: jest.fn(),
-      subscribe: jest.fn(() => jest.fn()),
+      subscribe: jest.fn((callback: () => void) => {
+        settingsSubscriber = callback
+        return jest.fn()
+      }),
     }),
   }
 })
@@ -67,6 +73,11 @@ jest.mock('@/features/gameCommentary/captureService', () => ({
 jest.mock('@/features/gameCommentary/generateGameCommentary', () => ({
   __esModule: true,
   generateGameCommentary: jest.fn(),
+}))
+
+jest.mock('@/features/gameCommentary/analyzeGameCommentaryScene', () => ({
+  __esModule: true,
+  analyzeGameCommentaryScene: jest.fn(),
 }))
 
 jest.mock('@/features/messages/speakCharacter', () => ({
@@ -152,6 +163,7 @@ describe('useGameCommentaryMode', () => {
     jest.clearAllMocks()
     jest.useFakeTimers()
     homeSubscriber = undefined
+    settingsSubscriber = undefined
     setupSettingsState()
     setupHomeState()
     mockGenerateGameCommentary.mockResolvedValue({
@@ -159,6 +171,7 @@ describe('useGameCommentaryMode', () => {
       emotion: 'neutral',
       sceneDescription: 'テストシーン',
     })
+    mockAnalyzeGameCommentaryScene.mockResolvedValue('背景解析テスト')
   })
 
   afterEach(() => {
@@ -373,5 +386,76 @@ describe('useGameCommentaryMode', () => {
     await flushAsync()
 
     expect(mockGenerateGameCommentary).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves zero resize width as no resize when capturing', async () => {
+    setupSettingsState({ gameCommentaryResizeWidth: 0 })
+
+    renderHook(() => useGameCommentaryMode({}))
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000)
+      await Promise.resolve()
+    })
+
+    await flushAsync()
+
+    expect(mockCaptureFrame).toHaveBeenCalledWith(0, 0.7)
+  })
+
+  it('uses the latest commentary callback when settings change before the scheduled capture', async () => {
+    renderHook(() => useGameCommentaryMode({}))
+
+    await act(async () => {
+      settingsState = {
+        ...settingsState,
+        gameCommentaryResizeWidth: 0,
+      }
+      settingsSubscriber?.()
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000)
+      await Promise.resolve()
+    })
+
+    await flushAsync()
+
+    expect(mockCaptureFrame).toHaveBeenCalledWith(0, 0.7)
+  })
+
+  it('uses a runtime lower bound for background analysis interval', async () => {
+    setupSettingsState({
+      gameCommentaryBackgroundAnalysisEnabled: true,
+      gameCommentaryBackgroundAnalysisInterval: 0,
+    })
+
+    renderHook(() => useGameCommentaryMode({}))
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000)
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(mockGenerateGameCommentary).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(999)
+      await Promise.resolve()
+    })
+
+    expect(mockAnalyzeGameCommentaryScene).not.toHaveBeenCalled()
+
+    await act(async () => {
+      jest.advanceTimersByTime(1)
+      await Promise.resolve()
+    })
+
+    await flushAsync()
+
+    expect(mockAnalyzeGameCommentaryScene).toHaveBeenCalledTimes(1)
   })
 })
