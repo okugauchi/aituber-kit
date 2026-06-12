@@ -320,6 +320,62 @@ export async function mockBrowserAPIs(page: Page) {
     })
 
     HTMLMediaElement.prototype.play = async () => {}
+
+    // 実AudioContextはオーディオデバイス未初期化の環境（CI・ローカルの自動化
+    // ブラウザ）でネイティブ層のハングを起こしメインスレッドが停止することが
+    // あるため、テストではハードウェアに触れないスタブへ差し替える
+    class FakeAudioNode {
+      connect() {
+        return this
+      }
+      disconnect() {}
+    }
+    class FakeAudioContext {
+      state = 'running'
+      sampleRate = 44100
+      currentTime = 0
+      destination = new FakeAudioNode()
+      async close() {
+        this.state = 'closed'
+      }
+      async resume() {
+        this.state = 'running'
+      }
+      async suspend() {
+        this.state = 'suspended'
+      }
+      async decodeAudioData() {
+        throw new Error('decodeAudioData is not supported in e2e tests')
+      }
+      createGain() {
+        return Object.assign(new FakeAudioNode(), { gain: { value: 1 } })
+      }
+      createBufferSource() {
+        return Object.assign(new FakeAudioNode(), {
+          buffer: null,
+          onended: null,
+          start() {},
+          stop() {},
+        })
+      }
+      createAnalyser() {
+        return Object.assign(new FakeAudioNode(), {
+          fftSize: 2048,
+          frequencyBinCount: 1024,
+          getByteFrequencyData() {},
+          getByteTimeDomainData() {},
+          getFloatTimeDomainData() {},
+        })
+      }
+      createMediaStreamSource() {
+        return new FakeAudioNode()
+      }
+      createScriptProcessor() {
+        return Object.assign(new FakeAudioNode(), { onaudioprocess: null })
+      }
+    }
+    ;(window as any).AudioContext = FakeAudioContext
+    ;(window as any).webkitAudioContext = FakeAudioContext
   })
 }
 
