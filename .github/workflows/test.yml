@@ -69,8 +69,8 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Chromium
-        timeout-minutes: 3
-        run: npm run test:e2e:install
+        timeout-minutes: 8
+        run: npx playwright install --only-shell chromium
 
       - name: List E2E tests
         run: npm run test:e2e -- --list
@@ -127,8 +127,8 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Chromium
-        timeout-minutes: 3
-        run: npm run test:e2e:install
+        timeout-minutes: 8
+        run: npx playwright install --only-shell chromium
 
       - name: List production E2E tests
         run: npm run test:e2e:production -- --list
