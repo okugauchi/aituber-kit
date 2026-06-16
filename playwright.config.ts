@@ -7,11 +7,11 @@ const isProductionMode = e2eMode === 'production'
 const nextBin = './node_modules/next/dist/bin/next'
 
 // Playwright同梱のChromium(148系)はローカル環境でdevサーバーからの遅延チャンク取得が
-// 約60秒停止し全テストがタイムアウトするため、ローカルではインストール済みの
-// Chrome(stable)を使用する。CIでは従来通り同梱Chromiumを使う。
+// 約60秒停止し全テストがタイムアウトする。またGitHub ActionsではPlaywright browser
+// installがダウンロード後の展開で停止するため、CI/ローカルともインストール済みの
+// Chrome(stable)を使用する。
 // E2E_BROWSER_CHANNEL で明示的に上書き可能（例: E2E_BROWSER_CHANNEL=chromium）。
-const browserChannel =
-  process.env.E2E_BROWSER_CHANNEL || (process.env.CI ? undefined : 'chrome')
+const browserChannel = process.env.E2E_BROWSER_CHANNEL || 'chrome'
 
 const desktopSpecs = /^(?!.*\.(mobile|production)\.spec\.ts$).*\.spec\.ts$/
 const mobileSpecs = /.*\.mobile\.spec\.ts$/
