@@ -29,6 +29,8 @@ const child = spawn(process.execPath, [nextBin, 'dev', '-p', port], {
     NEXT_PUBLIC_SHOW_INTRODUCTION: 'false',
     NEXT_PUBLIC_MODEL_TYPE: 'pngtuber',
     NEXT_PUBLIC_SELECTED_PNGTUBER_PATH: '/pngtuber/nike01',
+    // .env.localでデモモードが有効だとテスト時にUIが応答不能になるため強制無効化
+    NEXT_PUBLIC_DEMO_MODE: 'false',
   },
 })
 
