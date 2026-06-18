@@ -170,23 +170,11 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
 
     // Handle media stream updates
     useEffect(() => {
-      const video = videoRef.current
-      if (video) {
-        video.srcObject = mediaStream ?? null
-        if (mediaStream) {
-          video.play().catch(console.error)
-        }
+      if (mediaStream && showBackgroundVideo && backgroundVideoRef.current) {
+        backgroundVideoRef.current.srcObject = mediaStream
+        backgroundVideoRef.current.play().catch(console.error)
       }
-
-      const backgroundVideo = backgroundVideoRef.current
-      if (backgroundVideo) {
-        backgroundVideo.srcObject =
-          mediaStream && showBackgroundVideo ? mediaStream : null
-        if (mediaStream && showBackgroundVideo) {
-          backgroundVideo.play().catch(console.error)
-        }
-      }
-    }, [mediaStream, showBackgroundVideo, videoRef])
+    }, [mediaStream, showBackgroundVideo])
 
     const handleCapture = useCallback(() => {
       if (!videoRef.current) return

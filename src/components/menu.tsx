@@ -83,7 +83,6 @@ export const Menu = () => {
     CHAT_LOG_MODE.ASSISTANT
   )
   const [showPermissionModal, setShowPermissionModal] = useState(false)
-  const [captureStream, setCaptureStream] = useState<MediaStream | null>(null)
   const imageFileInputRef = useRef<HTMLInputElement>(null)
 
   // ロングタップ用のステート
@@ -206,72 +205,33 @@ export const Menu = () => {
     }
   }, [youtubePlaying])
 
-  const stopCaptureStream = useCallback(() => {
-    if (captureStream) {
-      captureStream.getTracks().forEach((track) => track.stop())
-      setCaptureStream(null)
-    }
-  }, [captureStream])
-
-  const toggleGameCommentary = useCallback(async () => {
+  const toggleGameCommentary = useCallback(() => {
     const nextPlaying = !gameCommentaryPlaying
+    settingsStore.setState({ gameCommentaryPlaying: nextPlaying })
     if (nextPlaying) {
       // 開始時: キャプチャが未表示なら自動で表示する
       if (!showCapture) {
-        try {
-          if (!navigator.mediaDevices) {
-            throw new Error('Media Devices API non supported.')
-          }
-          const stream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-          })
-          setCaptureStream(stream)
-        } catch (error) {
-          console.error('Error capturing display:', error)
-          setShowPermissionModal(true)
-          return
-        }
         menuStore.setState({ showCapture: true, showWebcam: false })
         homeStore.setState({ webcamStatus: false })
       }
     }
-    settingsStore.setState({ gameCommentaryPlaying: nextPlaying })
   }, [gameCommentaryPlaying, showCapture])
 
-  const toggleCapture = useCallback(async () => {
-    if (showCapture) {
-      stopCaptureStream()
-      menuStore.setState({ showCapture: false })
-      homeStore.setState({ captureStatus: false })
-      return
+  const toggleCapture = useCallback(() => {
+    menuStore.setState(({ showCapture }) => ({ showCapture: !showCapture }))
+    menuStore.setState({ showWebcam: false }) // Captureを表示するときWebcamを非表示にする
+    if (!showCapture) {
+      homeStore.setState({ webcamStatus: false }) // Ensure webcam status is false when enabling capture
     }
-
-    try {
-      if (!navigator.mediaDevices) {
-        throw new Error('Media Devices API non supported.')
-      }
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-      })
-      setCaptureStream(stream)
-      menuStore.setState({ showCapture: true, showWebcam: false })
-      homeStore.setState({ webcamStatus: false })
-    } catch (error) {
-      console.error('Error capturing display:', error)
-      setShowPermissionModal(true)
-      menuStore.setState({ showCapture: false })
-      homeStore.setState({ captureStatus: false })
-    }
-  }, [showCapture, stopCaptureStream])
+  }, [showCapture])
 
   const toggleWebcam = useCallback(() => {
-    stopCaptureStream()
     menuStore.setState(({ showWebcam }) => ({ showWebcam: !showWebcam }))
     menuStore.setState({ showCapture: false }) // Webcamを表示するときCaptureを非表示にする
     if (!showWebcam) {
       homeStore.setState({ captureStatus: false }) // Ensure capture status is false when enabling webcam
     }
-  }, [showWebcam, stopCaptureStream])
+  }, [showWebcam])
 
   return (
     <>
@@ -422,12 +382,7 @@ export const Menu = () => {
         (!slideMode || !slideVisible) &&
         showAssistantText && <AssistantText message={latestAssistantMessage} />}
       {showWebcam && navigator.mediaDevices && <Webcam />}
-      {showCapture && (
-        <Capture
-          initialStream={captureStream}
-          onStreamChange={setCaptureStream}
-        />
-      )}
+      {showCapture && <Capture />}
       {showPermissionModal && (
         <div className="modal">
           <div className="modal-content">
