@@ -394,6 +394,9 @@ npm run deploy:cloudflare
   <a href="https://github.com/sa1p" title="sa1p">
     <img src="https://github.com/sa1p.png" width="40" height="40" alt="sa1p">
   </a>
+  <a href="https://github.com/HarukiExplorer" title="HarukiExplorer">
+    <img src="https://github.com/HarukiExplorer.png" width="40" height="40" alt="HarukiExplorer">
+  </a>
 </p>
 
 他、プライベートスポンサー 複数名
