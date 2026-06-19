@@ -124,6 +124,10 @@ const Capture = () => {
     }
   }
 
+  const stopCapture = useCallback(() => {
+    cleanupStream()
+  }, [cleanupStream])
+
   useEffect(() => {
     return () => {
       cleanupStream()
@@ -135,6 +139,7 @@ const Capture = () => {
       videoRef={videoRef}
       mediaStream={mediaStreamRef.current}
       onToggleSource={startCapture}
+      onClose={stopCapture}
       toggleSourceIcon="24/Reload"
       showToggleButton={true}
     />

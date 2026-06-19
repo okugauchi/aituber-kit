@@ -21,6 +21,7 @@ interface VideoDisplayProps {
   mediaStream?: MediaStream | null
   onCapture?: () => void
   onToggleSource?: () => void
+  onClose?: () => void
   toggleSourceIcon?: string
   toggleSourceDisabled?: boolean
   showToggleButton?: boolean
@@ -34,6 +35,7 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
       mediaStream,
       onCapture,
       onToggleSource,
+      onClose,
       toggleSourceIcon = '24/Roll',
       toggleSourceDisabled = false,
       showToggleButton = true,
@@ -227,6 +229,10 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
     const handleToggleHidden = useCallback(() => {
       settingsStore.setState({ hideVideoDisplay: !hideVideoDisplay })
     }, [hideVideoDisplay])
+
+    const hiddenToggleLabel = hideVideoDisplay
+      ? t('ShowVideoDisplay')
+      : t('HideVideoDisplay')
 
     // Calculate actual video bounds within container
     const updateVideoBounds = useCallback(() => {
@@ -447,13 +453,23 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
                   onClick={handleExpand}
                 />
                 <IconButton
-                  iconName="24/Close"
+                  iconName={hideVideoDisplay ? '24/Hide' : '24/Show'}
                   className="bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled m-2"
                   isProcessing={false}
                   onClick={handleToggleHidden}
-                  title={t('HideVideoDisplay')}
-                  aria-label={t('HideVideoDisplay')}
+                  title={hiddenToggleLabel}
+                  aria-label={hiddenToggleLabel}
                 />
+                {onClose && (
+                  <IconButton
+                    iconName="24/Close"
+                    className="bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled m-2"
+                    isProcessing={false}
+                    onClick={onClose}
+                    title={t('Close')}
+                    aria-label={t('Close')}
+                  />
+                )}
                 <IconButton
                   iconName="24/Shutter"
                   className="z-30 bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled m-2"
@@ -482,17 +498,23 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
               onClick={handleExpand}
             />
             <IconButton
-              iconName={hideVideoDisplay ? '24/Add' : '24/Close'}
+              iconName={hideVideoDisplay ? '24/Hide' : '24/Show'}
               className="bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled m-2"
               isProcessing={false}
               onClick={handleToggleHidden}
-              title={
-                hideVideoDisplay ? t('ShowVideoDisplay') : t('HideVideoDisplay')
-              }
-              aria-label={
-                hideVideoDisplay ? t('ShowVideoDisplay') : t('HideVideoDisplay')
-              }
+              title={hiddenToggleLabel}
+              aria-label={hiddenToggleLabel}
             />
+            {onClose && (
+              <IconButton
+                iconName="24/Close"
+                className="bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled m-2"
+                isProcessing={false}
+                onClick={onClose}
+                title={t('Close')}
+                aria-label={t('Close')}
+              />
+            )}
             <IconButton
               iconName="24/Shutter"
               className="z-30 bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled m-2"
