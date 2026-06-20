@@ -112,18 +112,7 @@ export class SpeakQueue {
     SpeakQueue.stopTokenCounter++
     instance.clearQueue()
 
-    const hs = homeStore.getState()
-    const ss = settingsStore.getState()
-    if (ss.modelType === 'live2d') {
-      Live2DHandler.stopSpeaking()
-    } else if (ss.modelType === 'pngtuber') {
-      PNGTuberHandler.stopSpeaking()
-    } else {
-      hs.viewer.model?.stopSpeaking()
-      if (hs.viewer.model?.poseManager?.isActive) {
-        hs.viewer.model?.poseManager?.resetToIdle(hs.viewer.model)
-      }
-    }
+    SpeakQueue.stopCurrentModelSpeaking()
     homeStore.setState({ isSpeaking: false })
   }
 
