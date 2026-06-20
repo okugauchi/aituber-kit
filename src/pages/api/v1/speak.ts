@@ -39,7 +39,11 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).json({ error: 'Client ID is required' })
   }
 
-  const messages = normalizeMessages(req.body?.messages ?? req.body?.text)
+  const normalizedFromMessages = normalizeMessages(req.body?.messages)
+  const messages =
+    normalizedFromMessages.length > 0
+      ? normalizedFromMessages
+      : normalizeMessages(req.body?.text)
   if (messages.length === 0) {
     return res.status(400).json({ error: 'Text or messages are required' })
   }

@@ -187,6 +187,20 @@ describe('/api/messages', () => {
       )
     })
 
+    it('should return 400 when type query parameter is invalid', () => {
+      const req = createMockReq({
+        method: 'POST',
+        query: { clientId: 'client1', type: 'invalid_type' },
+        body: { messages: ['hello'] },
+      })
+      const res = createMockRes()
+
+      handler(req, res)
+
+      expect(res._status).toBe(400)
+      expect(res._json).toEqual({ error: 'Invalid type' })
+    })
+
     it('should accumulate messages for the same client', () => {
       // First POST
       handler(

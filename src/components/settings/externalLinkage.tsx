@@ -4,7 +4,7 @@ import { ToggleSwitch } from '../toggleSwitch'
 import { useCallback } from 'react'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import externalLinkageWebSocketStore from '@/features/stores/externalLinkageWebSocketStore'
-import { TextButton } from '../textButton'
+import { TextButton } from '@/components/textButton'
 import { createExternalLinkageCancelEvent } from '@/features/externalLinkage/externalLinkageProtocol'
 
 const SEND_EXAMPLE = `{
@@ -82,13 +82,13 @@ const ExternalLinkage = () => {
       </div>
 
       {externalLinkageMode && (
-        <div className="my-6 border border-gray-200 rounded-lg p-4 space-y-4">
+        <div className="theme-surface-popover my-6 rounded-lg border p-4 space-y-4">
           <div>
             <div className="text-sm font-bold mb-1">
               {t('ExternalLinkageUrl')}
             </div>
             <input
-              className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+              className="theme-surface-control text-ellipsis px-4 py-2 w-full sm:w-col-span-2 rounded-lg"
               type="text"
               value={externalLinkageUrl}
               onChange={(e) =>
@@ -151,7 +151,7 @@ const ExternalLinkage = () => {
               </div>
             )}
             {lastError && (
-              <div className="text-red-500 sm:col-span-2">
+              <div className="text-secondary sm:col-span-2">
                 <span className="font-bold">
                   {t('ExternalLinkageLastError')}:{' '}
                 </span>
@@ -159,7 +159,7 @@ const ExternalLinkage = () => {
               </div>
             )}
             {requestError && (
-              <div className="text-red-500 sm:col-span-2">
+              <div className="text-secondary sm:col-span-2">
                 <span className="font-bold">
                   {t('ExternalLinkageRequestError')}:{' '}
                 </span>

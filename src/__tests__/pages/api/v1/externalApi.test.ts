@@ -277,6 +277,7 @@ describe('/api/v1 external API', () => {
     commands(
       createMockReq({
         method: 'GET',
+        headers: { authorization: 'Bearer test-api-key' },
         query: { clientId: 'client1' },
       }),
       commandRes
@@ -312,6 +313,7 @@ describe('/api/v1 external API', () => {
     commands(
       createMockReq({
         method: 'GET',
+        headers: { authorization: 'Bearer test-api-key' },
         query: { clientId: 'unknown-client' },
       }),
       commandsRes
@@ -340,14 +342,32 @@ describe('/api/v1 external API', () => {
     )
   })
 
+  it('requires authentication before updating client status', () => {
+    const statusUpdate = require('@/pages/api/v1/client/status').default
+    const unauthenticatedRes = createMockRes()
+
+    statusUpdate(
+      createMockReq({
+        method: 'POST',
+        query: { clientId: 'client1' },
+        body: { connected: true },
+      }),
+      unauthenticatedRes
+    )
+
+    expect(unauthenticatedRes._status).toBe(401)
+  })
+
   it('returns the latest client status and queue summary', () => {
     const statusUpdate = require('@/pages/api/v1/client/status').default
     const status = require('@/pages/api/v1/status').default
     const speak = require('@/pages/api/v1/speak').default
 
+    const statusUpdateRes = createMockRes()
     statusUpdate(
       createMockReq({
         method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
         query: { clientId: 'client1' },
         body: {
           connected: true,
@@ -358,8 +378,10 @@ describe('/api/v1 external API', () => {
           voiceEngine: 'voicevox',
         },
       }),
-      createMockRes()
+      statusUpdateRes
     )
+
+    expect(statusUpdateRes._status).toBe(200)
 
     speak(
       createMockReq({
@@ -430,6 +452,37 @@ describe('/api/v1 external API', () => {
       expect.arrayContaining([
         expect.objectContaining({ type: 'message_queued' }),
       ])
+    )
+  })
+
+  it('falls back to text when speak messages is an empty array', () => {
+    const speak = require('@/pages/api/v1/speak').default
+    const messages = require('@/pages/api/messages').default
+
+    const speakRes = createMockRes()
+    speak(
+      createMockReq({
+        method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
+        query: { clientId: 'client1' },
+        body: { messages: [], text: 'fallback text' },
+      }),
+      speakRes
+    )
+
+    expect(speakRes._status).toBe(202)
+
+    const getRes = createMockRes()
+    messages(
+      createMockReq({
+        method: 'GET',
+        query: { clientId: 'client1' },
+      }),
+      getRes
+    )
+
+    expect((getRes._json as { messages: unknown[] }).messages[0]).toEqual(
+      expect.objectContaining({ message: 'fallback text' })
     )
   })
 })

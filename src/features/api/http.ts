@@ -49,10 +49,12 @@ export const getClientIdFromRequest = (
 ): string => {
   const queryClientId = req.query.clientId
   if (typeof bodyClientId === 'string') {
-    return bodyClientId.trim()
+    const trimmedBodyClientId = bodyClientId.trim()
+    if (trimmedBodyClientId) return trimmedBodyClientId
   }
   if (typeof queryClientId === 'string') {
-    return queryClientId.trim()
+    const trimmedQueryClientId = queryClientId.trim()
+    if (trimmedQueryClientId) return trimmedQueryClientId
   }
   return ''
 }

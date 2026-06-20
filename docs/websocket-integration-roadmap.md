@@ -6,7 +6,7 @@ AITuberKitの外部連携モードを、既存機能を壊さずにリッチなW
 
 現行実装は `ws://localhost:8000/ws` に接続し、シンプルなJSONメッセージを送受信する構成である。テキスト、画像、ストリーミング応答、server initiated message などの基礎機能はあるが、接続状態、再接続、heartbeat、ack/error、cancel、プロトコルバージョン管理が不足している。
 
-サーバー側は `tegnike/aituber-server` が現行の連携先であり、ローカルでは `/Users/user/WorkSpace/aituber-projects/aituber-server` にある。`aituber-kit-server` という名称のリポジトリは確認できず、現行ドキュメントも `tegnike/aituber-server` を参照している。
+サーバー側は `tegnike/aituber-server` が現行の連携先である。現行ドキュメントも `tegnike/aituber-server` を参照している。
 
 ## 方針
 
@@ -330,14 +330,14 @@ server内部では全メッセージを `v2` として扱い、`v1` は入力境
 
 ### server
 
-| 領域                      | ファイル                                                                                          | 役割                                                                  |
-| ------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Protocol schema           | `/Users/user/WorkSpace/aituber-projects/aituber-server/app/protocol.py`                           | `v2` envelope、ack生成、`v1` input正規化                              |
-| Connection manager        | `/Users/user/WorkSpace/aituber-projects/aituber-server/app/connection_manager.py`                 | 接続一覧、protocol version、接続直後の `session.ready`、broadcast管理 |
-| WebSocket service         | `/Users/user/WorkSpace/aituber-projects/aituber-server/app/services/websocket_service.py`         | `v1` / `v2` 応答送信、`chat.start` / `chat.delta` / `chat.done` 変換  |
-| WebSocket session service | `/Users/user/WorkSpace/aituber-projects/aituber-server/app/services/websocket_session_service.py` | 受信message dispatch、ack、ping/pong、cancel、backend stream実行      |
-| Agent backend             | `/Users/user/WorkSpace/aituber-projects/aituber-server/app/agent_backends.py`                     | `EchoAgentBackend` と `SlowEchoAgentBackend` の切替                   |
-| Router                    | `/Users/user/WorkSpace/aituber-projects/aituber-server/app/routers/base.py`                       | 分離したconnection managerを利用                                      |
+| 領域                      | ファイル                                                           | 役割                                                                  |
+| ------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Protocol schema           | `tegnike/aituber-server:app/protocol.py`                           | `v2` envelope、ack生成、`v1` input正規化                              |
+| Connection manager        | `tegnike/aituber-server:app/connection_manager.py`                 | 接続一覧、protocol version、接続直後の `session.ready`、broadcast管理 |
+| WebSocket service         | `tegnike/aituber-server:app/services/websocket_service.py`         | `v1` / `v2` 応答送信、`chat.start` / `chat.delta` / `chat.done` 変換  |
+| WebSocket session service | `tegnike/aituber-server:app/services/websocket_session_service.py` | 受信message dispatch、ack、ping/pong、cancel、backend stream実行      |
+| Agent backend             | `tegnike/aituber-server:app/agent_backends.py`                     | `EchoAgentBackend` と `SlowEchoAgentBackend` の切替                   |
+| Router                    | `tegnike/aituber-server:app/routers/base.py`                       | 分離したconnection managerを利用                                      |
 
 ## `v2` 利用例
 
@@ -391,7 +391,7 @@ serverからのstream応答:
 AITuberKit側の接続先は `externalLinkageUrl` で管理する。環境変数では次を使う。
 
 ```env
-NEXT_PUBLIC_EXTERNAL_LINKAGE_URL="ws://localhost:8000/ws"
+NEXT_PUBLIC_EXTERNAL_LINKAGE_URL=ws://localhost:8000/ws
 ```
 
 server側は通常 `EchoAgentBackend` を使う。cancel確認では、次の環境変数でslow echo backendに切り替える。

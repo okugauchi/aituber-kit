@@ -65,9 +65,11 @@ const useExternalLinkage = ({ handleReceiveTextFromWs }: Params) => {
           ? { ...message, role: 'code' }
           : message
 
-      processingQueueRef.current = processingQueueRef.current.then(() =>
-        processMessage(processedMessage)
-      )
+      processingQueueRef.current = processingQueueRef.current
+        .then(() => processMessage(processedMessage))
+        .catch((error) => {
+          console.error('Failed to process external linkage message:', error)
+        })
     },
     [processMessage]
   )

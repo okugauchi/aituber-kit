@@ -26,6 +26,11 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
 
   const clientId = req.query.clientId as string
   const type = (req.query.type as MessageType) || 'direct_send'
+  const allowedTypes: MessageType[] = [
+    'direct_send',
+    'ai_generate',
+    'user_input',
+  ]
 
   if (!clientId) {
     res.status(400).json({ error: 'Client ID is required' })
@@ -54,6 +59,11 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     cleanupClientQueues()
+
+    if (!allowedTypes.includes(type)) {
+      res.status(400).json({ error: 'Invalid type' })
+      return
+    }
 
     enqueueMessages({
       clientId,

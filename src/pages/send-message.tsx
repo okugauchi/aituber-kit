@@ -539,19 +539,19 @@ print(response.json())`
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] text-slate-900">
-      <header className="border-b border-slate-200 bg-slate-950 text-white">
+    <div className="min-h-screen bg-theme text-theme-default">
+      <header className="border-b border-primary/20 bg-base-dark text-theme">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 md:px-8">
           <div className="flex flex-col gap-4">
             <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase text-cyan-100">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-bold uppercase text-theme">
                 <CommandLineIcon className="h-4 w-4" aria-hidden="true" />
                 External API
               </div>
               <h1 className="text-3xl font-bold tracking-normal md:text-4xl">
                 {t('ApiConsole.title')}
               </h1>
-              <p className="mt-2 text-sm leading-6 text-slate-300 md:text-base">
+              <p className="mt-2 text-sm leading-6 text-theme opacity-80 md:text-base">
                 {t('ApiConsole.description')}
               </p>
             </div>
@@ -561,8 +561,8 @@ print(response.json())`
 
       <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 md:px-8 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-5 lg:self-start">
-          <nav className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200">
+          <nav className="theme-surface-popover overflow-hidden rounded-lg border shadow-sm">
+            <div className="border-b border-primary/15">
               <button
                 type="button"
                 onClick={() => setEndpointsOpen((open) => !open)}
@@ -570,14 +570,14 @@ print(response.json())`
                 aria-expanded={endpointsOpen}
               >
                 <span className="flex min-w-0 items-center gap-2 text-sm font-bold">
-                  <ServerStackIcon className="h-5 w-5 shrink-0 text-slate-500" />
+                  <ServerStackIcon className="h-5 w-5 shrink-0 text-primary" />
                   <span>Endpoints</span>
-                  <span className="min-w-0 truncate rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 lg:hidden">
+                  <span className="min-w-0 truncate rounded-md bg-primary/10 px-2 py-1 text-xs font-bold text-primary lg:hidden">
                     {selectedEndpoint.method} {selectedEndpoint.label}
                   </span>
                 </span>
                 <ChevronDownIcon
-                  className={`h-5 w-5 shrink-0 text-slate-500 transition lg:hidden ${
+                  className={`h-5 w-5 shrink-0 text-primary transition lg:hidden ${
                     endpointsOpen ? 'rotate-180' : ''
                   }`}
                   aria-hidden="true"
@@ -588,9 +588,9 @@ print(response.json())`
               {(['v1', 'legacy'] as const).map((group) => (
                 <div
                   key={group}
-                  className="border-b border-slate-100 p-3 last:border-b-0"
+                  className="border-b border-primary/10 p-3 last:border-b-0"
                 >
-                  <div className="mb-2 text-xs font-bold uppercase text-slate-500">
+                  <div className="mb-2 text-xs font-bold uppercase text-primary">
                     {group === 'v1'
                       ? t('ApiConsole.v1Endpoints')
                       : t('ApiConsole.legacyEndpoints')}
@@ -605,19 +605,19 @@ print(response.json())`
                           onClick={() => handleEndpointChange(endpoint)}
                           className={`group flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                             selectedId === endpoint.id
-                              ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                              : 'border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50'
+                              ? 'border-primary bg-primary text-theme shadow-sm'
+                              : 'border-transparent bg-transparent text-theme-default hover:border-primary/30 hover:bg-primary/10'
                           }`}
                         >
                           <span
                             className={`inline-flex w-12 justify-center rounded-md px-2 py-1 text-[11px] font-bold ${
                               endpoint.method === 'GET'
                                 ? selectedId === endpoint.id
-                                  ? 'bg-emerald-400/20 text-emerald-100'
-                                  : 'bg-emerald-50 text-emerald-700'
+                                  ? 'bg-secondary/20 text-theme'
+                                  : 'bg-secondary/10 text-secondary'
                                 : selectedId === endpoint.id
-                                  ? 'bg-cyan-400/20 text-cyan-100'
-                                  : 'bg-cyan-50 text-cyan-700'
+                                  ? 'bg-secondary/20 text-theme'
+                                  : 'bg-primary/10 text-primary'
                             }`}
                           >
                             {endpoint.method}
@@ -635,34 +635,34 @@ print(response.json())`
         </aside>
 
         <div className="grid min-w-0 gap-5">
-          <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2">
+          <section className="theme-surface-popover grid gap-3 rounded-lg border p-4 shadow-sm md:grid-cols-2">
             <label
               className={`flex flex-col gap-2 text-sm font-bold ${
                 selectedEndpoint.requiresApiKey ? '' : 'md:col-span-2'
               }`}
             >
               <span className="flex items-center gap-2">
-                <ShieldCheckIcon className="h-5 w-5 text-slate-500" />
+                <ShieldCheckIcon className="h-5 w-5 text-primary" />
                 {t('ClientID')}
               </span>
               <input
                 type="text"
                 value={clientId}
                 onChange={(event) => setClientId(event.target.value)}
-                className="h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                className="theme-surface-control h-11 rounded-lg border px-3 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </label>
             {selectedEndpoint.requiresApiKey && (
               <label className="flex flex-col gap-2 text-sm font-bold">
                 <span className="flex items-center gap-2">
-                  <KeyIcon className="h-5 w-5 text-slate-500" />
+                  <KeyIcon className="h-5 w-5 text-primary" />
                   {t('ApiConsole.apiKey')}
                 </span>
                 <input
                   type="password"
                   value={apiKey}
                   onChange={(event) => setApiKey(event.target.value)}
-                  className="h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                  className="theme-surface-control h-11 rounded-lg border px-3 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   placeholder={t('ApiConsole.apiKeyPlaceholder')}
                 />
               </label>
@@ -670,24 +670,24 @@ print(response.json())`
           </section>
 
           <section className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-            <div className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 p-4">
+            <div className="theme-surface-popover min-w-0 rounded-lg border shadow-sm">
+              <div className="border-b border-primary/15 p-4">
                 <div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-md bg-slate-950 px-2.5 py-1 text-xs font-bold text-white">
+                      <span className="rounded-md bg-primary px-2.5 py-1 text-xs font-bold text-theme">
                         {selectedEndpoint.method}
                       </span>
-                      <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                      <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
                         {selectedEndpoint.requiresApiKey
                           ? 'API Key'
                           : 'No Auth'}
                       </span>
-                      <h2 className="text-xl font-bold text-slate-950">
+                      <h2 className="text-xl font-bold text-theme-default">
                         {selectedEndpoint.label}
                       </h2>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                    <p className="mt-2 text-sm leading-6 text-text-primary">
                       {selectedEndpoint.description}
                     </p>
                   </div>
@@ -696,42 +696,42 @@ print(response.json())`
 
               <div className="grid min-w-0 gap-4 p-4">
                 <div className="min-w-0">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
-                    <BoltIcon className="h-5 w-5 text-slate-500" />
+                  <div className="mb-2 flex items-center gap-2 text-sm font-bold text-text-primary">
+                    <BoltIcon className="h-5 w-5 text-primary" />
                     Endpoint URL
                   </div>
-                  <div className="min-w-0 overflow-auto rounded-lg bg-slate-950 px-3 py-3 font-mono text-xs text-slate-100">
+                  <div className="min-w-0 overflow-auto rounded-lg bg-base-dark px-3 py-3 font-mono text-xs text-theme">
                     {buildUrl().toString()}
                   </div>
                 </div>
 
                 <div className="min-w-0">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
-                    <CodeBracketSquareIcon className="h-5 w-5 text-slate-500" />
+                  <div className="mb-2 flex items-center gap-2 text-sm font-bold text-text-primary">
+                    <CodeBracketSquareIcon className="h-5 w-5 text-primary" />
                     Parameters
                   </div>
-                  <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="overflow-hidden rounded-lg border border-primary/20">
                     {selectedEndpoint.fields.map((field) => (
                       <div
                         key={field.name}
-                        className="grid gap-2 border-b border-slate-200 bg-white p-3 last:border-b-0 md:grid-cols-[180px_minmax(0,1fr)]"
+                        className="grid gap-2 border-b border-primary/10 p-3 last:border-b-0 md:grid-cols-[180px_minmax(0,1fr)]"
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-bold text-slate-900">
+                            <code className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-xs font-bold text-primary">
                               {field.name}
                             </code>
                             {field.required && (
-                              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
+                              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
                                 required
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 font-mono text-xs text-slate-500">
+                          <div className="mt-1 font-mono text-xs text-text-primary">
                             {field.type}
                           </div>
                         </div>
-                        <p className="min-w-0 text-sm leading-6 text-slate-700">
+                        <p className="min-w-0 text-sm leading-6 text-theme-default">
                           {field.description}
                         </p>
                       </div>
@@ -742,46 +742,46 @@ print(response.json())`
                 {selectedEndpoint.method === 'POST' && (
                   <div className="grid min-w-0 gap-3">
                     {selectedEndpoint.id === 'chat' && (
-                      <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-sm leading-6 text-slate-700">
-                        <div className="mb-1 font-bold text-slate-900">
+                      <div className="rounded-lg border border-primary/20 bg-primary/10 p-3 text-sm leading-6 text-theme-default">
+                        <div className="mb-1 font-bold text-theme-default">
                           mode
                         </div>
                         <div>
-                          <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-cyan-800">
+                          <code className="rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             user_input
                           </code>
                           :
                           画面下の入力欄から送ったのと同じ扱いです。現在のキャラクター設定、チャット履歴、通常の送信フローを使います。
                         </div>
                         <div>
-                          <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-cyan-800">
+                          <code className="rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             ai_generate
                           </code>
                           : 外部API側でAI生成を明示する互換モードです。
-                          <code className="mx-1 rounded bg-white px-1.5 py-0.5 font-mono text-xs text-cyan-800">
+                          <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             systemPrompt
                           </code>
                           や
-                          <code className="mx-1 rounded bg-white px-1.5 py-0.5 font-mono text-xs text-cyan-800">
+                          <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             useCurrentSystemPrompt
                           </code>
                           を指定でき、旧APIの
-                          <code className="mx-1 rounded bg-white px-1.5 py-0.5 font-mono text-xs text-cyan-800">
+                          <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             type=ai_generate
                           </code>
                           に相当します。
                         </div>
                       </div>
                     )}
-                    <label className="flex min-w-0 flex-col gap-2 text-sm font-bold text-slate-700">
+                    <label className="flex min-w-0 flex-col gap-2 text-sm font-bold text-text-primary">
                       <span className="flex items-center gap-2">
-                        <CodeBracketSquareIcon className="h-5 w-5 text-slate-500" />
+                        <CodeBracketSquareIcon className="h-5 w-5 text-primary" />
                         {t('ApiConsole.requestBody')}
                       </span>
                       <textarea
                         value={requestBody}
                         onChange={(event) => setRequestBody(event.target.value)}
-                        className="min-h-[260px] w-full min-w-0 rounded-lg border border-slate-300 bg-slate-50 p-3 font-mono text-sm font-normal leading-6 text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
+                        className="theme-surface-control min-h-[260px] w-full min-w-0 rounded-lg border p-3 font-mono text-sm font-normal leading-6 text-theme-default outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                         spellCheck={false}
                       />
                     </label>
@@ -791,15 +791,15 @@ print(response.json())`
             </div>
 
             <div className="grid min-w-0 content-start gap-5">
-              <div className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
-                <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
+              <div className="theme-surface-popover min-w-0 rounded-lg border shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-primary/15 px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
-                      <CommandLineIcon className="h-5 w-5 text-slate-500" />
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-theme-default">
+                      <CommandLineIcon className="h-5 w-5 text-primary" />
                       実行コード
                     </h2>
                   </div>
-                  <div className="flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1">
+                  <div className="flex flex-wrap gap-1 rounded-lg bg-primary/10 p-1">
                     {codeSampleTabs.map((sample) => (
                       <button
                         key={sample.id}
@@ -807,8 +807,8 @@ print(response.json())`
                         onClick={() => setSelectedSample(sample.id)}
                         className={`rounded-md px-3 py-1.5 text-sm font-bold transition ${
                           selectedSample === sample.id
-                            ? 'bg-white text-slate-950 shadow-sm'
-                            : 'text-slate-600 hover:text-slate-950'
+                            ? 'bg-primary text-theme shadow-sm'
+                            : 'text-text-primary hover:text-primary'
                         }`}
                       >
                         {sample.label}
@@ -823,17 +823,17 @@ print(response.json())`
                       onClick={() => copyToClipboard(getSelectedCodeSample())}
                       aria-label="コードをコピー"
                       title="コードをコピー"
-                      className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/10 text-slate-200 transition hover:bg-white/20 hover:text-white"
+                      className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border border-primary/20 bg-primary/20 text-theme transition hover:bg-primary/30"
                     >
                       <ClipboardDocumentIcon className="h-5 w-5" />
                     </button>
                     {copyStatus && (
-                      <span className="absolute right-12 top-2 z-10 inline-flex h-8 items-center gap-1 rounded-md bg-emerald-400/15 px-2 text-xs font-bold text-emerald-100">
+                      <span className="absolute right-12 top-2 z-10 inline-flex h-8 items-center gap-1 rounded-md bg-secondary/20 px-2 text-xs font-bold text-theme">
                         <CheckCircleIcon className="h-4 w-4" />
                         {copyStatus}
                       </span>
                     )}
-                    <pre className="max-h-64 min-w-0 overflow-auto rounded-lg bg-slate-950 p-3 pr-12 text-xs leading-5 text-slate-100">
+                    <pre className="max-h-64 min-w-0 overflow-auto rounded-lg bg-base-dark p-3 pr-12 text-xs leading-5 text-theme">
                       <code>{getSelectedCodeSample()}</code>
                     </pre>
                   </div>
@@ -841,7 +841,7 @@ print(response.json())`
                     type="button"
                     onClick={handleSubmit}
                     disabled={isSending}
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-theme transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSending ? (
                       <BoltIcon className="h-5 w-5 animate-pulse" />
@@ -853,18 +853,18 @@ print(response.json())`
                 </div>
               </div>
 
-              <div className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                  <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
-                    <PaperAirplaneIcon className="h-5 w-5 text-slate-500" />
+              <div className="theme-surface-popover min-w-0 rounded-lg border shadow-sm">
+                <div className="flex items-center justify-between border-b border-primary/15 px-4 py-3">
+                  <h2 className="flex items-center gap-2 text-lg font-bold text-theme-default">
+                    <PaperAirplaneIcon className="h-5 w-5 text-primary" />
                     {t('ApiConsole.response')}
                   </h2>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
                     JSON
                   </span>
                 </div>
                 <div className="p-4">
-                  <pre className="min-h-[220px] overflow-auto rounded-lg bg-slate-950 p-4 text-sm leading-6 text-slate-100">
+                  <pre className="min-h-[220px] overflow-auto rounded-lg bg-base-dark p-4 text-sm leading-6 text-theme">
                     <code>{responseText || t('ApiConsole.noResponse')}</code>
                   </pre>
                 </div>

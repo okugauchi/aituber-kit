@@ -42,6 +42,11 @@ type ReceivedCommand = {
   reason?: string
 }
 
+const getClientApiHeaders = () => {
+  const apiKey = process.env.NEXT_PUBLIC_AITUBERKIT_API_KEY
+  return apiKey ? { Authorization: `Bearer ${apiKey}` } : null
+}
+
 const MessageReceiver = () => {
   const [lastTimestamp, setLastTimestamp] = useState(0)
   const clientId = settingsStore((state) => state.clientId)
@@ -197,6 +202,9 @@ const MessageReceiver = () => {
     if (!clientId || isRestrictedMode) return
 
     const reportStatus = async () => {
+      const authHeaders = getClientApiHeaders()
+      if (!authHeaders) return
+
       const hs = homeStore.getState()
       const ss = settingsStore.getState()
 
@@ -205,6 +213,7 @@ const MessageReceiver = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...authHeaders,
           },
           body: JSON.stringify({
             connected: true,
@@ -223,9 +232,13 @@ const MessageReceiver = () => {
     }
 
     const fetchCommands = async () => {
+      const authHeaders = getClientApiHeaders()
+      if (!authHeaders) return
+
       try {
         const response = await fetch(
-          `/api/v1/client/commands/?clientId=${clientId}`
+          `/api/v1/client/commands/?clientId=${clientId}`,
+          { headers: authHeaders }
         )
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -309,11 +322,11 @@ const MessageReceiver = () => {
       }
     }
 
-    void safeFetchMessages()
     void safeFetchCommands()
+    void safeFetchMessages()
     void safeReportStatus()
-    const intervalId = setInterval(() => void safeFetchMessages(), 1000)
     const commandIntervalId = setInterval(() => void safeFetchCommands(), 1000)
+    const intervalId = setInterval(() => void safeFetchMessages(), 1000)
     const statusIntervalId = setInterval(() => void safeReportStatus(), 2000)
 
     return () => {

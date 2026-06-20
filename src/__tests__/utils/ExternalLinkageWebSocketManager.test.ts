@@ -91,6 +91,30 @@ describe('ExternalLinkageWebSocketManager', () => {
     expect(mockWs.listeners.close).toHaveLength(1)
   })
 
+  it('handles connectWebsocket exceptions as connection errors', () => {
+    mockConnectWebsocket.mockImplementationOnce(() => {
+      throw new Error('invalid url')
+    })
+    const manager = new ExternalLinkageWebSocketManager(
+      mockT,
+      handlers,
+      mockConnectWebsocket,
+      { onStatusChange: mockStatusChange }
+    )
+
+    manager.connect()
+
+    expect(mockStatusChange).toHaveBeenCalledWith('closed', {
+      lastError: 'Toasts.WebSocketConnectionError',
+    })
+    expect(mockAddToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tag: 'external-linkage-websocket-connection-error',
+        type: 'error',
+      })
+    )
+  })
+
   it('catches async message handler failures', async () => {
     handlers.onMessage.mockRejectedValueOnce(new Error('bad payload'))
     const manager = new ExternalLinkageWebSocketManager(

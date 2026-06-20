@@ -133,7 +133,13 @@ export const emitApiEvent = (
   const state = getGatewayState()
 
   state.recentEvents = [...state.recentEvents, event].slice(-RECENT_EVENT_LIMIT)
-  state.eventListeners.forEach((listener) => listener(event))
+  state.eventListeners.forEach((listener) => {
+    try {
+      listener(event)
+    } catch (error) {
+      console.error('API event listener failed:', error)
+    }
+  })
 
   return event
 }
@@ -163,6 +169,11 @@ export const cleanupClientQueues = () => {
   for (const clientId of Object.keys(state.queuesPerClient)) {
     if (now - state.queuesPerClient[clientId].lastAccessed > CLIENT_TIMEOUT) {
       delete state.queuesPerClient[clientId]
+    }
+  }
+  for (const clientId of Object.keys(state.statusesPerClient)) {
+    if (now - state.statusesPerClient[clientId].lastSeenAt > CLIENT_TIMEOUT) {
+      delete state.statusesPerClient[clientId]
     }
   }
 }

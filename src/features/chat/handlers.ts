@@ -826,7 +826,21 @@ export const handleSendChatFn =
         if ('id' in wsPayload) {
           externalWsState.startRequest(wsPayload.id)
         }
-        externalWsManager.websocket.send(JSON.stringify(wsPayload))
+        try {
+          externalWsManager.websocket.send(JSON.stringify(wsPayload))
+        } catch (error) {
+          console.error('Failed to send external linkage message:', error)
+          if ('id' in wsPayload) {
+            externalWsState.failRequest(wsPayload.id, 'WebSocket send failed')
+          }
+          homeStore.setState({ chatProcessing: false })
+          toastStore.getState().addToast({
+            message: i18next.t('Toasts.WebSocketConnectionError'),
+            type: 'error',
+            tag: 'external-linkage-websocket-send-error',
+          })
+          return
+        }
 
         if (modalImage) {
           homeStore.setState({ modalImage: '' })

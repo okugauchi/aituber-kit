@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { dequeueCommands } from '@/features/api/messageGateway'
 import {
   getClientIdFromRequest,
+  requireApiKey,
   sendMethodNotAllowed,
 } from '@/features/api/http'
 import {
@@ -19,6 +20,8 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
     return sendMethodNotAllowed(res)
   }
+
+  if (!requireApiKey(req, res)) return
 
   const clientId = getClientIdFromRequest(req)
   if (!clientId) {

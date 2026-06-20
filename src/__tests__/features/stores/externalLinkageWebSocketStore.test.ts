@@ -65,12 +65,22 @@ describe('externalLinkageWebSocketStore', () => {
     externalLinkageWebSocketStore
       .getState()
       .initializeWebSocket(mockT, mockHandlers, mockConnectWebsocket)
+    externalLinkageWebSocketStore.setState({
+      lastError: 'old error',
+      lastAckAt: '2026-01-01T00:00:00.000Z',
+      lastRequestId: 'msg_old',
+      requestError: 'request failed',
+    })
 
     externalLinkageWebSocketStore.getState().disconnect()
 
     expect(mockDisconnect).toHaveBeenCalledTimes(1)
     expect(externalLinkageWebSocketStore.getState().wsManager).toBeNull()
     expect(externalLinkageWebSocketStore.getState().status).toBe('idle')
+    expect(externalLinkageWebSocketStore.getState().lastError).toBeNull()
+    expect(externalLinkageWebSocketStore.getState().lastAckAt).toBeNull()
+    expect(externalLinkageWebSocketStore.getState().lastRequestId).toBeNull()
+    expect(externalLinkageWebSocketStore.getState().requestError).toBeNull()
   })
 
   it('reconnects through the manager without incrementing scheduled retry count', () => {

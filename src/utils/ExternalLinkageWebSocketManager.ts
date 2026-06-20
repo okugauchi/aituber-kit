@@ -118,7 +118,22 @@ export class ExternalLinkageWebSocketManager {
       tag: 'external-linkage-websocket-connection-info',
     })
 
-    this.ws = this.connectWebsocket()
+    try {
+      this.ws = this.connectWebsocket()
+    } catch (error) {
+      console.error('External linkage WebSocket connection failed:', error)
+      this.removeToast()
+      this.updateStatus('closed', {
+        lastError: this.t('Toasts.WebSocketConnectionError'),
+      })
+      toastStore.getState().addToast({
+        message: this.t('Toasts.WebSocketConnectionError'),
+        type: 'error',
+        duration: 5000,
+        tag: 'external-linkage-websocket-connection-error',
+      })
+      return
+    }
 
     if (!this.ws) {
       this.updateStatus('closed', {
