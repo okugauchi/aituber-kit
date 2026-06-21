@@ -9,6 +9,7 @@ import { aiServiceOptions } from './modelProvider/utils/aiServiceConfigs'
 import { useAIServiceHandlers } from './modelProvider/hooks/useAIServiceHandlers'
 import { useModelProviderState } from './modelProvider/hooks/useModelProviderState'
 import { ToggleSwitch } from '../toggleSwitch'
+import { languageOptions } from './languageOptions'
 
 type QuickStartDestination =
   | 'based'
@@ -20,25 +21,6 @@ type QuickStartDestination =
   | 'youtube'
   | 'idle'
   | 'other'
-
-const languageOptions: { value: Language; label: string }[] = [
-  { value: 'ja', label: 'Japanese - 日本語' },
-  { value: 'en', label: 'English - 英語' },
-  { value: 'ko', label: 'Korean - 韓国語' },
-  { value: 'zh-CN', label: 'Simplified Chinese - 簡体字中国語' },
-  { value: 'zh-TW', label: 'Traditional Chinese - 繁体字中国語' },
-  { value: 'fr', label: 'French - フランス語' },
-  { value: 'es', label: 'Spanish - スペイン語' },
-  { value: 'pt', label: 'Portuguese - ポルトガル語' },
-  { value: 'de', label: 'German - ドイツ語' },
-  { value: 'it', label: 'Italian - イタリア語' },
-  { value: 'vi', label: 'Vietnamese - ベトナム語' },
-  { value: 'th', label: 'Thai - タイ語' },
-  { value: 'pl', label: 'Polish - ポーランド語' },
-  { value: 'ru', label: 'Russian - ロシア語' },
-  { value: 'hi', label: 'Hindi - ヒンディー語' },
-  { value: 'ar', label: 'Arabic - アラビア語' },
-]
 
 const QuickStart = () => {
   const { t } = useTranslation()

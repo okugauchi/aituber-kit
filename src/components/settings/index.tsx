@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import menuStore from '@/features/stores/menu'
 import settingsStore from '@/features/stores/settings'
+import { Language } from '@/features/constants/settings'
 
 import { IconButton } from '../iconButton'
 import Image from 'next/image'
@@ -21,6 +22,7 @@ import IdleSettings from './idleSettings'
 import GameCommentarySettings from './gameCommentarySettings'
 import KioskSettings from './kioskSettings'
 import QuickStart from './quickStart'
+import { languageOptions } from './languageOptions'
 
 type Props = {
   onClickClose: () => void
@@ -57,14 +59,39 @@ const Settings = (props: Props) => {
 export default Settings
 
 const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
-  const { t, i18n } = useTranslation()
+  const { i18n } = useTranslation()
   const selectAIService = settingsStore((s) => s.selectAIService)
   const selectVoice = settingsStore((s) => s.selectVoice)
+  const selectLanguage = settingsStore((s) => s.selectLanguage)
   const youtubeMode = settingsStore((s) => s.youtubeMode)
+  const realtimeAPIMode = settingsStore((s) => s.realtimeAPIMode)
+  const audioMode = settingsStore((s) => s.audioMode)
+  const slideMode = settingsStore((s) => s.slideMode)
+  const externalLinkageMode = settingsStore((s) => s.externalLinkageMode)
+  const presenceDetectionEnabled = settingsStore(
+    (s) => s.presenceDetectionEnabled
+  )
+  const idleModeEnabled = settingsStore((s) => s.idleModeEnabled)
+  const kioskModeEnabled = settingsStore((s) => s.kioskModeEnabled)
+  const gameCommentaryEnabled = settingsStore((s) => s.gameCommentaryEnabled)
   const isJa = i18n.language === 'ja'
+  const modeItems = [
+    { label: 'YouTube', active: youtubeMode },
+    { label: 'Realtime API', active: realtimeAPIMode },
+    { label: isJa ? '音声会話' : 'Voice chat', active: audioMode },
+    { label: isJa ? 'スライド' : 'Slides', active: slideMode },
+    { label: isJa ? '外部連携' : 'External', active: externalLinkageMode },
+    {
+      label: isJa ? '人感検知' : 'Presence',
+      active: presenceDetectionEnabled,
+    },
+    { label: isJa ? 'アイドル' : 'Idle', active: idleModeEnabled },
+    { label: isJa ? 'キオスク' : 'Kiosk', active: kioskModeEnabled },
+    { label: isJa ? 'ゲーム実況' : 'Game', active: gameCommentaryEnabled },
+  ]
 
   return (
-    <header className="theme-surface-popover grid shrink-0 grid-cols-[auto_1fr] items-center gap-3 border-b border-primary/20 px-3 py-3 backdrop-blur-sm sm:grid-cols-[auto_auto_1fr_auto] sm:px-4">
+    <header className="theme-surface-popover relative z-30 grid shrink-0 grid-cols-[auto_1fr] items-center gap-3 border-b border-primary/20 px-3 py-3 backdrop-blur-sm sm:grid-cols-[auto_auto_minmax(10rem,14rem)_1fr_auto] sm:px-4">
       <div className="z-15">
         <IconButton
           iconName="24/Close"
@@ -81,9 +108,44 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
         <h1 className="text-lg font-bold leading-tight text-text1">
           {isJa ? '設定' : 'Settings'}
         </h1>
-        <div className="text-xs text-text-primary/80">AITuberKit</div>
+        <div className="flex items-center gap-1.5 text-xs text-text-primary/80">
+          <span
+            className="h-3.5 w-3.5 shrink-0 bg-primary opacity-80"
+            style={{
+              WebkitMask:
+                'url(/images/setting-icons/logo2-2favicon.svg) center / contain no-repeat',
+              mask: 'url(/images/setting-icons/logo2-2favicon.svg) center / contain no-repeat',
+            }}
+            aria-hidden="true"
+          />
+          <span>AITuberKit</span>
+        </div>
       </div>
-      <div className="order-3 col-span-2 sm:order-none sm:col-span-1">
+      <label className="theme-surface-control order-3 col-span-2 flex h-10 items-center gap-2 rounded-lg border px-3 text-sm text-text1 sm:order-none sm:col-span-1">
+        <span
+          className="flex h-5 w-5 shrink-0 items-center justify-center text-text-primary"
+          aria-hidden="true"
+        >
+          <pixiv-icon name="24/Text" scale="1" />
+        </span>
+        <select
+          aria-label={isJa ? '表示言語' : 'Display language'}
+          className="min-w-0 flex-1 bg-transparent font-bold outline-none"
+          value={selectLanguage}
+          onChange={(event) => {
+            const language = event.target.value as Language
+            settingsStore.setState({ selectLanguage: language })
+            i18n.changeLanguage(language)
+          }}
+        >
+          {languageOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="order-4 col-span-2 sm:order-none sm:col-span-1">
         <SettingsSearch />
       </div>
       <div className="hidden items-center gap-2 lg:flex">
@@ -92,11 +154,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
           label={isJa ? '音声' : 'Voice'}
           value={formatStatusValue(selectVoice)}
         />
-        <StatusChip
-          label="YouTube"
-          value={youtubeMode ? 'ON' : 'OFF'}
-          emphasized={youtubeMode}
-        />
+        <ModeStatusSummary items={modeItems} isJa={isJa} />
         <a
           className="theme-surface-contrast flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors"
           draggable={false}
@@ -115,6 +173,11 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
       </div>
     </header>
   )
+}
+
+type ModeStatusItem = {
+  label: string
+  active: boolean
 }
 
 // タブの定義
@@ -237,6 +300,79 @@ const StatusChip = ({
       <span className="shrink-0">{label}</span>
       <strong className="truncate text-text1">{value}</strong>
     </div>
+  )
+}
+
+const ModeStatusSummary = ({
+  items,
+  isJa,
+}: {
+  items: ModeStatusItem[]
+  isJa: boolean
+}) => {
+  const activeItems = items.filter((item) => item.active)
+  const visibleActiveItems = activeItems.slice(0, 2)
+  const remainingActiveCount = activeItems.length - visibleActiveItems.length
+  const summaryLabel =
+    activeItems.length === 0
+      ? isJa
+        ? '全OFF'
+        : 'All off'
+      : visibleActiveItems.map((item) => item.label).join(' / ')
+  const modeLabel = isJa ? 'モード' : 'Modes'
+
+  return (
+    <details className="group relative">
+      <summary className="theme-surface-control inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-full border px-3 text-xs text-text-primary transition-colors hover:border-primary/35 hover:text-text1 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-1">
+          {activeItems.length > 0 && (
+            <span
+              className="h-2 w-2 rounded-full bg-primary"
+              aria-hidden="true"
+            />
+          )}
+          <span className="shrink-0">{modeLabel}</span>
+        </span>
+        <strong className="max-w-36 truncate text-text1">
+          {summaryLabel}
+          {remainingActiveCount > 0 ? ` +${remainingActiveCount}` : ''}
+        </strong>
+        <pixiv-icon name="16/Down" scale="1" />
+      </summary>
+      <div className="theme-surface-popover absolute right-0 top-10 z-50 hidden max-h-[calc(100vh-6rem)] w-64 overflow-y-auto rounded-xl border border-primary/20 p-3 text-xs shadow-xl group-open:block">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="font-bold text-text1">
+            {isJa ? 'モード状態' : 'Mode status'}
+          </div>
+          <div className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">
+            {activeItems.length} ON
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          {items.map((item) => (
+            <div
+              key={item.label}
+              className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 ${
+                item.active
+                  ? 'border-primary/30 bg-primary/10 text-text1'
+                  : 'border-primary/10 bg-white/45 text-text-primary'
+              }`}
+            >
+              <span className="truncate font-bold">{item.label}</span>
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  item.active
+                    ? 'bg-primary text-theme'
+                    : 'bg-text-primary/10 text-text-primary'
+                }`}
+              >
+                {item.active ? 'ON' : 'OFF'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
   )
 }
 
@@ -367,6 +503,26 @@ const getTabGroups = (
     label: isJa ? '配信・表示' : 'Streaming & View',
     tabs: [
       {
+        key: 'based',
+        label: isJa ? '表示設定' : 'Display settings',
+        keywords: [
+          'display',
+          'basic',
+          'language',
+          'theme',
+          'background',
+          'assistant text',
+          'control panel',
+          '表示',
+          '基本',
+          '言語',
+          'テーマ',
+          '背景',
+          'アシスタントテキスト',
+          'コントロールパネル',
+        ],
+      },
+      {
         key: 'youtube',
         label: t('YoutubeSettings'),
         keywords: ['youtube', 'comment', 'stream', '配信', 'コメント'],
@@ -418,16 +574,11 @@ const getTabGroups = (
   },
   {
     key: 'system',
-    label: isJa ? '詳細設定' : 'Advanced',
+    label: isJa ? 'その他' : 'Other',
     tabs: [
       {
-        key: 'based',
-        label: isJa ? '表示・基本設定' : 'Display & Basics',
-        keywords: ['language', 'theme', 'background', '言語', 'テーマ', '背景'],
-      },
-      {
         key: 'other',
-        label: isJa ? 'その他・詳細' : 'Other Advanced',
+        label: isJa ? '詳細設定' : 'Advanced settings',
         keywords: ['system', 'debug', 'other', 'その他', 'システム', '詳細'],
       },
       {
