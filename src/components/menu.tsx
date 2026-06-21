@@ -66,7 +66,7 @@ export const Menu = () => {
 
   const [showSettings, setShowSettings] = useState(false)
 
-  // キオスクモードで設定アクセス権が剥奪された場合に自動クローズ
+  // デモ端末モードで設定アクセス権が剥奪された場合に自動クローズ
   useEffect(() => {
     if (!canAccessSettings) {
       setShowSettings(false)

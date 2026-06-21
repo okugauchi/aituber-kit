@@ -76,19 +76,28 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
   const idleModeEnabled = settingsStore((s) => s.idleModeEnabled)
   const kioskModeEnabled = settingsStore((s) => s.kioskModeEnabled)
   const gameCommentaryEnabled = settingsStore((s) => s.gameCommentaryEnabled)
-  const modeItems = [
-    { label: 'YouTube', active: youtubeMode },
-    { label: 'Realtime API', active: realtimeAPIMode },
-    { label: t('SettingsModeVoiceChat'), active: audioMode },
-    { label: t('SettingsModeSlides'), active: slideMode },
-    { label: t('SettingsModeExternal'), active: externalLinkageMode },
+  const modeItems: ModeStatusItem[] = [
+    { label: 'YouTube', active: youtubeMode, tab: 'youtube' },
+    { label: 'Realtime API', active: realtimeAPIMode, tab: 'ai' },
+    { label: t('SettingsModeVoiceChat'), active: audioMode, tab: 'ai' },
+    { label: t('SettingsModeSlides'), active: slideMode, tab: 'slide' },
+    {
+      label: t('SettingsModeExternal'),
+      active: externalLinkageMode,
+      tab: 'ai',
+    },
     {
       label: t('SettingsModePresence'),
       active: presenceDetectionEnabled,
+      tab: 'presence',
     },
-    { label: t('SettingsModeIdle'), active: idleModeEnabled },
-    { label: t('SettingsModeKiosk'), active: kioskModeEnabled },
-    { label: t('SettingsModeGame'), active: gameCommentaryEnabled },
+    { label: t('SettingsModeIdle'), active: idleModeEnabled, tab: 'idle' },
+    { label: t('KioskModeEnabled'), active: kioskModeEnabled, tab: 'kiosk' },
+    {
+      label: t('SettingsModeGame'),
+      active: gameCommentaryEnabled,
+      tab: 'gameCommentary',
+    },
   ]
   const openHeaderTab = (tab: TabKey) => {
     menuStore.setState({
@@ -175,7 +184,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
           value={formatStatusValue(selectVoice)}
           onClick={() => openHeaderTab('voice')}
         />
-        <ModeStatusSummary items={modeItems} />
+        <ModeStatusSummary items={modeItems} onSelect={openHeaderTab} />
         <a
           className="theme-surface-contrast flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors"
           draggable={false}
@@ -199,6 +208,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
 type ModeStatusItem = {
   label: string
   active: boolean
+  tab: TabKey
 }
 
 // タブの定義
@@ -339,8 +349,15 @@ const StatusChip = ({
   return <div className={className}>{content}</div>
 }
 
-const ModeStatusSummary = ({ items }: { items: ModeStatusItem[] }) => {
+const ModeStatusSummary = ({
+  items,
+  onSelect,
+}: {
+  items: ModeStatusItem[]
+  onSelect: (tab: TabKey) => void
+}) => {
   const { t } = useTranslation()
+  const detailsRef = useRef<HTMLDetailsElement>(null)
   const activeItems = items.filter((item) => item.active)
   const summaryLabel = activeItems.length === 0 ? t('SettingsModeAllOff') : 'ON'
   const modeLabel = t('SettingsModeModes')
@@ -351,7 +368,7 @@ const ModeStatusSummary = ({ items }: { items: ModeStatusItem[] }) => {
   const accessibleLabel = `${modeLabel}: ${detailLabel}`
 
   return (
-    <details className="group relative">
+    <details ref={detailsRef} className="group relative">
       <summary
         className="theme-surface-control inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-full border px-3 text-xs text-text-primary transition-colors hover:border-primary/35 hover:text-text1 [&::-webkit-details-marker]:hidden"
         aria-label={accessibleLabel}
@@ -370,13 +387,18 @@ const ModeStatusSummary = ({ items }: { items: ModeStatusItem[] }) => {
         <div className="mb-2 font-bold text-text1">{accessibleLabel}</div>
         <div className="space-y-1.5">
           {items.map((item) => (
-            <div
+            <button
+              type="button"
               key={item.label}
-              className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 ${
+              className={`flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-primary/10 ${
                 item.active
                   ? 'border-primary/30 bg-primary/10 text-text1'
                   : 'border-primary/10 bg-white/45 text-text-primary'
               }`}
+              onClick={() => {
+                onSelect(item.tab)
+                detailsRef.current?.removeAttribute('open')
+              }}
             >
               <span className="truncate font-bold">{item.label}</span>
               <span
@@ -388,7 +410,7 @@ const ModeStatusSummary = ({ items }: { items: ModeStatusItem[] }) => {
               >
                 {item.active ? 'ON' : 'OFF'}
               </span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
