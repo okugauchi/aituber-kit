@@ -250,7 +250,7 @@ export const Menu = () => {
 
       <div className="absolute z-15 m-3 sm:m-6">
         <div
-          className="relative grid grid-flow-col gap-[8px] mb-10"
+          className="theme-surface-popover relative mb-10 grid grid-flow-col gap-1 rounded-xl border p-1 shadow-md backdrop-blur-md"
           style={{ width: 'max-content' }}
         >
           {effectiveShowControlPanel && (
@@ -263,6 +263,9 @@ export const Menu = () => {
                     onClick={() => setShowSettings(true)}
                     aria-label={t('Settings')}
                     data-testid="open-settings-button"
+                    backgroundColor="bg-transparent hover:bg-primary/10 active:bg-primary/15 disabled:bg-transparent"
+                    iconColor="text-text1"
+                    className="transition-colors duration-200"
                   ></IconButton>
                 </div>
               )}
@@ -280,6 +283,9 @@ export const Menu = () => {
                   isProcessing={false}
                   onClick={() => setChatLogMode((prev) => (prev + 1) % 3)}
                   aria-label={t('ChatLog')}
+                  backgroundColor="bg-transparent hover:bg-primary/10 active:bg-primary/15 disabled:bg-transparent"
+                  iconColor="text-text1"
+                  className="transition-colors duration-200"
                 />
               </div>
               <div className="order-3">
@@ -292,6 +298,9 @@ export const Menu = () => {
                   aria-label={t('Tools')}
                   aria-expanded={showToolMenu}
                   data-testid="main-tools-toggle-button"
+                  backgroundColor="bg-transparent hover:bg-primary/10 active:bg-primary/15 disabled:bg-transparent"
+                  iconColor="text-text1"
+                  className="transition-colors duration-200"
                 />
               </div>
               {showToolMenu && (
