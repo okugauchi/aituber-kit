@@ -92,7 +92,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
       tab: 'presence',
     },
     { label: t('SettingsModeIdle'), active: idleModeEnabled, tab: 'idle' },
-    { label: t('KioskModeEnabled'), active: kioskModeEnabled, tab: 'kiosk' },
+    { label: t('SettingsModeKiosk'), active: kioskModeEnabled, tab: 'kiosk' },
     {
       label: t('SettingsModeGame'),
       active: gameCommentaryEnabled,
