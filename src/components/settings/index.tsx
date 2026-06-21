@@ -25,10 +25,28 @@ import QuickStart from './quickStart'
 type Props = {
   onClickClose: () => void
 }
+
+const tabsWithRedundantPanelTitle = new Set([
+  'character',
+  'ai',
+  'memory',
+  'voice',
+  'speechInput',
+  'youtube',
+  'gameCommentary',
+  'slide',
+  'images',
+  'presence',
+  'idle',
+  'kiosk',
+  'based',
+  'other',
+])
+
 const Settings = (props: Props) => {
   return (
-    <div className="absolute z-40 w-full h-full overflow-hidden bg-white/65 backdrop-blur-md">
-      <div className="mx-auto flex h-full w-full max-w-[1280px] flex-col overflow-hidden border-x border-white/60 bg-white/90 shadow-2xl md:my-4 md:h-[calc(100%-2rem)] md:w-[calc(100%-2rem)] md:rounded-xl md:border">
+    <div className="theme-settings-backdrop absolute z-40 h-full w-full overflow-hidden">
+      <div className="theme-settings-shell mx-auto flex h-full w-full max-w-[1280px] flex-col overflow-hidden border-x shadow-xl backdrop-blur-sm md:my-5 md:h-[calc(100%-2.5rem)] md:w-[calc(100%-3rem)] md:rounded-xl md:border">
         <Header {...props} />
         <Main />
         <Footer />
@@ -46,7 +64,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
   const isJa = i18n.language === 'ja'
 
   return (
-    <header className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-3 border-b border-gray-200 bg-white/85 px-3 py-3 sm:grid-cols-[auto_auto_1fr_auto] sm:px-4">
+    <header className="theme-surface-popover grid shrink-0 grid-cols-[auto_1fr] items-center gap-3 border-b border-primary/20 px-3 py-3 backdrop-blur-sm sm:grid-cols-[auto_auto_1fr_auto] sm:px-4">
       <div className="z-15">
         <IconButton
           iconName="24/Close"
@@ -54,13 +72,16 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
           aria-label={isJa ? '設定を閉じる' : 'Close settings'}
           onClick={onClickClose}
           data-testid="close-settings-button"
+          backgroundColor="bg-transparent hover:bg-primary/10 active:bg-primary/15 disabled:bg-transparent"
+          iconColor="text-text1"
+          className="border border-primary/15 shadow-sm"
         ></IconButton>
       </div>
       <div className="min-w-0">
         <h1 className="text-lg font-bold leading-tight text-text1">
           {isJa ? '設定' : 'Settings'}
         </h1>
-        <div className="text-xs text-gray-500">AITuberKit</div>
+        <div className="text-xs text-text-primary/80">AITuberKit</div>
       </div>
       <div className="order-3 col-span-2 sm:order-none sm:col-span-1">
         <SettingsSearch />
@@ -77,7 +98,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
           emphasized={youtubeMode}
         />
         <a
-          className="flex h-8 items-center gap-2 rounded-lg bg-[#1F2328] px-3 text-sm font-bold text-white hover:bg-[#33383E]"
+          className="theme-surface-contrast flex h-8 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors"
           draggable={false}
           href="https://github.com/tegnike/aituber-kit"
           rel="noopener noreferrer"
@@ -151,14 +172,15 @@ const SettingsSearch = () => {
   const { i18n } = useTranslation()
   const searchQuery = menuStore((state) => state.settingsSearchQuery)
   const searchLabel = i18n.language === 'ja' ? '設定を検索' : 'Search settings'
+  const clearLabel = i18n.language === 'ja' ? '検索をクリア' : 'Clear search'
 
   return (
-    <label className="relative block">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-        ⌕
+    <div className="relative block">
+      <span className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-text-primary">
+        <pixiv-icon name="24/Search" scale="1" />
       </span>
       <input
-        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-9 text-sm text-text1 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+        className="theme-surface-control h-10 w-full rounded-lg border py-2 pl-10 pr-11 text-sm text-text1 outline-none transition"
         placeholder={searchLabel}
         value={searchQuery}
         aria-label={searchLabel}
@@ -169,7 +191,22 @@ const SettingsSearch = () => {
           })
         }
       />
-    </label>
+      {searchQuery && (
+        <button
+          type="button"
+          aria-label={clearLabel}
+          title={clearLabel}
+          className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-text-primary transition-colors hover:bg-primary/10 hover:text-text1 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
+          onClick={() =>
+            menuStore.setState({
+              settingsSearchQuery: '',
+            })
+          }
+        >
+          <pixiv-icon name="24/Close" scale="1" />
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -193,8 +230,8 @@ const StatusChip = ({
     <div
       className={`inline-flex h-8 max-w-44 items-center gap-1 rounded-full border px-3 text-xs ${
         emphasized
-          ? 'border-primary/30 bg-primary/10 text-primary'
-          : 'border-gray-200 bg-white text-gray-600'
+          ? 'theme-surface-soft text-primary'
+          : 'theme-surface-control text-text-primary'
       }`}
     >
       <span className="shrink-0">{label}</span>
@@ -517,11 +554,11 @@ const Main = () => {
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_1fr] text-text1 md:grid-cols-[260px_1fr] md:grid-rows-1">
-      <aside className="hidden min-h-0 overflow-y-auto border-r border-gray-200 bg-white/70 p-3 md:block">
+      <aside className="theme-surface-popover hidden min-h-0 overflow-y-auto border-r border-primary/20 p-3 backdrop-blur-sm md:block">
         <nav aria-label="Settings navigation" className="space-y-4">
           {visibleGroups.map((group) => (
             <section key={group.key}>
-              <div className="mb-1 px-2 text-xs font-bold text-gray-500">
+              <div className="mb-1 px-2 text-xs font-bold text-text-primary/80">
                 {group.label}
               </div>
               <ul className="space-y-1">
@@ -541,7 +578,7 @@ const Main = () => {
         </nav>
       </aside>
 
-      <div className="min-w-0 border-b border-gray-200 bg-white/80 py-3 md:hidden">
+      <div className="theme-surface-popover min-w-0 border-b border-primary/20 py-3 md:hidden">
         <div className="scroll-hidden flex gap-2 overflow-x-auto px-3 pb-3">
           {visibleGroups.map((group) => (
             <button
@@ -549,7 +586,7 @@ const Main = () => {
               className={`h-10 shrink-0 rounded-lg border px-4 text-sm font-bold shadow-sm ${
                 selectedMobileGroup === group.key
                   ? 'border-primary bg-primary text-theme'
-                  : 'border-gray-200 bg-white text-text1 hover:border-primary/50'
+                  : 'theme-surface-control text-text1 hover:border-primary/50'
               }`}
               onClick={() => setActiveGroup(group)}
               data-testid={`settings-group-${group.key}`}
@@ -558,7 +595,7 @@ const Main = () => {
             </button>
           ))}
         </div>
-        <div className="scroll-hidden flex gap-2 overflow-x-auto border-t border-gray-100 px-3 pt-3">
+        <div className="scroll-hidden flex gap-2 overflow-x-auto border-t border-primary/10 px-3 pt-3">
           {visibleMobileTabs.map((tab) => (
             <SettingsTabButton
               key={tab.key}
@@ -593,7 +630,7 @@ const Main = () => {
                 )}
                 <div className="text-2xl font-bold">{currentTab?.label}</div>
               </div>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-text-primary/80">
                 {isJa
                   ? '関連する設定だけをまとめて表示します。左のカテゴリまたは検索から目的の項目を選んでください。'
                   : 'Choose a category or search to find related settings quickly.'}
@@ -602,10 +639,18 @@ const Main = () => {
           </div>
           <div
             ref={settingsPanelRef}
-            className="rounded-lg border border-gray-200 bg-white/90 p-4 shadow-sm sm:p-6"
+            className="theme-surface-elevated rounded-xl border p-4 backdrop-blur-sm sm:p-6"
             data-testid="settings-panel"
           >
-            {renderTabContent()}
+            <div
+              className={
+                tabsWithRedundantPanelTitle.has(activeTab)
+                  ? 'settings-panel-content settings-panel-content--hide-title'
+                  : 'settings-panel-content'
+              }
+            >
+              {renderTabContent()}
+            </div>
           </div>
         </div>
       </section>
@@ -635,7 +680,7 @@ const SettingsTabButton = ({
       } ${
         active
           ? 'border-primary bg-primary text-theme'
-          : 'border-transparent bg-transparent text-text1 hover:border-gray-200 hover:bg-white'
+          : 'border-transparent bg-transparent text-text1 hover:border-primary/30 hover:bg-primary/5'
       }`}
       onClick={onClick}
       data-testid={`settings-tab-${tabKey}`}
@@ -733,7 +778,7 @@ const escapeRegExp = (value: string) =>
 
 const Footer = () => {
   return (
-    <footer className="shrink-0 border-t border-gray-200 bg-[#413D43] py-1 text-center font-Montserrat text-xs text-theme">
+    <footer className="theme-surface-contrast shrink-0 border-t border-primary/20 py-1 text-center font-Montserrat text-xs">
       powered by ChatVRM from Pixiv / ver. 2.46.0
     </footer>
   )

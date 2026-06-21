@@ -64,16 +64,23 @@ const QuickStart = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-        <div className="text-lg font-bold">
-          {isJa ? 'まずはここだけで始められます' : 'Start here'}
+    <div className="space-y-4">
+      <div className="rounded-xl border border-primary/20 bg-primary/10 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-lg font-bold text-theme">
+            1
+          </div>
+          <div className="min-w-0">
+            <div className="text-lg font-bold">
+              {isJa ? 'まずはここだけで始められます' : 'Start here'}
+            </div>
+            <p className="mt-1 text-sm leading-6 text-text-primary">
+              {isJa
+                ? 'よく触る設定を1画面に集約しています。詳細な項目は各カテゴリへ移動できます。'
+                : 'Core settings are grouped here. Detailed controls live in each category.'}
+            </p>
+          </div>
         </div>
-        <p className="mt-2 text-sm leading-6 text-gray-600">
-          {isJa
-            ? 'キャラクター名、使うAI、声、会話の長さだけをまとめています。細かい調整は下の各詳細設定から変更できます。'
-            : 'Set the character name, AI, voice, and conversation length here. Use the detailed settings for advanced control.'}
-        </p>
       </div>
 
       <QuickSection
@@ -310,7 +317,7 @@ const QuickSection = ({
   description: string
   title: string
 }) => (
-  <section className="border-t border-gray-200 pt-5 first:border-t-0 first:pt-0">
+  <section className="pt-0">
     <h2 className="text-xl font-bold">{title}</h2>
     <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
     <div className="mt-4">{children}</div>
@@ -325,7 +332,9 @@ const LabeledField = ({
   label: string
 }) => (
   <label className="block">
-    <span className="mb-2 block text-sm font-bold text-text1">{label}</span>
+    <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-text-primary">
+      {label}
+    </span>
     {children}
   </label>
 )
@@ -353,10 +362,11 @@ const DetailLink = ({
   onClick: () => void
 }) => (
   <button
-    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-sm font-bold text-text1 shadow-sm transition hover:border-primary hover:text-primary"
+    className="inline-flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-white/70 px-3 py-2 text-left text-sm font-bold text-text1 shadow-sm transition hover:border-primary hover:bg-primary/10 hover:text-primary"
     onClick={onClick}
   >
-    {label}
+    <span>{label}</span>
+    <span className="text-secondary">→</span>
   </button>
 )
 
