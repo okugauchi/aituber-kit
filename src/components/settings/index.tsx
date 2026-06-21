@@ -90,6 +90,12 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
     { label: t('SettingsModeKiosk'), active: kioskModeEnabled },
     { label: t('SettingsModeGame'), active: gameCommentaryEnabled },
   ]
+  const openHeaderTab = (tab: TabKey) => {
+    menuStore.setState({
+      activeSettingsTab: tab,
+      settingsSearchQuery: '',
+    })
+  }
 
   return (
     <header className="theme-surface-popover relative z-30 grid shrink-0 grid-cols-[auto_auto_minmax(0,1fr)_minmax(6.75rem,8rem)_auto] items-center gap-2 border-b border-primary/20 px-3 py-3 backdrop-blur-sm sm:grid-cols-[auto_auto_auto_minmax(10rem,14rem)_1fr_auto] sm:gap-3 sm:px-4">
@@ -159,10 +165,15 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
         <SettingsSearch />
       </div>
       <div className="hidden items-center gap-2 lg:flex">
-        <StatusChip label="AI" value={formatStatusValue(selectAIService)} />
+        <StatusChip
+          label="AI"
+          value={formatStatusValue(selectAIService)}
+          onClick={() => openHeaderTab('ai')}
+        />
         <StatusChip
           label={t('SettingsVoice')}
           value={formatStatusValue(selectVoice)}
+          onClick={() => openHeaderTab('voice')}
         />
         <ModeStatusSummary items={modeItems} />
         <a
@@ -294,23 +305,38 @@ const StatusChip = ({
   label,
   value,
   emphasized = false,
+  onClick,
 }: {
   label: string
   value: string
   emphasized?: boolean
+  onClick?: () => void
 }) => {
-  return (
-    <div
-      className={`inline-flex h-8 max-w-44 items-center gap-1 rounded-full border px-3 text-xs ${
-        emphasized
-          ? 'theme-surface-soft text-primary'
-          : 'theme-surface-control text-text-primary'
-      }`}
-    >
+  const className = `inline-flex h-8 max-w-44 items-center gap-1 rounded-full border px-3 text-xs ${
+    emphasized
+      ? 'theme-surface-soft text-primary'
+      : 'theme-surface-control text-text-primary'
+  }`
+  const content = (
+    <>
       <span className="shrink-0">{label}</span>
       <strong className="truncate text-text1">{value}</strong>
-    </div>
+    </>
   )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={`${className} transition-colors hover:border-primary/35 hover:text-text1`}
+        onClick={onClick}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return <div className={className}>{content}</div>
 }
 
 const ModeStatusSummary = ({ items }: { items: ModeStatusItem[] }) => {
@@ -325,20 +351,48 @@ const ModeStatusSummary = ({ items }: { items: ModeStatusItem[] }) => {
   const accessibleLabel = `${modeLabel}: ${detailLabel}`
 
   return (
-    <div
-      className="theme-surface-control inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs text-text-primary"
-      aria-label={accessibleLabel}
-      title={accessibleLabel}
-    >
-      <span
-        className={`h-2 w-2 rounded-full ${
-          activeItems.length > 0 ? 'bg-primary' : 'bg-text-primary/25'
-        }`}
-        aria-hidden="true"
-      />
-      <span className="shrink-0">{modeLabel}</span>
-      <strong className="text-text1">{summaryLabel}</strong>
-    </div>
+    <details className="group relative">
+      <summary
+        className="theme-surface-control inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-full border px-3 text-xs text-text-primary transition-colors hover:border-primary/35 hover:text-text1 [&::-webkit-details-marker]:hidden"
+        aria-label={accessibleLabel}
+        title={accessibleLabel}
+      >
+        <span
+          className={`h-2 w-2 rounded-full ${
+            activeItems.length > 0 ? 'bg-primary' : 'bg-text-primary/25'
+          }`}
+          aria-hidden="true"
+        />
+        <span className="shrink-0">{modeLabel}</span>
+        <strong className="text-text1">{summaryLabel}</strong>
+      </summary>
+      <div className="theme-surface-popover absolute right-0 top-10 z-50 hidden max-h-[calc(100vh-6rem)] w-64 overflow-y-auto rounded-xl border border-primary/20 p-3 text-xs shadow-xl group-open:block">
+        <div className="mb-2 font-bold text-text1">{accessibleLabel}</div>
+        <div className="space-y-1.5">
+          {items.map((item) => (
+            <div
+              key={item.label}
+              className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 ${
+                item.active
+                  ? 'border-primary/30 bg-primary/10 text-text1'
+                  : 'border-primary/10 bg-white/45 text-text-primary'
+              }`}
+            >
+              <span className="truncate font-bold">{item.label}</span>
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  item.active
+                    ? 'bg-primary text-theme'
+                    : 'bg-text-primary/10 text-text-primary'
+                }`}
+              >
+                {item.active ? 'ON' : 'OFF'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
   )
 }
 
@@ -557,11 +611,20 @@ const Main = () => {
   const { t } = useTranslation()
   const activeTab = menuStore((state) => state.activeSettingsTab)
   const searchQuery = menuStore((state) => state.settingsSearchQuery)
+  const [activeMobileGroup, setActiveMobileGroup] = useState('start')
   const contentScrollRef = useRef<HTMLElement>(null)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
 
   const setActiveTab = (tab: TabKey) => {
     menuStore.setState({ activeSettingsTab: tab })
+  }
+
+  const setActiveGroup = (group: TabGroup) => {
+    setActiveMobileGroup(group.key)
+    const defaultTab = group.tabs[0]?.key
+    if (defaultTab) {
+      setActiveTab(defaultTab)
+    }
   }
 
   const groups = useMemo(() => getTabGroups(t), [t])
@@ -584,7 +647,18 @@ const Main = () => {
       }))
       .filter((group) => group.tabs.length > 0)
   }, [groups, normalizedSearchQuery])
-  const visibleMobileTabs = visibleGroups.flatMap((group) => group.tabs)
+  const activeTabGroup =
+    groups.find((group) => group.tabs.some((tab) => tab.key === activeTab))
+      ?.key ?? activeMobileGroup
+  const selectedMobileGroup = normalizedSearchQuery
+    ? activeMobileGroup
+    : activeTabGroup
+
+  const visibleMobileTabs = normalizedSearchQuery
+    ? visibleGroups.flatMap((group) => group.tabs)
+    : (visibleGroups.find((group) => group.key === selectedMobileGroup)?.tabs ??
+      visibleGroups[0]?.tabs ??
+      [])
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -672,7 +746,23 @@ const Main = () => {
       </aside>
 
       <div className="theme-surface-popover min-w-0 border-b border-primary/20 py-2 md:hidden">
-        <div className="scroll-hidden flex gap-2 overflow-x-auto px-3">
+        <div className="scroll-hidden flex gap-2 overflow-x-auto px-3 pb-2">
+          {visibleGroups.map((group) => (
+            <button
+              key={group.key}
+              className={`h-9 shrink-0 rounded-lg border px-4 text-sm font-bold shadow-sm ${
+                selectedMobileGroup === group.key
+                  ? 'border-primary bg-primary text-theme'
+                  : 'theme-surface-control text-text1 hover:border-primary/50'
+              }`}
+              onClick={() => setActiveGroup(group)}
+              data-testid={`settings-group-${group.key}`}
+            >
+              {group.label}
+            </button>
+          ))}
+        </div>
+        <div className="scroll-hidden flex gap-2 overflow-x-auto border-t border-primary/10 px-3 pt-2">
           {visibleMobileTabs.map((tab) => (
             <SettingsTabButton
               key={tab.key}
