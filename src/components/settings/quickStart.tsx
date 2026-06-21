@@ -24,7 +24,6 @@ type QuickStartDestination =
 
 const QuickStart = () => {
   const { t } = useTranslation()
-  const isJa = i18n.language === 'ja'
   const modelState = useModelProviderState()
   const { handleAIServiceChange, updateMultiModalModeForModel } =
     useAIServiceHandlers()
@@ -53,25 +52,17 @@ const QuickStart = () => {
             1
           </div>
           <div className="min-w-0">
-            <div className="text-lg font-bold">
-              {isJa ? 'まずはここだけで始められます' : 'Start here'}
-            </div>
+            <div className="text-lg font-bold">{t('QuickStartTitle')}</div>
             <p className="mt-1 text-sm leading-6 text-text-primary">
-              {isJa
-                ? 'よく触る設定を1画面に集約しています。詳細な項目は各カテゴリへ移動できます。'
-                : 'Core settings are grouped here. Detailed controls live in each category.'}
+              {t('QuickStartDescription')}
             </p>
           </div>
         </div>
       </div>
 
       <QuickSection
-        title={isJa ? '1. 基本情報' : '1. Basics'}
-        description={
-          isJa
-            ? '表示名と言語など、最初に決める項目です。'
-            : 'Set names and language first.'
-        }
+        title={t('QuickStartBasicsTitle')}
+        description={t('QuickStartBasicsDescription')}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <LabeledField label={t('CharacterName')}>
@@ -128,21 +119,15 @@ const QuickStart = () => {
         </div>
         <div className="mt-4">
           <DetailLink
-            label={
-              isJa ? '見た目や背景を詳しく設定' : 'Detailed display settings'
-            }
+            label={t('QuickStartDetailedDisplaySettings')}
             onClick={() => goTo('based')}
           />
         </div>
       </QuickSection>
 
       <QuickSection
-        title={isJa ? '2. AIと会話' : '2. AI and conversation'}
-        description={
-          isJa
-            ? '迷ったらAIサービスとモデルだけ設定すれば大丈夫です。'
-            : 'Choose the AI service and model. Advanced behavior can be tuned later.'
-        }
+        title={t('QuickStartAIConversationTitle')}
+        description={t('QuickStartAIConversationDescription')}
       >
         <LabeledField label={t('SelectAIService')}>
           <select
@@ -209,23 +194,19 @@ const QuickStart = () => {
         )}
         <div className="mt-3 flex flex-wrap gap-3">
           <DetailLink
-            label={isJa ? 'AIを詳しく設定' : 'Detailed AI settings'}
+            label={t('QuickStartDetailedAISettings')}
             onClick={() => goTo('ai')}
           />
           <DetailLink
-            label={isJa ? '記憶を詳しく設定' : 'Detailed memory settings'}
+            label={t('QuickStartDetailedMemorySettings')}
             onClick={() => goTo('memory')}
           />
         </div>
       </QuickSection>
 
       <QuickSection
-        title={isJa ? '3. 声' : '3. Voice'}
-        description={
-          isJa
-            ? 'キャラクターがどの音声エンジンで話すかを選びます。'
-            : 'Choose the voice engine used by the character.'
-        }
+        title={t('QuickStartVoiceTitle')}
+        description={t('QuickStartVoiceDescription')}
       >
         <LabeledField label={t('SyntheticVoiceEngineChoice')}>
           <select
@@ -252,23 +233,19 @@ const QuickStart = () => {
         </LabeledField>
         <div className="mt-3 flex flex-wrap gap-3">
           <DetailLink
-            label={isJa ? '声を詳しく設定' : 'Detailed voice settings'}
+            label={t('QuickStartDetailedVoiceSettings')}
             onClick={() => goTo('voice')}
           />
           <DetailLink
-            label={isJa ? 'マイク入力を設定' : 'Speech input settings'}
+            label={t('QuickStartSpeechInputSettings')}
             onClick={() => goTo('speechInput')}
           />
         </div>
       </QuickSection>
 
       <QuickSection
-        title={isJa ? '4. 必要になったら使う設定' : '4. Optional features'}
-        description={
-          isJa
-            ? '配信、画像、スライド、自動発話などは、使いたくなった時に開けば大丈夫です。'
-            : 'Streaming, images, slides, and automation can be configured when needed.'
-        }
+        title={t('QuickStartOptionalFeaturesTitle')}
+        description={t('QuickStartOptionalFeaturesDescription')}
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <DetailLink
