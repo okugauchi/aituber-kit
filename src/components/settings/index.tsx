@@ -119,13 +119,7 @@ const Header = ({ onClickClose }: Pick<Props, 'onClickClose'>) => {
         </h1>
         <div className="text-xs text-text-primary/80">AITuberKit</div>
       </div>
-      <label className="theme-surface-control order-3 col-span-3 flex h-10 items-center gap-2 rounded-lg border px-3 text-sm text-text1 sm:order-none sm:col-span-1">
-        <span
-          className="flex h-5 w-5 shrink-0 items-center justify-center text-text-primary"
-          aria-hidden="true"
-        >
-          <pixiv-icon name="24/Text" scale="1" />
-        </span>
+      <label className="theme-surface-control order-3 col-span-3 flex h-10 items-center rounded-lg border px-3 text-sm text-text1 sm:order-none sm:col-span-1">
         <select
           aria-label={isJa ? '表示言語' : 'Display language'}
           className="min-w-0 flex-1 bg-transparent font-bold outline-none"
@@ -237,11 +231,11 @@ const SettingsSearch = () => {
 
   return (
     <div className="relative block">
-      <span className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-text-primary">
+      <span className="pointer-events-none absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-text-primary">
         <pixiv-icon name="24/Search" scale="1" />
       </span>
       <input
-        className="theme-surface-control h-10 w-full rounded-lg border py-2 pl-10 pr-11 text-sm text-text1 outline-none transition"
+        className="theme-surface-control h-10 w-full rounded-lg border py-2 pl-8 pr-11 text-sm text-text1 outline-none transition"
         placeholder={searchLabel}
         value={searchQuery}
         aria-label={searchLabel}
