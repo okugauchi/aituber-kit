@@ -43,6 +43,7 @@ describe('/api/messages', () => {
   beforeEach(() => {
     jest.resetModules()
 
+    require('@/features/api/messageGateway').__resetMessageGatewayForTests()
     handler = require('@/pages/api/messages').default
   })
 
@@ -184,6 +185,20 @@ describe('/api/messages', () => {
       expect(messages[0]).toEqual(
         expect.objectContaining({ type: 'ai_generate' })
       )
+    })
+
+    it('should return 400 when type query parameter is invalid', () => {
+      const req = createMockReq({
+        method: 'POST',
+        query: { clientId: 'client1', type: 'invalid_type' },
+        body: { messages: ['hello'] },
+      })
+      const res = createMockRes()
+
+      handler(req, res)
+
+      expect(res._status).toBe(400)
+      expect(res._json).toEqual({ error: 'Invalid type' })
     })
 
     it('should accumulate messages for the same client', () => {
