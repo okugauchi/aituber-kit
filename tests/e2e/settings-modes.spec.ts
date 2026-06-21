@@ -85,9 +85,7 @@ test('can edit settings tabs and keep idle and presence form state when the pane
   await openSettings(page)
 
   await openSettingsTab(page, 'idle')
-  await expect(
-    page.getByRole('heading', { name: 'Idle Mode Settings' })
-  ).toBeVisible()
+  await expect(page.getByTestId('idle-mode-toggle')).toBeVisible()
 
   await switchAfter(page, 'Idle Mode').click()
   await expectPersistedSetting(page, 'idleModeEnabled', true)
@@ -113,12 +111,10 @@ test('can edit settings tabs and keep idle and presence form state when the pane
 
   await openSettingsTab(page, 'presence')
   await expect(
-    page.getByRole('heading', { name: 'Presence Detection Settings' })
+    panel(page).getByTestId('presence-timing-settings-button')
   ).toBeVisible()
 
-  await panel(page)
-    .getByRole('button', { name: /Timing Settings/ })
-    .click()
+  await panel(page).getByTestId('presence-timing-settings-button').click()
   await page.getByLabel('Departure Detection Time').fill('9')
   await expectPersistedSetting(page, 'presenceDepartureTimeout', 9)
   await page.getByLabel('Cooldown Time').fill('2')
@@ -147,9 +143,7 @@ test('can edit settings tabs and keep idle and presence form state when the pane
   )
 
   await openSettingsTab(page, 'presence')
-  await panel(page)
-    .getByRole('button', { name: /Timing Settings/ })
-    .click()
+  await panel(page).getByTestId('presence-timing-settings-button').click()
   await expect(page.getByLabel('Departure Detection Time')).toHaveValue('9')
   await expect(page.getByLabel('Cooldown Time')).toHaveValue('2')
   await panel(page)
