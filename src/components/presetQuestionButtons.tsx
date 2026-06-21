@@ -61,18 +61,18 @@ export const PresetQuestionButtons = ({ onSelectQuestion }: Props) => {
             shouldCenter ? 'justify-center' : 'justify-start'
           }`}
         >
-          {sortedQuestions.map((question, index) => (
+          {sortedQuestions.map((question) => (
             <button
               key={question.id}
               onClick={() => handleQuestionClick(question.text)}
-              className="theme-surface-popover group inline-flex max-w-[82vw] items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold text-theme-default backdrop-blur-sm transition-colors duration-200 hover:border-secondary sm:max-w-none sm:px-4"
+              className="theme-surface-popover group inline-flex max-w-[82vw] items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-bold text-theme-default backdrop-blur-sm transition-colors duration-200 hover:border-secondary sm:max-w-none sm:px-4"
             >
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-secondary px-1.5 text-[11px] leading-none text-theme shadow-sm">
-                {index + 1}
-              </span>
               <span className="truncate">{question.text}</span>
-              <span className="text-secondary transition-transform duration-200 group-hover:translate-x-0.5">
-                →
+              <span
+                className="flex h-5 w-5 shrink-0 items-center justify-center text-secondary transition-transform duration-200 group-hover:translate-x-0.5 [&_svg]:h-4 [&_svg]:w-4"
+                aria-hidden="true"
+              >
+                <pixiv-icon name="24/Send" scale="1" />
               </span>
             </button>
           ))}
