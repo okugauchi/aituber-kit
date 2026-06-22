@@ -89,6 +89,7 @@
   "SelectAIService": "AIサービスを選択",
   "LocalLLM": "ローカルLLM",
   "SelectModel": "モデルを選択",
+  "ModelCapabilityLegend": "モデル名の絵文字: 📷 画像入力対応 / 🔍 検索対応（Google Geminiのみ） / 💡 推論対応",
   "OpenAIAPIKeyLabel": "OpenAI API キー",
   "AnthropicAPIKeyLabel": "Anthropic API キー",
   "GoogleAPIKeyLabel": "Google Gemini API キー",
