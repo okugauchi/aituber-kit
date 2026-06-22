@@ -5,10 +5,13 @@ import { TextButton } from '../../textButton'
 import { ToggleSwitch } from '../../toggleSwitch'
 import {
   getModels,
-  googleSearchGroundingModels,
   isMultiModalModel,
+  isReasoningModel,
+  isSearchGroundingModel,
 } from '@/features/constants/aiModels'
 import { AIService } from '@/features/constants/settings'
+import { DisabledSettingNote } from '@/components/settings/disabledSettingNote'
+import { ModelCapabilityLegend } from '@/components/settings/modelProvider/ModelCapabilityLegend'
 
 interface GoogleConfigProps {
   googleKey: string
@@ -30,6 +33,10 @@ export const GoogleConfig = ({
   updateMultiModalModeForModel,
 }: GoogleConfigProps) => {
   const { t } = useTranslation()
+  const isSelectedModelSearchEnabled = isSearchGroundingModel(
+    'google',
+    selectAIModel
+  )
 
   const handleModelChange = useCallback(
     (model: string) => {
@@ -98,26 +105,32 @@ export const GoogleConfig = ({
               }}
             />
           ) : (
-            <select
-              className="px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
-              value={selectAIModel}
-              onChange={(e) => handleModelChange(e.target.value)}
-            >
-              {getModels('google').map((model) => {
-                const isMultiModal = isMultiModalModel('google', model)
-                const isSearchEnabled = googleSearchGroundingModels.includes(
-                  model as any
-                )
-                let icons = ''
-                if (isMultiModal) icons += '📷'
-                if (isSearchEnabled) icons += '🔍'
-                return (
-                  <option key={model} value={model}>
-                    {model} {icons}
-                  </option>
-                )
-              })}
-            </select>
+            <>
+              <select
+                className="px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+                value={selectAIModel}
+                onChange={(e) => handleModelChange(e.target.value)}
+              >
+                {getModels('google').map((model) => {
+                  const isMultiModal = isMultiModalModel('google', model)
+                  const isSearchEnabled = isSearchGroundingModel(
+                    'google',
+                    model
+                  )
+                  const isReasoning = isReasoningModel('google', model)
+                  let icons = ''
+                  if (isMultiModal) icons += '📷'
+                  if (isSearchEnabled) icons += '🔍'
+                  if (isReasoning) icons += '💡'
+                  return (
+                    <option key={model} value={model}>
+                      {model} {icons}
+                    </option>
+                  )
+                })}
+              </select>
+              <ModelCapabilityLegend />
+            </>
           )}
         </div>
 
@@ -144,48 +157,48 @@ export const GoogleConfig = ({
         <div className="my-2 text-sm whitespace-pre-wrap">
           {t('SearchGroundingDescription')}
         </div>
+        <DisabledSettingNote show={!isSelectedModelSearchEnabled}>
+          {t('SearchGroundingDisabledInfo')}
+        </DisabledSettingNote>
         <div className="my-2">
           <ToggleSwitch
             enabled={useSearchGrounding}
             onChange={(v) => settingsStore.setState({ useSearchGrounding: v })}
-            disabled={
-              !googleSearchGroundingModels.includes(selectAIModel as any)
-            }
+            disabled={!isSelectedModelSearchEnabled}
           />
         </div>
 
-        {useSearchGrounding &&
-          googleSearchGroundingModels.includes(selectAIModel as any) && (
-            <>
-              <div className="mt-6 mb-4 text-xl font-bold">
-                {t('DynamicRetrieval')}
+        {useSearchGrounding && isSelectedModelSearchEnabled && (
+          <>
+            <div className="mt-6 mb-4 text-xl font-bold">
+              {t('DynamicRetrieval')}
+            </div>
+            <div className="my-2 text-sm whitespace-pre-wrap">
+              {t('DynamicRetrievalDescription')}
+            </div>
+            <div className="my-4">
+              <div className="mb-2 font-medium">
+                {t('DynamicRetrievalThreshold')}:{' '}
+                {dynamicRetrievalThreshold.toFixed(1)}
               </div>
-              <div className="my-2 text-sm whitespace-pre-wrap">
-                {t('DynamicRetrievalDescription')}
+              <div className="flex items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={dynamicRetrievalThreshold}
+                  onChange={(e) => {
+                    settingsStore.setState({
+                      dynamicRetrievalThreshold: parseFloat(e.target.value),
+                    })
+                  }}
+                  className="mt-2 mb-4 input-range"
+                />
               </div>
-              <div className="my-4">
-                <div className="mb-2 font-medium">
-                  {t('DynamicRetrievalThreshold')}:{' '}
-                  {dynamicRetrievalThreshold.toFixed(1)}
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={dynamicRetrievalThreshold}
-                    onChange={(e) => {
-                      settingsStore.setState({
-                        dynamicRetrievalThreshold: parseFloat(e.target.value),
-                      })
-                    }}
-                    className="mt-2 mb-4 input-range"
-                  />
-                </div>
-              </div>
-            </>
-          )}
+            </div>
+          </>
+        )}
       </div>
     </>
   )

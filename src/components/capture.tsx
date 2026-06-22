@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import homeStore from '@/features/stores/home'
+import menuStore from '@/features/stores/menu'
+import settingsStore from '@/features/stores/settings'
 import CaptureService from '@/features/gameCommentary/captureService'
 import { VideoDisplay } from './common/VideoDisplay'
 
@@ -31,6 +33,15 @@ const Capture = () => {
       videoRef.current.srcObject = null
     }
   }, [])
+
+  const stopCapture = useCallback(() => {
+    cleanupStream()
+    settingsStore.setState({
+      hideVideoDisplay: false,
+      useVideoAsBackground: false,
+    })
+    menuStore.setState({ showCapture: false })
+  }, [cleanupStream])
 
   // ストリームの設定を一元管理する関数
   const setupStream = useCallback(
@@ -71,11 +82,11 @@ const Capture = () => {
       // track endedイベント監視（ブラウザ側で共有停止された時の検知）
       stream.getVideoTracks().forEach((track) => {
         track.addEventListener('ended', () => {
-          cleanupStream()
+          stopCapture()
         })
       })
     },
-    [cleanupStream]
+    [stopCapture]
   )
 
   // Capture permission request
@@ -108,7 +119,7 @@ const Capture = () => {
   const startCapture = async () => {
     // すでに画面共有中の場合は停止
     if (captureStartedRef.current) {
-      cleanupStream()
+      stopCapture()
       return
     }
 
@@ -124,22 +135,18 @@ const Capture = () => {
     }
   }
 
-  const stopCapture = useCallback(() => {
-    cleanupStream()
-  }, [cleanupStream])
-
   useEffect(() => {
     return () => {
-      cleanupStream()
+      stopCapture()
     }
-  }, [cleanupStream])
+  }, [stopCapture])
 
   return (
     <VideoDisplay
       videoRef={videoRef}
       mediaStream={mediaStreamRef.current}
       onToggleSource={startCapture}
-      onClose={stopCapture}
+      onStopSource={stopCapture}
       toggleSourceIcon="24/Reload"
       showToggleButton={true}
     />
