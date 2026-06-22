@@ -8,6 +8,8 @@ const config = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^canvas$': '<rootDir>/src/__mocks__/node-canvas.js',
     '^canvas/(.*)$': '<rootDir>/src/__mocks__/node-canvas.js',
+    '^p-map$': '<rootDir>/src/__mocks__/p-map.js',
+    '^tokenx$': '<rootDir>/src/__mocks__/tokenx.js',
     '^three/examples/jsm/(.*)$':
       '<rootDir>/src/__mocks__/three/examples/jsm/$1',
     // Next.js internal modules
@@ -20,6 +22,7 @@ const config = {
     'node_modules/canvas',
     'node_modules/@ffmpeg-installer',
     'node_modules/fluent-ffmpeg',
+    '<rootDir>/.open-next',
   ],
   transform: {
     '^.+\\.(ts|tsx|js|jsx)$': [
@@ -45,7 +48,7 @@ const config = {
     'node_modules/(?!(@pixiv/three-vrm|three/examples/jsm|pdfjs-dist|i18next|idb))',
   ],
   moduleDirectories: ['node_modules', '<rootDir>/src/__mocks__'],
-  testPathIgnorePatterns: ['/node_modules/', '/\\.next/'],
+  testPathIgnorePatterns: ['/node_modules/', '/\\.next/', '/\\.open-next/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 }
 

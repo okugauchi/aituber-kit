@@ -1,0 +1,39 @@
+function estimateTokenCount(input) {
+  return String(input ?? '')
+    .split(/\s+/)
+    .filter(Boolean).length
+}
+
+function approximateTokenSize(input) {
+  return estimateTokenCount(input)
+}
+
+function isWithinTokenLimit(input, limit) {
+  return estimateTokenCount(input) <= limit
+}
+
+function sliceByTokens(input, limit) {
+  return String(input ?? '')
+    .split(/\s+/)
+    .slice(0, limit)
+    .join(' ')
+}
+
+function splitByTokens(input, limit) {
+  const words = String(input ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+  const chunks = []
+  for (let i = 0; i < words.length; i += limit) {
+    chunks.push(words.slice(i, i + limit).join(' '))
+  }
+  return chunks
+}
+
+module.exports = {
+  approximateTokenSize,
+  estimateTokenCount,
+  isWithinTokenLimit,
+  sliceByTokens,
+  splitByTokens,
+}
