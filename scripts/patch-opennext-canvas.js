@@ -35,10 +35,18 @@ if (content.includes('"canvas"')) {
 }
 
 // external配列に"canvas"を追加
-const patched = content.replace(
+// @opennextjs/cloudflare 1.16.x は複数行、1.19.x は1行の配列形式を使う。
+let patched = content.replace(
   'external: [\n            "./middleware/handler.mjs",',
   'external: [\n            "./middleware/handler.mjs",\n            "canvas",'
 )
+
+if (patched === content) {
+  patched = content.replace(
+    'external: ["./middleware/handler.mjs"],',
+    'external: ["./middleware/handler.mjs", "canvas"],'
+  )
+}
 
 if (patched === content) {
   console.error('patch-opennext-canvas: Could not find the expected external array pattern.')

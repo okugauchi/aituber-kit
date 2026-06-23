@@ -23,6 +23,9 @@ const nextConfig = {
         './coverage/**/*',
       ],
     },
+    outputFileTracingIncludes: {
+      '*': ['./node_modules/@posthog/core/dist/logs/**/*'],
+    },
   }),
   env: {
     NEXT_PUBLIC_BASE_PATH: process.env.BASE_PATH || '',
