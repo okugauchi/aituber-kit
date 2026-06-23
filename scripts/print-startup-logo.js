@@ -9,16 +9,24 @@ if (process.env.AITUBERKIT_NO_LOGO === '1') {
 const root = path.resolve(__dirname, '..')
 
 const readPackageVersion = () => {
-  const packageJsonPath = path.join(root, 'package.json')
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-  return `v${packageJson.version}`
+  try {
+    const packageJsonPath = path.join(root, 'package.json')
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+    return `v${packageJson.version}`
+  } catch {
+    return null
+  }
 }
 
 const readUiVersion = () => {
-  const settingsPath = path.join(root, 'src/components/settings/index.tsx')
-  const settingsSource = fs.readFileSync(settingsPath, 'utf8')
-  const match = settingsSource.match(/ver\.\s*([0-9]+\.[0-9]+\.[0-9]+)/)
-  return match ? `v${match[1]}` : null
+  try {
+    const settingsPath = path.join(root, 'src/components/settings/index.tsx')
+    const settingsSource = fs.readFileSync(settingsPath, 'utf8')
+    const match = settingsSource.match(/ver\.\s*([0-9]+\.[0-9]+\.[0-9]+)/)
+    return match ? `v${match[1]}` : null
+  } catch {
+    return null
+  }
 }
 
 const readGitVersion = () => {
@@ -33,7 +41,8 @@ const readGitVersion = () => {
   }
 }
 
-const getVersion = () => readGitVersion() || readUiVersion() || readPackageVersion()
+const getVersion = () =>
+  readGitVersion() || readUiVersion() || readPackageVersion() || 'version unknown'
 
 const main = async () => {
   const { render } = await import('oh-my-logo')
@@ -51,5 +60,5 @@ const main = async () => {
 main().catch((error) => {
   console.error('[startup-logo] failed to render logo')
   console.error(error)
-  process.exit(1)
+  process.exit(0)
 })

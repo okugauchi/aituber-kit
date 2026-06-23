@@ -12,7 +12,14 @@ function isWithinTokenLimit(input, limit) {
   return estimateTokenCount(input) <= limit
 }
 
+function assertPositiveLimit(limit) {
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new RangeError('limit must be a positive integer')
+  }
+}
+
 function sliceByTokens(input, limit) {
+  assertPositiveLimit(limit)
   return String(input ?? '')
     .split(/\s+/)
     .slice(0, limit)
@@ -20,6 +27,7 @@ function sliceByTokens(input, limit) {
 }
 
 function splitByTokens(input, limit) {
+  assertPositiveLimit(limit)
   const words = String(input ?? '')
     .split(/\s+/)
     .filter(Boolean)

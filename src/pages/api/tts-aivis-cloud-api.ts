@@ -151,19 +151,19 @@ export default async function handler(
     const characterCount = normalizeHeaderValue(
       response.headers['x-aivis-character-count']
     )
-    if (characterCount) {
+    if (characterCount !== undefined) {
       res.setHeader('X-Aivis-Character-Count', characterCount)
     }
     const creditsRemaining = normalizeHeaderValue(
       response.headers['x-aivis-credits-remaining']
     )
-    if (creditsRemaining) {
+    if (creditsRemaining !== undefined) {
       res.setHeader('X-Aivis-Credits-Remaining', creditsRemaining)
     }
     const creditsUsed = normalizeHeaderValue(
       response.headers['x-aivis-credits-used']
     )
-    if (creditsUsed) {
+    if (creditsUsed !== undefined) {
       res.setHeader('X-Aivis-Credits-Used', creditsUsed)
     }
 
