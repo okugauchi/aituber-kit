@@ -36,6 +36,20 @@ function normalizeHeaderValue(
   return undefined
 }
 
+function getFallbackContentType(outputFormat: unknown): string {
+  const contentTypeByFormat: Record<string, string> = {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    aac: 'audio/aac',
+    flac: 'audio/flac',
+  }
+  return (
+    contentTypeByFormat[String(outputFormat).toLowerCase()] ||
+    'application/octet-stream'
+  )
+}
+
 function isValidUUID(uuid: string): boolean {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -144,7 +158,8 @@ export default async function handler(
 
     // レスポンスのContent-Typeを設定
     const contentType =
-      normalizeHeaderValue(response.headers['content-type']) || 'audio/mpeg'
+      normalizeHeaderValue(response.headers['content-type']) ||
+      getFallbackContentType(outputFormat)
     res.setHeader('Content-Type', contentType)
 
     // Aivis Cloud APIのカスタムヘッダーがあれば転送

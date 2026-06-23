@@ -22,6 +22,7 @@ function sliceByTokens(input, limit) {
   assertPositiveLimit(limit)
   return String(input ?? '')
     .split(/\s+/)
+    .filter(Boolean)
     .slice(0, limit)
     .join(' ')
 }
