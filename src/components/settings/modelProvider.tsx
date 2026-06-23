@@ -355,7 +355,7 @@ const ModelProvider = () => {
         >
           <div className="relative inline-block min-w-[240px]">
             <Listbox.Button className="flex w-full cursor-pointer items-center rounded-lg border border-gray-300 bg-white px-4 py-2 shadow-sm transition hover:bg-white-hover focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20">
-              <ServiceLogo service={state.selectAIService as any} />
+              <ServiceLogo service={state.selectAIService} />
               <span>{selectedServiceOption?.label}</span>
             </Listbox.Button>
             <Listbox.Options className="absolute z-10 top-[-170px] w-auto min-w-full overflow-auto rounded-lg bg-white py-2 shadow-lg focus:outline-none">
@@ -371,7 +371,7 @@ const ModelProvider = () => {
                 >
                   {({ selected }) => (
                     <div className="flex items-center">
-                      <ServiceLogo service={option.value as any} />
+                      <ServiceLogo service={option.value} />
                       <span
                         className={selected ? 'font-medium' : 'font-normal'}
                       >

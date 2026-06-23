@@ -78,8 +78,8 @@ describe('aiModels', () => {
   })
 
   describe('getDefaultModel', () => {
-    it('should return gpt-4.1-mini for openai', () => {
-      expect(getDefaultModel('openai')).toBe('gpt-4.1-mini')
+    it('should return gpt-5.4-mini for openai', () => {
+      expect(getDefaultModel('openai')).toBe('gpt-5.4-mini')
     })
 
     it('should return claude-sonnet-4-6 for anthropic', () => {
@@ -116,8 +116,10 @@ describe('aiModels', () => {
   })
 
   describe('getSpecificDefaultModel', () => {
-    it('should return tts-1 for openaiAudio', () => {
-      expect(getSpecificDefaultModel('openaiAudio')).toBe('tts-1')
+    it('should return gpt-4o-mini-audio-preview for openaiAudio', () => {
+      expect(getSpecificDefaultModel('openaiAudio')).toBe(
+        'gpt-4o-mini-audio-preview'
+      )
     })
 
     it('should return gpt-realtime for openaiRealtime', () => {
@@ -125,7 +127,7 @@ describe('aiModels', () => {
     })
 
     it('should also work for regular AIService', () => {
-      expect(getSpecificDefaultModel('openai')).toBe('gpt-4.1-mini')
+      expect(getSpecificDefaultModel('openai')).toBe('gpt-5.4-mini')
     })
   })
 
@@ -144,10 +146,13 @@ describe('aiModels', () => {
       expect(models).toEqual(allModels)
     })
 
-    it('should return all models for google (all are multimodal)', () => {
+    it('should return subset for google (Gemma and AQA are not multimodal)', () => {
       const models = getMultiModalModels('google')
       const allModels = getModels('google')
-      expect(models).toEqual(allModels)
+      expect(models.length).toBeLessThan(allModels.length)
+      expect(models).toContain('gemini-2.5-flash')
+      expect(models).not.toContain('aqa')
+      expect(models).not.toContain('gemma-3-27b-it')
     })
 
     it('should return subset for xai (some are not multimodal)', () => {
@@ -305,8 +310,8 @@ describe('aiModels', () => {
     it('getOpenAIAudioModels should return correct models', () => {
       const models = getOpenAIAudioModels()
       expect(models).toEqual([...openAIAudioModels])
-      expect(models).toContain('tts-1')
-      expect(models).toContain('tts-1-hd')
+      expect(models).toContain('gpt-4o-audio-preview')
+      expect(models).toContain('gpt-4o-mini-audio-preview')
     })
 
     it('getOpenAIWhisperModels should return correct models', () => {
