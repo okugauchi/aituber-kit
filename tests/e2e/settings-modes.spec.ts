@@ -9,6 +9,8 @@ import {
   readPersistedSetting,
 } from './helpers/app'
 
+const OPENAI_AUDIO_MODE_MODEL = 'gpt-4o-mini-audio-preview'
+
 async function blockExternalRequests(page: Page) {
   await page.route('**/*', (route) => {
     const url = new URL(route.request().url())
@@ -208,13 +210,13 @@ test('enforces mode exclusions for real-time API and audio modes from settings U
   await clickElement(page.getByTestId('audio-mode-toggle'))
   await expectPersistedSetting(page, 'audioMode', true)
   await expectPersistedSetting(page, 'realtimeAPIMode', false)
-  await expectPersistedSetting(page, 'selectAIModel', 'tts-1')
+  await expectPersistedSetting(page, 'selectAIModel', OPENAI_AUDIO_MODE_MODEL)
 
   await clickElement(page.getByTestId('audio-mode-toggle'))
   await expectPersistedSetting(page, 'audioMode', false)
   await expect
     .poll(() => readPersistedSetting<string>(page, 'selectAIModel'))
-    .not.toBe('tts-1')
+    .not.toBe(OPENAI_AUDIO_MODE_MODEL)
 
   await openSettingsTab(page, 'idle')
   await switchAfter(page, 'Idle Mode').click()
