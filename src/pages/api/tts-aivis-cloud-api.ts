@@ -23,6 +23,33 @@ interface AivisCloudRequestBody {
   style_name?: string
 }
 
+function normalizeHeaderValue(
+  value: unknown
+): string | number | readonly string[] | undefined {
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    (Array.isArray(value) && value.every((item) => typeof item === 'string'))
+  ) {
+    return value
+  }
+  return undefined
+}
+
+function getFallbackContentType(outputFormat: unknown): string {
+  const contentTypeByFormat: Record<string, string> = {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    aac: 'audio/aac',
+    flac: 'audio/flac',
+  }
+  return (
+    contentTypeByFormat[String(outputFormat).toLowerCase()] ||
+    'application/octet-stream'
+  )
+}
+
 function isValidUUID(uuid: string): boolean {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -130,27 +157,29 @@ export default async function handler(
     )
 
     // レスポンスのContent-Typeを設定
-    const contentType = response.headers['content-type'] || 'audio/mpeg'
+    const contentType =
+      normalizeHeaderValue(response.headers['content-type']) ||
+      getFallbackContentType(outputFormat)
     res.setHeader('Content-Type', contentType)
 
     // Aivis Cloud APIのカスタムヘッダーがあれば転送
-    if (response.headers['x-aivis-character-count']) {
-      res.setHeader(
-        'X-Aivis-Character-Count',
-        response.headers['x-aivis-character-count']
-      )
+    const characterCount = normalizeHeaderValue(
+      response.headers['x-aivis-character-count']
+    )
+    if (characterCount !== undefined) {
+      res.setHeader('X-Aivis-Character-Count', characterCount)
     }
-    if (response.headers['x-aivis-credits-remaining']) {
-      res.setHeader(
-        'X-Aivis-Credits-Remaining',
-        response.headers['x-aivis-credits-remaining']
-      )
+    const creditsRemaining = normalizeHeaderValue(
+      response.headers['x-aivis-credits-remaining']
+    )
+    if (creditsRemaining !== undefined) {
+      res.setHeader('X-Aivis-Credits-Remaining', creditsRemaining)
     }
-    if (response.headers['x-aivis-credits-used']) {
-      res.setHeader(
-        'X-Aivis-Credits-Used',
-        response.headers['x-aivis-credits-used']
-      )
+    const creditsUsed = normalizeHeaderValue(
+      response.headers['x-aivis-credits-used']
+    )
+    if (creditsUsed !== undefined) {
+      res.setHeader('X-Aivis-Credits-Used', creditsUsed)
     }
 
     res.end(Buffer.from(response.data))
