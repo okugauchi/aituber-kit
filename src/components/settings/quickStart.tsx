@@ -12,18 +12,18 @@ import {
   OpenAITTSVoice,
 } from '@/features/constants/settings'
 import { getOpenAITTSModels } from '@/features/constants/aiModels'
-import { ModelSelector } from './modelProvider/ModelSelector'
-import { ApiKeyInput } from './modelProvider/ApiKeyInput'
-import { ServiceLogo } from './modelProvider/ServiceLogo'
+import { ModelSelector } from '@/components/settings/modelProvider/ModelSelector'
+import { ApiKeyInput } from '@/components/settings/modelProvider/ApiKeyInput'
+import { ServiceLogo } from '@/components/settings/modelProvider/ServiceLogo'
 import {
   aiServiceOptions,
   getServiceConfigByKey,
-} from './modelProvider/utils/aiServiceConfigs'
-import { useAIServiceHandlers } from './modelProvider/hooks/useAIServiceHandlers'
-import { useModelProviderState } from './modelProvider/hooks/useModelProviderState'
-import { ToggleSwitch } from '../toggleSwitch'
+} from '@/components/settings/modelProvider/utils/aiServiceConfigs'
+import { useAIServiceHandlers } from '@/components/settings/modelProvider/hooks/useAIServiceHandlers'
+import { useModelProviderState } from '@/components/settings/modelProvider/hooks/useModelProviderState'
+import { ToggleSwitch } from '@/components/toggleSwitch'
 import { languageOptions } from '@/components/settings/languageOptions'
-import speakers from '../speakers.json'
+import speakers from '@/components/speakers.json'
 
 type SpeakerOption = {
   id: number | string
@@ -31,10 +31,10 @@ type SpeakerOption = {
 }
 
 const inputClassName =
-  'w-full rounded-lg bg-white px-4 py-2 hover:bg-white-hover'
+  'theme-surface-control w-full rounded-lg border px-4 py-2 text-theme-default outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
 
 const selectButtonClassName =
-  'flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2 text-left shadow-sm transition hover:bg-white-hover focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20'
+  'theme-surface-control flex w-full cursor-pointer items-center justify-between rounded-lg border px-4 py-2 text-left shadow-sm transition hover:border-primary/40 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20'
 
 const choiceControlClassName = 'w-full max-w-full sm:w-80'
 
@@ -63,6 +63,21 @@ type QuickStartDestination =
   | 'youtube'
   | 'idle'
   | 'other'
+
+const isSpeakerOption = (value: unknown): value is SpeakerOption => {
+  if (typeof value !== 'object' || value === null) return false
+
+  const speakerOption = value as {
+    id?: unknown
+    speaker?: unknown
+  }
+
+  return (
+    (typeof speakerOption.id === 'number' ||
+      typeof speakerOption.id === 'string') &&
+    typeof speakerOption.speaker === 'string'
+  )
+}
 
 const QuickStart = () => {
   const { t } = useTranslation()
@@ -116,10 +131,17 @@ const QuickStart = () => {
     const fetchAivisSpeakers = async () => {
       try {
         const response = await fetch('/speakers_aivis.json')
-        const data = (await response.json()) as SpeakerOption[]
-        setAivisSpeakers(data)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const data: unknown = await response.json()
+        setAivisSpeakers(
+          Array.isArray(data) ? data.filter(isSpeakerOption) : []
+        )
       } catch (error) {
         console.error('Failed to fetch AIVIS speakers:', error)
+        setAivisSpeakers([])
       }
     }
 
@@ -531,11 +553,12 @@ const QuickStart = () => {
                   className={inputClassName}
                   type="number"
                   value={aivisCloudStyleId}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const styleId = Number.parseInt(e.target.value, 10)
                     settingsStore.setState({
-                      aivisCloudStyleId: Number(e.target.value),
+                      aivisCloudStyleId: Number.isNaN(styleId) ? 0 : styleId,
                     })
-                  }
+                  }}
                   placeholder="0"
                 />
               </LabeledField>
@@ -808,14 +831,14 @@ const QuickStart = () => {
             <div className={`relative ${choiceControlClassName}`}>
               <Listbox.Button className={selectButtonClassName}>
                 <span className="flex min-w-0 items-center">
-                  <ServiceLogo service={modelState.selectAIService as any} />
+                  <ServiceLogo service={modelState.selectAIService} />
                   <span className="truncate">
                     {selectedServiceOption?.label}
                   </span>
                 </span>
                 <span className="ml-3 text-secondary">⌄</span>
               </Listbox.Button>
-              <Listbox.Options className="absolute z-20 mt-2 max-h-80 w-full overflow-auto rounded-lg bg-white py-2 shadow-lg ring-1 ring-black/5 focus:outline-none">
+              <Listbox.Options className="theme-surface-popover absolute z-20 mt-2 max-h-80 w-full overflow-auto rounded-lg border border-primary/20 py-2 shadow-lg focus:outline-none">
                 {aiServiceOptions.map((option) => (
                   <Listbox.Option
                     key={option.value}
@@ -828,7 +851,7 @@ const QuickStart = () => {
                   >
                     {({ selected }) => (
                       <div className="flex min-w-0 items-center">
-                        <ServiceLogo service={option.value as any} />
+                        <ServiceLogo service={option.value} />
                         <span
                           className={`truncate ${
                             selected ? 'font-medium' : 'font-normal'
