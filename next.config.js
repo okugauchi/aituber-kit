@@ -24,7 +24,11 @@ const nextConfig = {
       ],
     },
     outputFileTracingIncludes: {
-      '*': ['./node_modules/@posthog/core/dist/logs/**/*'],
+      '*': [
+        './node_modules/@posthog/core/dist/logs/**/*',
+        './node_modules/unist-util-visit-parents/lib/color*.js',
+        './node_modules/vfile/lib/min*.js',
+      ],
     },
   }),
   env: {
