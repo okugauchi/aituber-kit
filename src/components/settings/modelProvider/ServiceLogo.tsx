@@ -1,6 +1,7 @@
 import Image from 'next/image'
+import { AIService } from '@/features/constants/settings'
 
-const aiServiceLogos = {
+const aiServiceLogos: Record<AIService, string> = {
   openai: '/images/ai-logos/openai.svg',
   anthropic: '/images/ai-logos/anthropic.svg',
   google: '/images/ai-logos/google.svg',
@@ -20,7 +21,7 @@ const aiServiceLogos = {
 }
 
 interface ServiceLogoProps {
-  service: keyof typeof aiServiceLogos
+  service: AIService
 }
 
 export const ServiceLogo = ({ service }: ServiceLogoProps) => {
