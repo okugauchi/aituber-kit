@@ -267,6 +267,43 @@ describe('/api/v1 external API', () => {
     )
   })
 
+  it('falls back to text when v1 messages contains an empty messages array', () => {
+    const v1Messages = require('@/pages/api/v1/messages').default
+    const messages = require('@/pages/api/messages').default
+
+    const res = createMockRes()
+    v1Messages(
+      createMockReq({
+        method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
+        query: { clientId: 'client1' },
+        body: {
+          messages: [],
+          text: 'fallback text',
+        },
+      }),
+      res
+    )
+
+    expect(res._status).toBe(202)
+
+    const getRes = createMockRes()
+    messages(
+      createMockReq({
+        method: 'GET',
+        query: { clientId: 'client1' },
+      }),
+      getRes
+    )
+
+    expect((getRes._json as { messages: unknown[] }).messages[0]).toEqual(
+      expect.objectContaining({
+        message: 'fallback text',
+        type: 'direct_send',
+      })
+    )
+  })
+
   it('supports ai_generate through v1 messages requests', () => {
     const v1Messages = require('@/pages/api/v1/messages').default
     const messages = require('@/pages/api/messages').default

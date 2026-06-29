@@ -56,7 +56,9 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).json({ error: 'Invalid type' })
   }
 
-  const messages = normalizeMessages(req.body?.messages ?? req.body?.text)
+  const bodyMessages = normalizeMessages(req.body?.messages)
+  const messages =
+    bodyMessages.length > 0 ? bodyMessages : normalizeMessages(req.body?.text)
   if (messages.length === 0) {
     return res.status(400).json({ error: 'Text or messages are required' })
   }

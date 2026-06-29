@@ -29,6 +29,8 @@ const createMediaStreamMock = () => {
 }
 
 describe('Capture lifecycle', () => {
+  let mediaTrack: ReturnType<typeof createMediaStreamMock>['track']
+
   beforeEach(() => {
     jest.clearAllMocks()
     homeStore.setState({ captureStatus: false })
@@ -38,7 +40,8 @@ describe('Capture lifecycle', () => {
       useVideoAsBackground: true,
     })
 
-    const { stream } = createMediaStreamMock()
+    const { stream, track } = createMediaStreamMock()
+    mediaTrack = track
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
       value: {
@@ -53,9 +56,12 @@ describe('Capture lifecycle', () => {
     await waitFor(() => {
       expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalled()
     })
+    expect(homeStore.getState().captureStatus).toBe(true)
 
     unmount()
 
+    expect(mediaTrack.stop).toHaveBeenCalledTimes(1)
+    expect(homeStore.getState().captureStatus).toBe(false)
     expect(menuStore.getState().showCapture).toBe(true)
     expect(settingsStore.getState().hideVideoDisplay).toBe(true)
     expect(settingsStore.getState().useVideoAsBackground).toBe(true)
@@ -67,9 +73,12 @@ describe('Capture lifecycle', () => {
     await waitFor(() => {
       expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalled()
     })
+    expect(homeStore.getState().captureStatus).toBe(true)
 
     fireEvent.click(screen.getByRole('button', { name: 'stop source' }))
 
+    expect(mediaTrack.stop).toHaveBeenCalledTimes(1)
+    expect(homeStore.getState().captureStatus).toBe(false)
     expect(menuStore.getState().showCapture).toBe(false)
     expect(settingsStore.getState().hideVideoDisplay).toBe(false)
     expect(settingsStore.getState().useVideoAsBackground).toBe(false)

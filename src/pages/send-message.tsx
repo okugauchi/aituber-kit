@@ -370,6 +370,11 @@ const defaultEndpoint = endpoints.find(
 const stringifyBody = (body?: Record<string, unknown>) =>
   body ? JSON.stringify(body, null, 2) : ''
 
+const isRequestBodyObject = (
+  value: unknown
+): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
 const extractMessageText = (
   endpoint: EndpointDefinition,
   body?: Record<string, unknown>
@@ -557,8 +562,11 @@ print(response.json())`
     setMessageText(text)
 
     try {
-      const body = requestBody.trim()
+      const parsed = requestBody.trim()
         ? JSON.parse(requestBody)
+        : { ...(selectedEndpoint.defaultBody ?? {}) }
+      const body = isRequestBodyObject(parsed)
+        ? parsed
         : { ...(selectedEndpoint.defaultBody ?? {}) }
       if (
         selectedEndpoint.group === 'legacy' ||
@@ -579,6 +587,26 @@ print(response.json())`
           ? { messages: text ? [text] : [] }
           : { text }
       setRequestBody(JSON.stringify(body, null, 2))
+    }
+  }
+
+  const handleRequestBodyChange = (bodyText: string) => {
+    setRequestBody(bodyText)
+
+    try {
+      if (!bodyText.trim()) {
+        setMessageText('')
+        return
+      }
+
+      const parsed = JSON.parse(bodyText)
+      if (isRequestBodyObject(parsed)) {
+        setMessageText(extractMessageText(selectedEndpoint, parsed))
+      } else {
+        setMessageText('')
+      }
+    } catch {
+      // Keep the current message text while the JSON is invalid.
     }
   }
 
@@ -869,11 +897,11 @@ print(response.json())`
                           <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             useCurrentSystemPrompt
                           </code>
-                          を指定でき、旧APIの
+                          を指定でき、
                           <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             type=ai_generate
                           </code>
-                          に相当します。
+                          としてAI生成に渡します。
                         </div>
                       </div>
                     )}
@@ -903,7 +931,9 @@ print(response.json())`
                       </span>
                       <textarea
                         value={requestBody}
-                        onChange={(event) => setRequestBody(event.target.value)}
+                        onChange={(event) =>
+                          handleRequestBodyChange(event.target.value)
+                        }
                         className="theme-surface-control min-h-[260px] w-full min-w-0 rounded-lg border p-3 font-mono text-sm font-normal leading-6 text-theme-default outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                         spellCheck={false}
                       />
