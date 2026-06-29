@@ -20,6 +20,7 @@ aituber-kitで `develop => main` PRをマージし、新しいマイナーバー
 
 ```markdown
 ## vX.Y.0
+
 - XXX
 - XXX
 
