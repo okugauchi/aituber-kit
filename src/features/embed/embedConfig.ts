@@ -123,7 +123,8 @@ export const toPresetQuestions = (questions?: string[]): PresetQuestion[] =>
 
 export const isEmbedOriginAllowed = (config: EmbedConfig, referrer: string) => {
   const allowedOrigins = config.allowedOrigins || []
-  if (allowedOrigins.length === 0 || !referrer) return true
+  if (allowedOrigins.length === 0) return true
+  if (!referrer) return false
 
   try {
     const origin = new URL(referrer).origin

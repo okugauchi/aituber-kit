@@ -2,9 +2,15 @@
   function getCurrentScript() {
     return (
       document.currentScript ||
-      document.querySelector('script[src$="/embed.js"]')
+      document.querySelector('script[src*="/embed.js"]')
     )
   }
+
+  var initialScript = getCurrentScript()
+  var defaultBaseUrl =
+    initialScript && initialScript.src
+      ? new URL(initialScript.src).origin
+      : window.location.origin
 
   function getOption(options, element, key) {
     if (options && options[key] !== undefined) return options[key]
@@ -31,9 +37,7 @@
     var script = getCurrentScript()
     var baseUrl =
       getOption(options, element, 'baseUrl') ||
-      (script && script.src
-        ? new URL(script.src).origin
-        : window.location.origin)
+      (script && script.src ? new URL(script.src).origin : defaultBaseUrl)
     var embedId = getOption(options, element, 'embedId')
     var height = getOption(options, element, 'height') || '640'
     var iframe = document.createElement('iframe')
