@@ -375,19 +375,30 @@ const isRequestBodyObject = (
 ): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 
-const extractMessageText = (
-  endpoint: EndpointDefinition,
-  body?: Record<string, unknown>
-) => {
-  const value =
-    endpoint.group === 'legacy' || endpoint.id === 'messages'
-      ? body?.messages
-      : body?.text
+const formatMessageInputValue = (value: unknown) => {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) {
     return value.filter((item) => typeof item === 'string').join('\n')
   }
   return ''
+}
+
+const extractMessageText = (
+  endpoint: EndpointDefinition,
+  body?: Record<string, unknown>
+) => {
+  if (
+    endpoint.group === 'legacy' ||
+    endpoint.id === 'messages' ||
+    endpoint.id === 'speak' ||
+    endpoint.id === 'chat'
+  ) {
+    return (
+      formatMessageInputValue(body?.messages) ||
+      formatMessageInputValue(body?.text)
+    )
+  }
+  return formatMessageInputValue(body?.text)
 }
 
 const SendMessage = () => {
@@ -576,8 +587,10 @@ print(response.json())`
           .split('\n')
           .map((line) => line.trim())
           .filter(Boolean)
+        delete body.text
       } else {
         body.text = text
+        delete body.messages
       }
       setRequestBody(JSON.stringify(body, null, 2))
     } catch {
