@@ -9,17 +9,29 @@
   var initialScript = getCurrentScript()
   var defaultBaseUrl =
     initialScript && initialScript.src
-      ? new URL(initialScript.src).origin
-      : window.location.origin
+      ? getScriptBaseUrl(initialScript)
+      : window.location.origin + '/'
 
   function getOption(options, element, key) {
     if (options && options[key] !== undefined) return options[key]
     return element.dataset[key]
   }
 
+  function getScriptBaseUrl(script) {
+    return new URL('.', script.src).toString()
+  }
+
+  function normalizeBaseUrl(baseUrl) {
+    var normalizedBaseUrl = String(baseUrl || defaultBaseUrl)
+    if (!/[/?#]$/.test(normalizedBaseUrl)) {
+      normalizedBaseUrl += '/'
+    }
+    return normalizedBaseUrl
+  }
+
   function buildEmbedUrl(baseUrl, embedId, options) {
-    var path = embedId ? '/embed/' + encodeURIComponent(embedId) : '/embed'
-    var url = new URL(path, baseUrl)
+    var path = embedId ? 'embed/' + encodeURIComponent(embedId) : 'embed'
+    var url = new URL(path, normalizeBaseUrl(baseUrl))
     Object.keys(options || {}).forEach(function (key) {
       var value = options[key]
       if (value !== undefined && value !== null && value !== '') {
@@ -37,7 +49,7 @@
     var script = getCurrentScript()
     var baseUrl =
       getOption(options, element, 'baseUrl') ||
-      (script && script.src ? new URL(script.src).origin : defaultBaseUrl)
+      (script && script.src ? getScriptBaseUrl(script) : defaultBaseUrl)
     var embedId = getOption(options, element, 'embedId')
     var height = getOption(options, element, 'height') || '640'
     var iframe = document.createElement('iframe')
@@ -76,9 +88,17 @@
     mount: mount,
   }
 
-  document
-    .querySelectorAll('[data-aituber-kit-embed]')
-    .forEach(function (element) {
-      mount(element, {})
-    })
+  function autoMount() {
+    document
+      .querySelectorAll('[data-aituber-kit-embed]')
+      .forEach(function (element) {
+        mount(element, {})
+      })
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoMount, { once: true })
+  } else {
+    autoMount()
+  }
 })()

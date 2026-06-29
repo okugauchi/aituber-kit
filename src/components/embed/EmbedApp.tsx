@@ -34,6 +34,8 @@ const applyEmbedConfig = (embedId?: string) => {
   const baseConfig = getEmbedConfig(embedId || params.get('embedId') || '')
   const queryConfig = getEmbedOverridesFromSearchParams(params)
   const config = mergeEmbedConfig(baseConfig, queryConfig)
+  const defaultSettings = settingsStore.getInitialState()
+  const defaultHome = homeStore.getInitialState()
 
   if (!isEmbedOriginAllowed(config, document.referrer)) {
     return { allowed: false, id: config.id || embedId || '' }
@@ -44,39 +46,36 @@ const applyEmbedConfig = (embedId?: string) => {
     showQuickMenu: false,
     messageReceiverEnabled: false,
     slideMode: false,
-    ...(config.characterName && { characterName: config.characterName }),
-    ...(config.userDisplayName && { userDisplayName: config.userDisplayName }),
-    ...(config.systemPrompt && { systemPrompt: config.systemPrompt }),
-    ...(config.modelType && { modelType: config.modelType }),
-    ...(config.selectedVrmPath && { selectedVrmPath: config.selectedVrmPath }),
-    ...(config.selectedLive2DPath && {
-      selectedLive2DPath: config.selectedLive2DPath,
-    }),
-    ...(config.selectedPNGTuberPath && {
-      selectedPNGTuberPath: config.selectedPNGTuberPath,
-    }),
-    ...(config.showAssistantText !== undefined && {
-      showAssistantText: config.showAssistantText,
-    }),
-    ...(config.showCharacterName !== undefined && {
-      showCharacterName: config.showCharacterName,
-    }),
-    ...(config.showPresetQuestions !== undefined && {
-      showPresetQuestions: config.showPresetQuestions,
-    }),
-    ...(config.presetQuestions && {
-      presetQuestions: toPresetQuestions(config.presetQuestions),
-    }),
-    ...(config.colorTheme && { colorTheme: config.colorTheme }),
+    characterName: config.characterName ?? defaultSettings.characterName,
+    userDisplayName: config.userDisplayName ?? defaultSettings.userDisplayName,
+    systemPrompt: config.systemPrompt ?? defaultSettings.systemPrompt,
+    modelType: config.modelType ?? defaultSettings.modelType,
+    selectedVrmPath: config.selectedVrmPath ?? defaultSettings.selectedVrmPath,
+    selectedLive2DPath:
+      config.selectedLive2DPath ?? defaultSettings.selectedLive2DPath,
+    selectedPNGTuberPath:
+      config.selectedPNGTuberPath ?? defaultSettings.selectedPNGTuberPath,
+    showAssistantText:
+      config.showAssistantText ?? defaultSettings.showAssistantText,
+    showCharacterName:
+      config.showCharacterName ?? defaultSettings.showCharacterName,
+    showPresetQuestions:
+      config.showPresetQuestions ?? defaultSettings.showPresetQuestions,
+    presetQuestions: config.presetQuestions
+      ? toPresetQuestions(config.presetQuestions)
+      : defaultSettings.presetQuestions,
+    colorTheme: config.colorTheme ?? defaultSettings.colorTheme,
   })
 
-  if (config.colorTheme) {
-    document.documentElement.setAttribute('data-theme', config.colorTheme)
-  }
+  document.documentElement.setAttribute(
+    'data-theme',
+    config.colorTheme ?? defaultSettings.colorTheme
+  )
 
-  if (config.backgroundImageUrl) {
-    homeStore.setState({ backgroundImageUrl: config.backgroundImageUrl })
-  }
+  homeStore.setState({
+    backgroundImageUrl:
+      config.backgroundImageUrl ?? defaultHome.backgroundImageUrl,
+  })
 
   return { allowed: true, id: config.id || embedId || '' }
 }
