@@ -137,9 +137,9 @@ const Capture = () => {
 
   useEffect(() => {
     return () => {
-      stopCapture()
+      cleanupStream()
     }
-  }, [stopCapture])
+  }, [cleanupStream])
 
   return (
     <VideoDisplay

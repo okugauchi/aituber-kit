@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 type EndpointId =
+  | 'messages'
   | 'speak'
   | 'chat'
   | 'stop'
@@ -45,6 +46,57 @@ type EndpointDefinition = {
 }
 
 const endpoints: EndpointDefinition[] = [
+  {
+    id: 'messages',
+    group: 'v1',
+    label: 'Messages',
+    method: 'POST',
+    path: '/api/v1/messages/',
+    description:
+      'messages と type を指定して、発話・AI生成・通常入力をまとめて送信します。',
+    requiresApiKey: true,
+    defaultBody: {
+      messages: ['こんにちは。外部APIからの発話テストです。'],
+      type: 'direct_send',
+    },
+    fields: [
+      {
+        name: 'messages',
+        type: 'string[]',
+        required: true,
+        description: '送信する本文の配列です。',
+      },
+      {
+        name: 'type',
+        type: '"direct_send" | "ai_generate" | "user_input"',
+        description:
+          'direct_send はそのまま発話、ai_generate はAI生成、user_input は通常入力として処理します。',
+      },
+      {
+        name: 'text',
+        type: 'string',
+        description: 'messages の代わりに単一本文を送る場合に使います。',
+      },
+      {
+        name: 'systemPrompt',
+        type: 'string',
+        description:
+          'type が ai_generate で useCurrentSystemPrompt=false のときに使うシステムプロンプトです。',
+      },
+      {
+        name: 'useCurrentSystemPrompt',
+        type: 'boolean',
+        description:
+          'type が ai_generate のとき、現在のキャラクター設定のシステムプロンプトを使うかどうかです。',
+      },
+      {
+        name: 'image',
+        type: 'string',
+        description:
+          'data URL などの画像文字列です。画像付き入力として処理します。',
+      },
+    ],
+  },
   {
     id: 'speak',
     group: 'v1',
@@ -311,17 +363,44 @@ const codeSampleTabs: Array<{ id: CodeSampleId; label: string }> = [
   { id: 'python', label: 'Python' },
 ]
 
+const defaultEndpoint = endpoints.find(
+  (endpoint) => endpoint.id === 'messages'
+)!
+
 const stringifyBody = (body?: Record<string, unknown>) =>
   body ? JSON.stringify(body, null, 2) : ''
 
+const isRequestBodyObject = (
+  value: unknown
+): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+const extractMessageText = (
+  endpoint: EndpointDefinition,
+  body?: Record<string, unknown>
+) => {
+  const value =
+    endpoint.group === 'legacy' || endpoint.id === 'messages'
+      ? body?.messages
+      : body?.text
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === 'string').join('\n')
+  }
+  return ''
+}
+
 const SendMessage = () => {
   const { t } = useTranslation()
-  const [selectedId, setSelectedId] = useState<EndpointId>('speak')
+  const [selectedId, setSelectedId] = useState<EndpointId>(defaultEndpoint.id)
   const [clientId, setClientId] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [requestBody, setRequestBody] = useState(
-    stringifyBody(endpoints[0].defaultBody)
+    stringifyBody(defaultEndpoint.defaultBody)
+  )
+  const [messageText, setMessageText] = useState(
+    extractMessageText(defaultEndpoint, defaultEndpoint.defaultBody)
   )
   const [responseText, setResponseText] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -472,9 +551,62 @@ print(response.json())`
   const handleEndpointChange = (endpoint: EndpointDefinition) => {
     setSelectedId(endpoint.id)
     setRequestBody(stringifyBody(endpoint.defaultBody))
+    setMessageText(extractMessageText(endpoint, endpoint.defaultBody))
     setResponseText('')
     if (window.innerWidth < 1024) {
       setEndpointsOpen(false)
+    }
+  }
+
+  const handleMessageTextChange = (text: string) => {
+    setMessageText(text)
+
+    try {
+      const parsed = requestBody.trim()
+        ? JSON.parse(requestBody)
+        : { ...(selectedEndpoint.defaultBody ?? {}) }
+      const body = isRequestBodyObject(parsed)
+        ? parsed
+        : { ...(selectedEndpoint.defaultBody ?? {}) }
+      if (
+        selectedEndpoint.group === 'legacy' ||
+        selectedEndpoint.id === 'messages'
+      ) {
+        body.messages = text
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+      } else {
+        body.text = text
+      }
+      setRequestBody(JSON.stringify(body, null, 2))
+    } catch {
+      const body =
+        selectedEndpoint.group === 'legacy' ||
+        selectedEndpoint.id === 'messages'
+          ? { messages: text ? [text] : [] }
+          : { text }
+      setRequestBody(JSON.stringify(body, null, 2))
+    }
+  }
+
+  const handleRequestBodyChange = (bodyText: string) => {
+    setRequestBody(bodyText)
+
+    try {
+      if (!bodyText.trim()) {
+        setMessageText('')
+        return
+      }
+
+      const parsed = JSON.parse(bodyText)
+      if (isRequestBodyObject(parsed)) {
+        setMessageText(extractMessageText(selectedEndpoint, parsed))
+      } else {
+        setMessageText('')
+      }
+    } catch {
+      // Keep the current message text while the JSON is invalid.
     }
   }
 
@@ -765,13 +897,32 @@ print(response.json())`
                           <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             useCurrentSystemPrompt
                           </code>
-                          を指定でき、旧APIの
+                          を指定でき、
                           <code className="mx-1 rounded bg-base-light px-1.5 py-0.5 font-mono text-xs text-primary">
                             type=ai_generate
                           </code>
-                          に相当します。
+                          としてAI生成に渡します。
                         </div>
                       </div>
+                    )}
+                    {(selectedEndpoint.id === 'messages' ||
+                      selectedEndpoint.id === 'speak' ||
+                      selectedEndpoint.id === 'chat' ||
+                      selectedEndpoint.id.startsWith('legacy_')) && (
+                      <label className="flex min-w-0 flex-col gap-2 text-sm font-bold text-text-primary">
+                        <span className="flex items-center gap-2">
+                          <PaperAirplaneIcon className="h-5 w-5 text-primary" />
+                          Message
+                        </span>
+                        <textarea
+                          value={messageText}
+                          onChange={(event) =>
+                            handleMessageTextChange(event.target.value)
+                          }
+                          className="theme-surface-control min-h-[120px] w-full min-w-0 rounded-lg border p-3 text-sm font-normal leading-6 text-theme-default outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          spellCheck={false}
+                        />
+                      </label>
                     )}
                     <label className="flex min-w-0 flex-col gap-2 text-sm font-bold text-text-primary">
                       <span className="flex items-center gap-2">
@@ -780,7 +931,9 @@ print(response.json())`
                       </span>
                       <textarea
                         value={requestBody}
-                        onChange={(event) => setRequestBody(event.target.value)}
+                        onChange={(event) =>
+                          handleRequestBodyChange(event.target.value)
+                        }
                         className="theme-surface-control min-h-[260px] w-full min-w-0 rounded-lg border p-3 font-mono text-sm font-normal leading-6 text-theme-default outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                         spellCheck={false}
                       />

@@ -185,6 +185,171 @@ describe('/api/v1 external API', () => {
     )
   })
 
+  it('queues v1 messages requests with the legacy messages payload shape', () => {
+    const v1Messages = require('@/pages/api/v1/messages').default
+    const messages = require('@/pages/api/messages').default
+
+    const res = createMockRes()
+    v1Messages(
+      createMockReq({
+        method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
+        query: { clientId: 'client1' },
+        body: {
+          messages: ['hello from v1 messages'],
+          type: 'direct_send',
+          emotion: 'happy',
+        },
+      }),
+      res
+    )
+
+    expect(res._status).toBe(202)
+    expect(res._json).toEqual(
+      expect.objectContaining({
+        ok: true,
+        clientId: 'client1',
+        type: 'direct_send',
+        count: 1,
+      })
+    )
+
+    const getRes = createMockRes()
+    messages(
+      createMockReq({
+        method: 'GET',
+        query: { clientId: 'client1' },
+      }),
+      getRes
+    )
+
+    expect((getRes._json as { messages: unknown[] }).messages[0]).toEqual(
+      expect.objectContaining({
+        message: 'hello from v1 messages',
+        type: 'direct_send',
+        emotion: 'happy',
+        source: 'v1',
+      })
+    )
+  })
+
+  it('defaults v1 messages requests to direct_send when type is omitted', () => {
+    const v1Messages = require('@/pages/api/v1/messages').default
+    const messages = require('@/pages/api/messages').default
+
+    const res = createMockRes()
+    v1Messages(
+      createMockReq({
+        method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
+        query: { clientId: 'client1' },
+        body: { messages: ['default direct send'] },
+      }),
+      res
+    )
+
+    expect(res._status).toBe(202)
+
+    const getRes = createMockRes()
+    messages(
+      createMockReq({
+        method: 'GET',
+        query: { clientId: 'client1' },
+      }),
+      getRes
+    )
+
+    expect((getRes._json as { messages: unknown[] }).messages[0]).toEqual(
+      expect.objectContaining({
+        message: 'default direct send',
+        type: 'direct_send',
+      })
+    )
+  })
+
+  it('falls back to text when v1 messages contains an empty messages array', () => {
+    const v1Messages = require('@/pages/api/v1/messages').default
+    const messages = require('@/pages/api/messages').default
+
+    const res = createMockRes()
+    v1Messages(
+      createMockReq({
+        method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
+        query: { clientId: 'client1' },
+        body: {
+          messages: [],
+          text: 'fallback text',
+        },
+      }),
+      res
+    )
+
+    expect(res._status).toBe(202)
+
+    const getRes = createMockRes()
+    messages(
+      createMockReq({
+        method: 'GET',
+        query: { clientId: 'client1' },
+      }),
+      getRes
+    )
+
+    expect((getRes._json as { messages: unknown[] }).messages[0]).toEqual(
+      expect.objectContaining({
+        message: 'fallback text',
+        type: 'direct_send',
+      })
+    )
+  })
+
+  it('supports ai_generate through v1 messages requests', () => {
+    const v1Messages = require('@/pages/api/v1/messages').default
+    const messages = require('@/pages/api/messages').default
+
+    const res = createMockRes()
+    v1Messages(
+      createMockReq({
+        method: 'POST',
+        headers: { authorization: 'Bearer test-api-key' },
+        query: { clientId: 'client1' },
+        body: {
+          text: 'describe this',
+          type: 'ai_generate',
+          useCurrentSystemPrompt: false,
+          systemPrompt: 'Be concise',
+        },
+      }),
+      res
+    )
+
+    expect(res._status).toBe(202)
+    expect(res._json).toEqual(
+      expect.objectContaining({
+        type: 'ai_generate',
+      })
+    )
+
+    const getRes = createMockRes()
+    messages(
+      createMockReq({
+        method: 'GET',
+        query: { clientId: 'client1' },
+      }),
+      getRes
+    )
+
+    expect((getRes._json as { messages: unknown[] }).messages[0]).toEqual(
+      expect.objectContaining({
+        message: 'describe this',
+        type: 'ai_generate',
+        systemPrompt: 'Be concise',
+        useCurrentSystemPrompt: false,
+      })
+    )
+  })
+
   it('queues chat requests as user_input by default', () => {
     const chat = require('@/pages/api/v1/chat').default
     const messages = require('@/pages/api/messages').default
