@@ -768,6 +768,8 @@
   "DemoModeAppNotice": "これはAITuberKitのデモアプリです。",
   "DemoModeLimitedFeaturesNotice": "デモ版のため、一部の機能が制限されています。",
   "DemoModeLogNotice": "このアプリでは会話ログがサーバーに保存されるようになっています。ログは一部加工した上で公開される可能性があります。",
+  "EmbedPageTitle": "AITuberKit 埋め込み",
+  "EmbedUnavailable": "このAITuberKit埋め込みは、このサイトでは利用できません。",
   "ApiConsole": {
     "title": "API Console",
     "description": "用途別の /api/v1 エンドポイントと互換維持用の旧 /api/messages を、この画面から実行できます。",

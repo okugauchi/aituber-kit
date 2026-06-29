@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
+import { useTranslation } from 'react-i18next'
 
 import { AssistantText } from '@/components/assistantText'
 import { Form } from '@/components/form'
@@ -81,6 +82,7 @@ const applyEmbedConfig = (embedId?: string) => {
 }
 
 export const EmbedApp = ({ embedId }: Props) => {
+  const { t } = useTranslation()
   const webcamStatus = homeStore((s) => s.webcamStatus)
   const captureStatus = homeStore((s) => s.captureStatus)
   const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
@@ -93,6 +95,7 @@ export const EmbedApp = ({ embedId }: Props) => {
   const [isReady, setIsReady] = useState(false)
   const [isAllowed, setIsAllowed] = useState(true)
   const [resolvedEmbedId, setResolvedEmbedId] = useState(embedId || '')
+  const pageTitle = t('EmbedPageTitle')
   usePresetLoader()
 
   useEffect(() => {
@@ -123,7 +126,7 @@ export const EmbedApp = ({ embedId }: Props) => {
     return (
       <>
         <Head>
-          <title>AITuberKit Embed</title>
+          <title>{pageTitle}</title>
         </Head>
         <main className="h-[100svh] bg-theme-default" />
       </>
@@ -134,10 +137,10 @@ export const EmbedApp = ({ embedId }: Props) => {
     return (
       <>
         <Head>
-          <title>AITuberKit Embed</title>
+          <title>{pageTitle}</title>
         </Head>
         <main className="flex h-[100svh] items-center justify-center bg-theme-default px-4 text-center text-sm font-bold text-theme-default">
-          This AITuberKit embed is not available on this site.
+          {t('EmbedUnavailable')}
         </main>
       </>
     )
@@ -147,9 +150,7 @@ export const EmbedApp = ({ embedId }: Props) => {
     <>
       <Head>
         <title>
-          {resolvedEmbedId
-            ? `${resolvedEmbedId} - AITuberKit Embed`
-            : 'AITuberKit Embed'}
+          {resolvedEmbedId ? `${resolvedEmbedId} - ${pageTitle}` : pageTitle}
         </title>
       </Head>
       <main
