@@ -10,8 +10,6 @@ jest.mock('axios', () => ({
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '@/pages/api/tts-aivisspeech'
 
-const originalEnv = { ...process.env }
-
 function createMockReq(
   overrides: Partial<NextApiRequest> = {}
 ): NextApiRequest {
@@ -39,7 +37,6 @@ function createMockRes() {
       res._headers[key] = value
       return res
     },
-    end: jest.fn(),
   }
   return res as unknown as NextApiResponse & {
     _status: number
@@ -51,14 +48,11 @@ function createMockRes() {
 describe('/api/tts-aivisspeech', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env = { ...originalEnv }
-    delete process.env.AIVIS_SPEECH_SERVER_URL
     jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
     jest.restoreAllMocks()
-    process.env = originalEnv
   })
 
   it('should call audio_query and synthesis endpoints', async () => {
@@ -139,53 +133,6 @@ describe('/api/tts-aivisspeech', () => {
     await handler(req, res)
 
     expect(mockAxiosPost.mock.calls[0][0]).toContain('http://custom:10101')
-  })
-
-  it('should reject server-configured AivisSpeech URL by default', async () => {
-    process.env.AIVIS_SPEECH_SERVER_URL = 'http://aivis.internal:10101'
-    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
-
-    const req = createMockReq({
-      body: {
-        text: 'test',
-        speaker: 1,
-        speed: 1,
-        pitch: 0,
-        intonationScale: 1,
-      },
-    })
-    const res = createMockRes()
-
-    await handler(req, res)
-
-    expect(res._status).toBe(403)
-    expect(res._json).toEqual(
-      expect.objectContaining({
-        errorCode: 'ServerSecretAccessDenied',
-        feature: 'tts-aivisspeech',
-      })
-    )
-    expect(mockAxiosPost).not.toHaveBeenCalled()
-  })
-
-  it('should reject invalid serverUrl protocols', async () => {
-    const req = createMockReq({
-      body: {
-        text: 'test',
-        speaker: 1,
-        speed: 1,
-        pitch: 0,
-        intonationScale: 1,
-        serverUrl: 'file:///tmp/aivis',
-      },
-    })
-    const res = createMockRes()
-
-    await handler(req, res)
-
-    expect(res._status).toBe(400)
-    expect(res._json).toEqual({ error: 'Invalid server URL protocol' })
-    expect(mockAxiosPost).not.toHaveBeenCalled()
   })
 
   it('should apply tempoDynamics parameter', async () => {

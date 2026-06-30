@@ -5,7 +5,6 @@ import {
   isRestrictedMode,
   createRestrictedModeErrorResponse,
 } from '@/utils/restrictedMode'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 interface Style {
   name: string
@@ -32,14 +31,6 @@ export default async function handler(
     return res
       .status(403)
       .json(createRestrictedModeErrorResponse('update-voicevox-speakers'))
-  }
-
-  if (
-    !guardServerSecretAccess(req, res, {
-      featureName: 'update-voicevox-speakers',
-    })
-  ) {
-    return
   }
 
   try {

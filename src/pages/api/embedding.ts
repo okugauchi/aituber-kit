@@ -7,7 +7,6 @@
 
 import { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 /** Embeddingモデル名 */
 const EMBEDDING_MODEL = 'text-embedding-3-small'
@@ -53,9 +52,6 @@ export default async function handler(
   // APIキーの取得（リクエスト > 環境変数の優先順位）
   const openaiKey =
     apiKey || process.env.OPENAI_EMBEDDING_KEY || process.env.OPENAI_API_KEY
-  const usesServerSecret =
-    !apiKey &&
-    Boolean(process.env.OPENAI_EMBEDDING_KEY || process.env.OPENAI_API_KEY)
 
   // APIキーの存在確認
   if (!openaiKey) {
@@ -63,13 +59,6 @@ export default async function handler(
       error: 'OpenAI API key is not configured',
       code: 'API_KEY_MISSING',
     })
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'embedding' })
-  ) {
-    return
   }
 
   try {

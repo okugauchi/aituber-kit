@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { AzureOpenAI } from 'openai'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,19 +13,9 @@ export default async function handler(
 
   const azureTTSKey = apiKey || process.env.AZURE_TTS_KEY
   const azureTTSEndpoint = endpoint || process.env.AZURE_TTS_ENDPOINT
-  const usesServerSecret =
-    (!apiKey && Boolean(process.env.AZURE_TTS_KEY)) ||
-    (!endpoint && Boolean(process.env.AZURE_TTS_ENDPOINT))
 
   if (!message || !voice || !speed || !azureTTSKey || !azureTTSEndpoint) {
     return res.status(400).json({ error: 'Missing required parameters' })
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'azureOpenAITTS' })
-  ) {
-    return
   }
 
   try {
@@ -39,7 +28,7 @@ export default async function handler(
       url.searchParams.get('api-version') || '2024-02-15-preview'
 
     const azureOpenAI = new AzureOpenAI({
-      apiKey: azureTTSKey,
+      apiKey: apiKey,
       endpoint: azureTTSEndpoint,
       apiVersion: apiVersion,
       deployment: deploymentName,

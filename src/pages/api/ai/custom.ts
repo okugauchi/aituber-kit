@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { handleCustomApi } from '@/lib/api-services/customApi'
 import { pipeResponse } from '@/utils/pipeResponse'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 export const config = {
   api: {
@@ -31,19 +30,6 @@ export default async function handler(
     customApiIncludeMimeType = false,
     threadId,
   } = req.body
-
-  const usesServerSecret = Boolean(
-    process.env.CUSTOM_API_URL ||
-    process.env.CUSTOM_API_HEADERS ||
-    process.env.CUSTOM_API_BODY
-  )
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'ai/custom' })
-  ) {
-    return
-  }
 
   // サーバーサイド環境変数を優先（秘匿設定）
   const apiUrl = process.env.CUSTOM_API_URL || customApiUrl

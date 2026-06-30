@@ -7,7 +7,6 @@ import {
 import { createAIRegistry, getLanguageModel } from '@/lib/api-services/vercelAi'
 import { mastra } from '@/lib/mastra'
 import { RequestContext } from '@mastra/core/request-context'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 export default async function handler(
   req: NextApiRequest,
@@ -42,7 +41,6 @@ export default async function handler(
 
   // APIキーの取得と検証
   let aiApiKey = apiKey
-  let usesServerSecret = false
   if (isVercelCloudAIService(aiService)) {
     if (!aiApiKey) {
       const servicePrefix = aiService.toUpperCase()
@@ -50,20 +48,12 @@ export default async function handler(
         process.env[`${servicePrefix}_KEY`] ||
         process.env[`${servicePrefix}_API_KEY`] ||
         ''
-      usesServerSecret = Boolean(aiApiKey)
     }
     if (!aiApiKey) {
       return res
         .status(400)
         .json({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' })
     }
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'youtube/continuation' })
-  ) {
-    return
   }
 
   // ローカルLLMのURL検証
@@ -78,22 +68,15 @@ export default async function handler(
   }
 
   // Azureのエンドポイントとデプロイメント名の処理
-  const azureEndpointValue = azureEndpoint || process.env.AZURE_ENDPOINT || ''
-  const usesServerAzureEndpoint =
-    !azureEndpoint && Boolean(process.env.AZURE_ENDPOINT)
-  if (
-    usesServerAzureEndpoint &&
-    !guardServerSecretAccess(req, res, { featureName: 'youtube/continuation' })
-  ) {
-    return
-  }
-
-  let modifiedAzureEndpoint = azureEndpointValue.replace(
-    /^https:\/\/|\.openai\.azure\.com.*$/g,
+  let modifiedAzureEndpoint = (
+    azureEndpoint ||
+    process.env.AZURE_ENDPOINT ||
     ''
-  )
+  ).replace(/^https:\/\/|\.openai\.azure\.com.*$/g, '')
   const modifiedAzureDeployment =
-    azureEndpointValue.match(/\/deployments\/([^\/]+)/)?.[1] || ''
+    (azureEndpoint || process.env.AZURE_ENDPOINT || '').match(
+      /\/deployments\/([^\/]+)/
+    )?.[1] || ''
   const modifiedModel = aiService === 'azure' ? modifiedAzureDeployment : model
 
   if (aiService === 'azure' && !modifiedModel) {

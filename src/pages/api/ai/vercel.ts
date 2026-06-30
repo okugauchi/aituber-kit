@@ -14,7 +14,6 @@ import {
 import { buildReasoningProviderOptions } from '@/lib/api-services/providerOptionsBuilder'
 import { googleSearchGroundingModels } from '@/features/constants/aiModels'
 import { pipeResponse } from '@/utils/pipeResponse'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 export const config = {
   api: {
@@ -53,7 +52,6 @@ export default async function handler(
 
   // APIキーの取得と検証
   let aiApiKey = apiKey
-  let usesServerSecret = false
   if (isVercelCloudAIService(aiService)) {
     if (!aiApiKey) {
       // 環境変数から[サービス名]_KEY または [サービス名]_API_KEY の形式でAPIキーを取得
@@ -62,20 +60,12 @@ export default async function handler(
         process.env[`${servicePrefix}_KEY`] ||
         process.env[`${servicePrefix}_API_KEY`] ||
         ''
-      usesServerSecret = Boolean(aiApiKey)
     }
     if (!aiApiKey) {
       return res
         .status(400)
         .json({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' })
     }
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'ai/vercel' })
-  ) {
-    return
   }
 
   // ローカルLLMのURL検証
@@ -89,22 +79,15 @@ export default async function handler(
   }
 
   // Azureのエンドポイントとデプロイメント名の処理
-  const azureEndpointValue = azureEndpoint || process.env.AZURE_ENDPOINT || ''
-  const usesServerAzureEndpoint =
-    !azureEndpoint && Boolean(process.env.AZURE_ENDPOINT)
-  if (
-    usesServerAzureEndpoint &&
-    !guardServerSecretAccess(req, res, { featureName: 'ai/vercel' })
-  ) {
-    return
-  }
-
-  let modifiedAzureEndpoint = azureEndpointValue.replace(
-    /^https:\/\/|\.openai\.azure\.com.*$/g,
+  let modifiedAzureEndpoint = (
+    azureEndpoint ||
+    process.env.AZURE_ENDPOINT ||
     ''
-  )
+  ).replace(/^https:\/\/|\.openai\.azure\.com.*$/g, '')
   let modifiedAzureDeployment =
-    azureEndpointValue.match(/\/deployments\/([^\/]+)/)?.[1] || ''
+    (azureEndpoint || process.env.AZURE_ENDPOINT || '').match(
+      /\/deployments\/([^\/]+)/
+    )?.[1] || ''
   let modifiedModel = aiService === 'azure' ? modifiedAzureDeployment : model
 
   // モデル名のバリデーション

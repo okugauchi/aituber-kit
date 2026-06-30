@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
 import { Buffer } from 'buffer'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 // FormDataのパース用に設定を無効化
 export const config = {
@@ -73,23 +72,9 @@ export default async function handler(
       process.env.OPENAI_API_KEY ||
       process.env.NEXT_PUBLIC_OPENAI_API_KEY ||
       process.env.NEXT_PUBLIC_OPENAI_KEY
-    const usesServerSecret =
-      !openaiKey &&
-      Boolean(
-        process.env.OPENAI_API_KEY ||
-        process.env.NEXT_PUBLIC_OPENAI_API_KEY ||
-        process.env.NEXT_PUBLIC_OPENAI_KEY
-      )
 
     if (!apiKey) {
       return res.status(500).json({ error: 'OpenAI API key is not configured' })
-    }
-
-    if (
-      usesServerSecret &&
-      !guardServerSecretAccess(req, res, { featureName: 'whisper' })
-    ) {
-      return
     }
 
     const openai = new OpenAI({

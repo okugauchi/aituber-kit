@@ -149,9 +149,6 @@ export async function handleCustomApi(
   }
 
   if (stream) {
-    const forwardMetadata =
-      process.env.AITUBERKIT_FORWARD_CUSTOM_API_METADATA === 'true'
-
     // ストリーミングレスポンスを正規化して返す
     // SSEの行をVercel AI SDK形式（text-delta + delta）に変換する
     let buffer = ''
@@ -182,9 +179,7 @@ export async function handleCustomApi(
 
             // 既にVercel AI SDK形式（deltaフィールドあり）ならそのまま
             if (data.delta !== undefined) {
-              if (forwardMetadata || data.type === 'text-delta') {
-                controller.enqueue(encoder.encode(line + '\n'))
-              }
+              controller.enqueue(encoder.encode(line + '\n'))
               continue
             }
 
@@ -202,15 +197,13 @@ export async function handleCustomApi(
 
             // OpenAI互換形式（choices[].delta.reasoning_content）の推論コンテンツ変換
             if (data.choices?.[0]?.delta?.reasoning_content !== undefined) {
-              if (forwardMetadata) {
-                const normalized = {
-                  type: 'reasoning-delta',
-                  delta: data.choices[0].delta.reasoning_content,
-                }
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify(normalized)}\n`)
-                )
+              const normalized = {
+                type: 'reasoning-delta',
+                delta: data.choices[0].delta.reasoning_content,
               }
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(normalized)}\n`)
+              )
               // contentも同時に存在する場合があるのでフォールスルー
               if (data.choices[0].delta.content === undefined) {
                 continue
@@ -230,14 +223,10 @@ export async function handleCustomApi(
             }
 
             // その他の形式はそのまま
-            if (forwardMetadata) {
-              controller.enqueue(encoder.encode(line + '\n'))
-            }
+            controller.enqueue(encoder.encode(line + '\n'))
           } catch {
             // JSONパース失敗時はそのまま
-            if (forwardMetadata) {
-              controller.enqueue(encoder.encode(line + '\n'))
-            }
+            controller.enqueue(encoder.encode(line + '\n'))
           }
         }
       },
