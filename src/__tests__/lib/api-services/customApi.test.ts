@@ -151,4 +151,26 @@ describe('handleCustomApi', () => {
     expect(text).toContain('visible payload reasoning')
     expect(text).toContain('response-id')
   })
+
+  it('normalizes quoted custom API header names and values before fetch', async () => {
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue(createStreamResponse('data: [DONE]\n\n'))
+
+    await handleCustomApi(
+      [{ role: 'user', content: 'hi' } as any],
+      'https://example.com/custom',
+      '{"\\"Authorization\\"":"\\"Bearer token\\""}',
+      '{}',
+      true
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://example.com/custom',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token',
+        }),
+      })
+    )
+  })
 })

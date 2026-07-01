@@ -50,6 +50,45 @@ function processMessagesWithMimeType(messages: Message[]): any[] {
   })
 }
 
+const VALID_HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/
+
+function normalizeHeaderName(value: string): string {
+  return value
+    .trim()
+    .replace(/\\+"/g, '"')
+    .replace(/^[{\\'"]+/, '')
+    .replace(/[}\\'"]+$/, '')
+    .trim()
+}
+
+function normalizeHeaderValue(value: unknown): string {
+  return String(value)
+    .trim()
+    .replace(/\\+"/g, '"')
+    .replace(/^[\\'"]+/, '')
+    .replace(/[\\'"]+$/, '')
+    .trim()
+}
+
+function normalizeParsedHeaders(headers: unknown): Record<string, string> {
+  if (!headers || typeof headers !== 'object' || Array.isArray(headers)) {
+    return {}
+  }
+
+  const normalized: Record<string, string> = {}
+  for (const [rawKey, rawValue] of Object.entries(headers)) {
+    const headerName = normalizeHeaderName(rawKey)
+    if (!VALID_HEADER_NAME.test(headerName)) {
+      console.warn('Skipping invalid Custom API header name')
+      continue
+    }
+
+    normalized[headerName] = normalizeHeaderValue(rawValue)
+  }
+
+  return normalized
+}
+
 /**
  * カスタムAPIを使用して応答を取得する
  * @param messages メッセージ
@@ -74,7 +113,7 @@ export async function handleCustomApi(
   let parsedBody: Record<string, any> = {}
 
   try {
-    parsedHeaders = JSON.parse(customApiHeaders)
+    parsedHeaders = normalizeParsedHeaders(JSON.parse(customApiHeaders))
     parsedBody = JSON.parse(customApiBody)
   } catch (error) {
     return new Response(
