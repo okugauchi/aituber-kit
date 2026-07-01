@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import textToSpeech from '@google-cloud/text-to-speech'
 import { google } from '@google-cloud/text-to-speech/build/protos/protos'
+import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 type Data = {
   audio?: string | Uint8Array // Base64 encoded string or Uint8Array
@@ -14,6 +15,10 @@ export default async function handler(
   const message = req.body.message
   const ttsType = req.body.ttsType
   const languageCode = req.body.languageCode || 'ja-JP'
+
+  if (!guardServerSecretAccess(req, res, { featureName: 'tts-google' })) {
+    return
+  }
 
   try {
     // Check if GOOGLE_TTS_KEY exists
