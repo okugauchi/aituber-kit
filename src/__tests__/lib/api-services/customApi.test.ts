@@ -173,4 +173,44 @@ describe('handleCustomApi', () => {
       })
     )
   })
+
+  it('retries Anthropic custom API requests with x-api-key after bearer auth fails', async () => {
+    process.env.ANTHROPIC_API_KEY = 'anthropic-secret'
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: { type: 'authentication_error' } }),
+          {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      )
+      .mockResolvedValueOnce(createStreamResponse('data: [DONE]\n\n'))
+
+    const response = await handleCustomApi(
+      [{ role: 'user', content: 'hi' } as any],
+      'https://api.anthropic.com/v1/messages',
+      '{"Authorization":"Bearer stale"}',
+      '{"model":"claude-sonnet-4-5","max_tokens":128}',
+      true
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.anthropic.com/v1/messages',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-api-key': 'anthropic-secret',
+          'anthropic-version': '2023-06-01',
+        }),
+      })
+    )
+    expect(fetchMock.mock.calls[1][1].headers).not.toHaveProperty(
+      'Authorization'
+    )
+  })
 })

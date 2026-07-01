@@ -89,6 +89,42 @@ function normalizeParsedHeaders(headers: unknown): Record<string, string> {
   return normalized
 }
 
+function isAnthropicApiUrl(customApiUrl: string): boolean {
+  try {
+    return new URL(customApiUrl).hostname === 'api.anthropic.com'
+  } catch (error) {
+    return false
+  }
+}
+
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  const lowerName = name.toLowerCase()
+  return Object.keys(headers).some((key) => key.toLowerCase() === lowerName)
+}
+
+function removeHeader(headers: Record<string, string>, name: string) {
+  const lowerName = name.toLowerCase()
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === lowerName) {
+      delete headers[key]
+    }
+  }
+}
+
+function buildAnthropicRetryHeaders(
+  headers: Record<string, string>
+): Record<string, string> {
+  const retryHeaders = { ...headers }
+  removeHeader(retryHeaders, 'authorization')
+  retryHeaders['x-api-key'] = process.env.ANTHROPIC_API_KEY || ''
+
+  if (!hasHeader(retryHeaders, 'anthropic-version')) {
+    retryHeaders['anthropic-version'] = '2023-06-01'
+  }
+
+  return retryHeaders
+}
+
 /**
  * カスタムAPIを使用して応答を取得する
  * @param messages メッセージ
@@ -144,12 +180,27 @@ export async function handleCustomApi(
     messages: processedMessages,
   })
 
-  const apiResponse = await fetch(customApiUrl, {
+  const requestInit = {
     method: 'POST',
     headers: apiHeaders,
     body: apiBody,
     signal: AbortSignal.timeout(180000), // 3分でタイムアウト
-  })
+  }
+
+  let apiResponse = await fetch(customApiUrl, requestInit)
+
+  if (
+    apiResponse.status === 401 &&
+    isAnthropicApiUrl(customApiUrl) &&
+    process.env.ANTHROPIC_API_KEY &&
+    !hasHeader(parsedHeaders, 'x-api-key')
+  ) {
+    console.warn('Retrying Custom API request with Anthropic x-api-key header')
+    apiResponse = await fetch(customApiUrl, {
+      ...requestInit,
+      headers: buildAnthropicRetryHeaders(apiHeaders),
+    })
+  }
 
   if (!apiResponse.ok) {
     console.error(
