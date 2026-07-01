@@ -120,7 +120,8 @@ describe('/api/tts-aivisspeech', () => {
     expect(res._headers['Content-Type']).toBe('audio/wav')
   })
 
-  it('should use custom serverUrl when provided', async () => {
+  it('should use allowlisted custom serverUrl when provided', async () => {
+    process.env.AITUBERKIT_ALLOWED_TTS_SERVER_ORIGINS = 'http://custom:10101'
     const mockPipe = jest.fn()
     mockAxiosPost
       .mockResolvedValueOnce({ data: {} })
@@ -141,6 +142,26 @@ describe('/api/tts-aivisspeech', () => {
     await handler(req, res)
 
     expect(mockAxiosPost.mock.calls[0][0]).toContain('http://custom:10101')
+  })
+
+  it('should reject non-allowlisted custom serverUrl', async () => {
+    const req = createMockReq({
+      body: {
+        text: 'test',
+        speaker: 1,
+        speed: 1,
+        pitch: 0,
+        intonationScale: 1,
+        serverUrl: 'http://custom:10101',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Server URL is not allowed' })
+    expect(mockAxiosPost).not.toHaveBeenCalled()
   })
 
   it('should reject default localhost AivisSpeech URL by default', async () => {
@@ -180,6 +201,33 @@ describe('/api/tts-aivisspeech', () => {
         speed: 1,
         pitch: 0,
         intonationScale: 1,
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(403)
+    expect(res._json).toEqual(
+      expect.objectContaining({
+        errorCode: 'ServerSecretAccessDenied',
+        feature: 'tts-aivisspeech',
+      })
+    )
+    expect(mockAxiosPost).not.toHaveBeenCalled()
+  })
+
+  it('should guard explicitly provided localhost AivisSpeech URL by default', async () => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+
+    const req = createMockReq({
+      body: {
+        text: 'test',
+        speaker: 1,
+        speed: 1,
+        pitch: 0,
+        intonationScale: 1,
+        serverUrl: 'http://localhost:10101',
       },
     })
     const res = createMockRes()

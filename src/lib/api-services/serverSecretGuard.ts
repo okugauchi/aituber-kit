@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { timingSafeEqual } from 'crypto'
 
 export type ServerSecretAccessMode =
   | 'disabled'
@@ -38,6 +39,13 @@ function getAccessMode(): ServerSecretAccessMode {
 function getHeaderValue(req: NextApiRequest, name: string): string {
   const value = req.headers?.[name.toLowerCase()]
   return Array.isArray(value) ? value[0] || '' : value || ''
+}
+
+function safeCompare(a: string, b: string): boolean {
+  const aBuffer = Buffer.from(a)
+  const bBuffer = Buffer.from(b)
+  if (aBuffer.length !== bBuffer.length) return false
+  return timingSafeEqual(aBuffer, bBuffer)
 }
 
 function parseAllowedOrigins(): string[] {
@@ -91,17 +99,15 @@ function hasValidBearerToken(req: NextApiRequest): boolean {
 
   const authorization = getHeaderValue(req, 'authorization')
   const expectedAuthorization = `Bearer ${expectedToken}`
-  return authorization === expectedAuthorization
+  return safeCompare(authorization, expectedAuthorization)
 }
 
 function hasValidDemoToken(req: NextApiRequest): boolean {
-  const expectedToken =
-    process.env.AITUBERKIT_DEMO_ACCESS_TOKEN ||
-    process.env.AITUBERKIT_SERVER_SECRET_TOKEN
+  const expectedToken = process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
   if (!expectedToken) return false
 
   const token = getHeaderValue(req, 'x-aituberkit-demo-token')
-  return token === expectedToken
+  return safeCompare(token, expectedToken)
 }
 
 function getClientIp(req: NextApiRequest): string {
@@ -111,7 +117,12 @@ function getClientIp(req: NextApiRequest): string {
 
     const forwardedFor = getHeaderValue(req, 'x-forwarded-for')
     if (forwardedFor) {
-      return forwardedFor.split(',')[0].trim()
+      const forwardedChain = forwardedFor
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+      const lastForwardedIp = forwardedChain[forwardedChain.length - 1]
+      if (lastForwardedIp) return lastForwardedIp
     }
   }
 

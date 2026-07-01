@@ -54,8 +54,11 @@ export default async function handler(
       return res.status(400).json({ message: 'Invalid messages data' })
     }
 
+    const hasTargetFileName =
+      targetFileName !== undefined && targetFileName !== null
+
     // overwrite=trueの場合はtargetFileNameが必須
-    if (overwrite && !targetFileName) {
+    if (overwrite && !hasTargetFileName) {
       return res.status(400).json({
         message: 'targetFileName is required when overwrite is true',
       })
@@ -70,10 +73,10 @@ export default async function handler(
 
     // ファイル名の決定: isNewFile → targetFileName → 最新ファイル → 新規作成
     const newFileName = `log_${currentTime.replace(/[:.]/g, '-')}.json`
-    const safeTargetFileName = targetFileName
+    const safeTargetFileName = hasTargetFileName
       ? getSafeLogFileName(targetFileName)
       : null
-    if (targetFileName && !safeTargetFileName) {
+    if (hasTargetFileName && !safeTargetFileName) {
       return res.status(400).json({ message: 'Invalid targetFileName' })
     }
 

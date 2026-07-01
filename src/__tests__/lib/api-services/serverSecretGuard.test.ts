@@ -46,6 +46,36 @@ describe('serverSecretGuard', () => {
     expect(res._getStatusCode()).toBe(200)
   })
 
+  it('allows unprotected mode without credentials', () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
+    const { req, res } = createMocks({ method: 'POST' })
+
+    const allowed = guardServerSecretAccess(req as any, res as any, {
+      featureName: 'test-feature',
+    })
+
+    expect(allowed).toBe(true)
+    expect(res._getStatusCode()).toBe(200)
+  })
+
+  it('falls back to disabled behavior for unknown access modes', () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unexpected-mode'
+    const { req, res } = createMocks({ method: 'POST' })
+
+    const allowed = guardServerSecretAccess(req as any, res as any, {
+      featureName: 'test-feature',
+    })
+
+    expect(allowed).toBe(false)
+    expect(res._getStatusCode()).toBe(403)
+    expect(res._getJSONData()).toEqual(
+      expect.objectContaining({
+        errorCode: 'ServerSecretAccessDenied',
+        feature: 'test-feature',
+      })
+    )
+  })
+
   it('allows demo mode only for same-origin requests with a demo token', () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
     process.env.AITUBERKIT_DEMO_ACCESS_TOKEN = 'demo-token'
@@ -108,6 +138,28 @@ describe('serverSecretGuard', () => {
     expect(res._getStatusCode()).toBe(403)
   })
 
+  it('does not accept the protected bearer token as a demo token fallback', () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
+    process.env.AITUBERKIT_SERVER_SECRET_TOKEN = 'server-secret-token'
+    delete process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: {
+        host: 'aituberkit.example',
+        origin: 'https://aituberkit.example',
+        'sec-fetch-site': 'same-origin',
+        'x-aituberkit-demo-token': 'server-secret-token',
+      },
+    })
+
+    const allowed = guardServerSecretAccess(req as any, res as any, {
+      featureName: 'test-feature',
+    })
+
+    expect(allowed).toBe(false)
+    expect(res._getStatusCode()).toBe(403)
+  })
+
   it('rate limits demo mode requests per feature and client IP', () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
     process.env.AITUBERKIT_DEMO_ACCESS_TOKEN = 'demo-token'
@@ -121,7 +173,7 @@ describe('serverSecretGuard', () => {
           origin: 'https://aituberkit.example',
           'sec-fetch-site': 'same-origin',
           'x-aituberkit-demo-token': 'demo-token',
-          'x-forwarded-for': '203.0.113.10',
+          'x-forwarded-for': '198.51.100.1, 203.0.113.10',
         },
         socket: { remoteAddress: '198.51.100.20' },
       })

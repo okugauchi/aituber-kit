@@ -27,14 +27,18 @@ export default async function handler(
   const body = req.body // JSON.parse を削除
   const message = body.message
   const stylebertvits2ModelId = body.stylebertvits2ModelId
+  const usesServerConfiguredUrl = !body.stylebertvits2ServerUrl
   const stylebertvits2ServerUrl =
     body.stylebertvits2ServerUrl || process.env.STYLEBERTVITS2_SERVER_URL
   const stylebertvits2ApiKey =
-    body.stylebertvits2ApiKey || process.env.STYLEBERTVITS2_API_KEY
+    body.stylebertvits2ApiKey ||
+    (usesServerConfiguredUrl ? process.env.STYLEBERTVITS2_API_KEY : undefined)
   const usesServerSecret =
-    (!body.stylebertvits2ServerUrl &&
+    (usesServerConfiguredUrl &&
       Boolean(process.env.STYLEBERTVITS2_SERVER_URL)) ||
-    (!body.stylebertvits2ApiKey && Boolean(process.env.STYLEBERTVITS2_API_KEY))
+    (usesServerConfiguredUrl &&
+      !body.stylebertvits2ApiKey &&
+      Boolean(process.env.STYLEBERTVITS2_API_KEY))
   const stylebertvits2Style = body.stylebertvits2Style
   const stylebertvits2SdpRatio = body.stylebertvits2SdpRatio
   const stylebertvits2Length = body.stylebertvits2Length
@@ -48,6 +52,15 @@ export default async function handler(
   }
 
   try {
+    if (
+      stylebertvits2ServerUrl.includes('https://api.runpod.ai') &&
+      !stylebertvits2ApiKey
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Style-Bert-VITS2 API key is required' })
+    }
+
     if (!stylebertvits2ServerUrl.includes('https://api.runpod.ai')) {
       const queryParams = new URLSearchParams({
         text: message,

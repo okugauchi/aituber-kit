@@ -73,14 +73,15 @@ describe('handleCustomApi', () => {
     const upstream = [
       'data: {"type":"start","payload":{"id":"internal"}}',
       'data: {"type":"reasoning-delta","delta":"hidden reasoning"}',
+      'data: {"type":"reasoning-delta","payload":{"text":"hidden payload reasoning"}}',
       'data: {"type":"text-delta","delta":"hello"}',
       'data: {"type":"step-finish","payload":{"metadata":{"headers":{"x-request-id":"secret"}}}}',
       'data: [DONE]',
       '',
+      '',
     ].join('\n')
-    ;(global.fetch as jest.Mock).mockResolvedValue(
-      createStreamResponse(upstream)
-    )
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue(createStreamResponse(upstream))
 
     const response = await handleCustomApi(
       [{ role: 'user', content: 'hi' } as any],
@@ -93,7 +94,9 @@ describe('handleCustomApi', () => {
     const text = await response.text()
     expect(text).toContain('data: {"type":"text-delta","delta":"hello"}')
     expect(text).toContain('data: [DONE]')
+    expect(text).toContain('data: [DONE]\n\n')
     expect(text).not.toContain('hidden reasoning')
+    expect(text).not.toContain('hidden payload reasoning')
     expect(text).not.toContain('x-request-id')
     expect(text).not.toContain('"type":"start"')
   })
@@ -105,9 +108,8 @@ describe('handleCustomApi', () => {
       'data: {"type":"text-delta","delta":"visible"}',
       'data: {"type":"step-finish","payload":{"metadata":{"secret":"hidden"}}}',
     ].join('\n')
-    ;(global.fetch as jest.Mock).mockResolvedValue(
-      createStreamResponse(upstream)
-    )
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue(createStreamResponse(upstream))
 
     const response = await handleCustomApi(
       [{ role: 'user', content: 'hi' } as any],
@@ -128,12 +130,13 @@ describe('handleCustomApi', () => {
     process.env.AITUBERKIT_FORWARD_CUSTOM_API_METADATA = 'true'
     const upstream = [
       'data: {"type":"reasoning-delta","delta":"visible reasoning"}',
+      'data: {"type":"reasoning-delta","payload":{"text":"visible payload reasoning"}}',
       'data: {"type":"step-finish","payload":{"metadata":{"id":"response-id"}}}',
       '',
+      '',
     ].join('\n')
-    ;(global.fetch as jest.Mock).mockResolvedValue(
-      createStreamResponse(upstream)
-    )
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue(createStreamResponse(upstream))
 
     const response = await handleCustomApi(
       [{ role: 'user', content: 'hi' } as any],
@@ -145,6 +148,7 @@ describe('handleCustomApi', () => {
 
     const text = await response.text()
     expect(text).toContain('visible reasoning')
+    expect(text).toContain('visible payload reasoning')
     expect(text).toContain('response-id')
   })
 })

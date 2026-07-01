@@ -162,6 +162,11 @@ export async function handleCustomApi(
       line: string,
       controller: TransformStreamDefaultController
     ) => {
+      if (line.trim() === '') {
+        controller.enqueue(encoder.encode('\n'))
+        return
+      }
+
       if (!line.startsWith('data:')) {
         if (forwardMetadata) {
           controller.enqueue(encoder.encode(line + '\n'))
@@ -188,8 +193,12 @@ export async function handleCustomApi(
 
         // payload.textフォーマットをdeltaフォーマットに変換
         if (data.payload?.text !== undefined) {
+          const payloadType = data.type || 'text-delta'
+          if (!forwardMetadata && payloadType !== 'text-delta') {
+            return
+          }
           const normalized = {
-            type: data.type || 'text-delta',
+            type: forwardMetadata ? payloadType : 'text-delta',
             delta: data.payload.text,
           }
           controller.enqueue(

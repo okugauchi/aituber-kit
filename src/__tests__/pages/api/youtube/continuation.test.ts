@@ -50,9 +50,26 @@ const buildRequestBody = (overrides: any = {}) => ({
 describe('/api/youtube/continuation handler', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockStart.mockReset()
+    mockCreateRun.mockReset()
+    mockGetWorkflow.mockReset()
     process.env = { ...originalEnv }
     mockCreateAIRegistry.mockReturnValue({ languageModel: jest.fn() } as any)
     mockGetLanguageModel.mockReturnValue('mock-language-model' as any)
+    mockStart.mockResolvedValue({
+      status: 'success',
+      result: {
+        action: 'process_messages',
+        messages: [],
+        stateUpdates: {
+          noCommentCount: 0,
+          continuationCount: 0,
+          sleepMode: false,
+        },
+      },
+    })
+    mockCreateRun.mockResolvedValue({ start: mockStart })
+    mockGetWorkflow.mockReturnValue({ createRun: mockCreateRun })
   })
 
   afterAll(() => {

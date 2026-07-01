@@ -1,6 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import {
+  isAllowedConfiguredOrListedUrl,
+  isHttpUrl,
+} from '@/lib/api-services/serverUrlGuard'
 
 type Data = {
   audio?: ArrayBuffer
@@ -22,23 +26,32 @@ export default async function handler(
     prePhonemeLength = 0.1,
     postPhonemeLength = 0.1,
   } = req.body
-  const usesServerConfiguredUrl = !serverUrl
-  const apiUrl =
-    serverUrl || process.env.AIVIS_SPEECH_SERVER_URL || 'http://localhost:10101'
+  const configuredApiUrl =
+    process.env.AIVIS_SPEECH_SERVER_URL || 'http://localhost:10101'
+  const apiUrl = serverUrl || configuredApiUrl
 
   let parsedUrl: URL
+  let configuredUrl: URL
   try {
     parsedUrl = new URL(apiUrl)
+    configuredUrl = new URL(configuredApiUrl)
   } catch {
     return res.status(400).json({ error: 'Invalid server URL' })
   }
 
-  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+  if (!isHttpUrl(parsedUrl)) {
     return res.status(400).json({ error: 'Invalid server URL protocol' })
   }
 
+  const { isProtectedServerResource, isAllowedPublicUrl } =
+    isAllowedConfiguredOrListedUrl(parsedUrl, configuredUrl)
+
+  if (serverUrl && !isProtectedServerResource && !isAllowedPublicUrl) {
+    return res.status(400).json({ error: 'Server URL is not allowed' })
+  }
+
   if (
-    usesServerConfiguredUrl &&
+    (!serverUrl || isProtectedServerResource) &&
     !guardServerSecretAccess(req, res, { featureName: 'tts-aivisspeech' })
   ) {
     return

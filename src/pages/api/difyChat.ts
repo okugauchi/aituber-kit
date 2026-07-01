@@ -15,10 +15,16 @@ export default async function handler(
 
   const { query, apiKey, url, conversationId, stream } = req.body
 
-  const difyKey = apiKey || process.env.DIFY_KEY || process.env.DIFY_API_KEY
+  const usesClientUrl = Boolean(url)
+  const usesServerDifyKey =
+    !apiKey &&
+    !usesClientUrl &&
+    Boolean(process.env.DIFY_KEY || process.env.DIFY_API_KEY)
+  const difyKey =
+    apiKey ||
+    (!usesClientUrl ? process.env.DIFY_KEY || process.env.DIFY_API_KEY : '')
   const usesServerSecret =
-    (!apiKey && Boolean(process.env.DIFY_KEY || process.env.DIFY_API_KEY)) ||
-    (!url && Boolean(process.env.DIFY_URL))
+    usesServerDifyKey || (!url && Boolean(process.env.DIFY_URL))
   if (!difyKey) {
     return res
       .status(400)
