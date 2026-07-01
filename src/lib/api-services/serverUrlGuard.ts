@@ -66,11 +66,10 @@ export function isLocalOrPrivateHost(hostname: string): boolean {
 
   if (!normalized.includes(':')) return false
 
-  return (
-    normalized.startsWith('fc') ||
-    normalized.startsWith('fd') ||
-    normalized.startsWith('fe80:')
-  )
+  const firstHextet = Number.parseInt(normalized.split(':')[0], 16)
+  if (!Number.isFinite(firstHextet)) return false
+
+  return (firstHextet & 0xfe00) === 0xfc00 || (firstHextet & 0xffc0) === 0xfe80
 }
 
 export function isAllowedConfiguredOrListedUrl(

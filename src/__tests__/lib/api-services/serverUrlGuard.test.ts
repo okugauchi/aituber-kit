@@ -18,5 +18,12 @@ describe('serverUrlGuard', () => {
       expect(isLocalOrPrivateHost('::ffff:8.8.8.8')).toBe(false)
       expect(isLocalOrPrivateHost('::ffff:808:808')).toBe(false)
     })
+
+    it('detects the full IPv6 link-local range', () => {
+      expect(isLocalOrPrivateHost('fe80::1')).toBe(true)
+      expect(isLocalOrPrivateHost('fe90::1')).toBe(true)
+      expect(isLocalOrPrivateHost('febf::1')).toBe(true)
+      expect(isLocalOrPrivateHost('fec0::1')).toBe(false)
+    })
   })
 })
