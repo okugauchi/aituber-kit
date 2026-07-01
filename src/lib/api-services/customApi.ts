@@ -225,7 +225,7 @@ export async function handleCustomApi(
     apiResponse.status === 401 &&
     isAnthropicApiUrl(customApiUrl) &&
     process.env.ANTHROPIC_API_KEY &&
-    !hasHeader(parsedHeaders, 'x-api-key')
+    getHeader(apiHeaders, 'x-api-key') !== process.env.ANTHROPIC_API_KEY
   ) {
     console.warn('Retrying Custom API request with Anthropic x-api-key header')
     apiResponse = await fetch(customApiUrl, {
