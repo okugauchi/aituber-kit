@@ -68,6 +68,9 @@ jobs:
           if [ -n "$CLOUDFLARE_ENV_FILE" ]; then
             printf '%s\n' "$CLOUDFLARE_ENV_FILE" >> .env.local
           fi
+          if [ -n "$CLOUDFLARE_PUBLIC_ENV_APPEND" ]; then
+            printf '\n%s\n' "$CLOUDFLARE_PUBLIC_ENV_APPEND" >> .env.local
+          fi
           if [ -n "$OPENAI_API_KEY" ] && ! grep -q '^OPENAI_API_KEY=' .env.local; then
             printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY" >> .env.local
           fi
@@ -99,6 +102,7 @@ jobs:
           NODE
         env:
           CLOUDFLARE_ENV_FILE: ${{ secrets.CLOUDFLARE_ENV_FILE }}
+          CLOUDFLARE_PUBLIC_ENV_APPEND: ${{ secrets.CLOUDFLARE_PUBLIC_ENV_APPEND }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Build for Cloudflare
