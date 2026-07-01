@@ -2,19 +2,10 @@
  * @jest-environment node
  */
 
-const mockSpeechCreate = jest.fn()
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
-    audio: {
-      speech: {
-        create: mockSpeechCreate,
-      },
-    },
-  }))
-})
-
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '@/pages/api/openAITTS'
+
+const originalFetch = global.fetch
 
 function createMockReq(
   overrides: Partial<NextApiRequest> = {}
@@ -60,6 +51,11 @@ function createMockRes() {
 describe('/api/openAITTS', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = jest.fn()
+  })
+
+  afterAll(() => {
+    global.fetch = originalFetch
   })
 
   it('should return 405 for non-POST methods', async () => {
@@ -127,9 +123,12 @@ describe('/api/openAITTS', () => {
 
   it('should return audio buffer on success', async () => {
     const fakeBuffer = Buffer.from('fake-audio')
-    mockSpeechCreate.mockResolvedValue({
-      arrayBuffer: () => Promise.resolve(fakeBuffer),
-    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(fakeBuffer, {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' },
+      })
+    )
 
     const req = createMockReq({
       body: {
@@ -150,9 +149,12 @@ describe('/api/openAITTS', () => {
 
   it('should add emotional instructions for gpt-4o model', async () => {
     const fakeBuffer = Buffer.from('audio')
-    mockSpeechCreate.mockResolvedValue({
-      arrayBuffer: () => Promise.resolve(fakeBuffer),
-    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(fakeBuffer, {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' },
+      })
+    )
 
     const req = createMockReq({
       body: {
@@ -167,15 +169,20 @@ describe('/api/openAITTS', () => {
 
     await handler(req, res)
 
-    const callArgs = mockSpeechCreate.mock.calls[0][0]
+    const callArgs = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body
+    )
     expect(callArgs.instructions).toContain('rich emotional expression')
   })
 
   it('should not add instructions for non-gpt-4o models', async () => {
     const fakeBuffer = Buffer.from('audio')
-    mockSpeechCreate.mockResolvedValue({
-      arrayBuffer: () => Promise.resolve(fakeBuffer),
-    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(fakeBuffer, {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' },
+      })
+    )
 
     const req = createMockReq({
       body: {
@@ -190,13 +197,22 @@ describe('/api/openAITTS', () => {
 
     await handler(req, res)
 
-    const callArgs = mockSpeechCreate.mock.calls[0][0]
+    const callArgs = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body
+    )
     expect(callArgs.instructions).toBeUndefined()
   })
 
   it('should return 500 on OpenAI API error', async () => {
-    mockSpeechCreate.mockRejectedValue(new Error('API error'))
-    jest.spyOn(console, 'error').mockImplementation(() => {})
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: 'API error' } }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      })
+    )
+    const consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
 
     const req = createMockReq({
       body: {
@@ -212,6 +228,11 @@ describe('/api/openAITTS', () => {
     await handler(req, res)
 
     expect(res._status).toBe(500)
-    expect(res._json).toEqual({ error: 'Failed to generate speech' })
+    expect(res._json).toEqual({
+      error: 'Failed to generate speech',
+      errorCode: 'OpenAITTSUpstreamError',
+      status: 401,
+    })
+    consoleErrorSpy.mockRestore()
   })
 })
