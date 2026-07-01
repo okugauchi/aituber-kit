@@ -121,6 +121,33 @@ describe('/api/ai/vercel handler', () => {
     })
   })
 
+  it('rejects server-side API keys by default', async () => {
+    process.env.OPENAI_API_KEY = 'env-openai'
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: '',
+        aiService: 'openai',
+        model: 'gpt-4.1',
+        stream: true,
+        temperature: 1,
+        maxTokens: 10,
+      },
+    })
+
+    await handler(req as any, res as any)
+    expect(res._getStatusCode()).toBe(403)
+    expect(res._getJSONData()).toEqual(
+      expect.objectContaining({
+        errorCode: 'ServerSecretAccessDenied',
+        feature: 'ai/vercel',
+      })
+    )
+  })
+
   it('returns 400 when local services lack a URL', async () => {
     const { req, res } = createMocks({
       method: 'POST',
@@ -146,6 +173,7 @@ describe('/api/ai/vercel handler', () => {
 
   it('streams google responses with search grounding using env API key', async () => {
     process.env.GOOGLE_KEY = 'env-google'
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
     mockModifyMessages.mockReturnValue([
       { role: 'user', content: 'hello' },
     ] as any)
@@ -190,6 +218,38 @@ describe('/api/ai/vercel handler', () => {
       },
       providerOptions: undefined,
     })
+  })
+
+  it('does not guard non-azure requests only because AZURE_ENDPOINT is configured', async () => {
+    process.env.AZURE_ENDPOINT =
+      'https://my-resource.openai.azure.com/openai/deployments/my-deploy/chat/completions?api-version=2024-05-01-preview'
+    mockModifyMessages.mockReturnValue([{ role: 'user', content: 'hi' }] as any)
+
+    const generateResponse = new Response('done', { status: 200 })
+    mockGenerateAiText.mockResolvedValue(generateResponse)
+
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: 'openai-key',
+        aiService: 'openai',
+        model: 'gpt-4.1',
+        stream: false,
+        temperature: 0.3,
+        maxTokens: 256,
+      },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).not.toBe(403)
+    expect(mockCreateAIRegistry).toHaveBeenCalledWith('openai', {
+      apiKey: 'openai-key',
+      baseURL: undefined,
+      resourceName: '',
+    })
+    expect(mockGenerateAiText).toHaveBeenCalled()
   })
 
   it('calls generateAiText for azure requests using deployment name', async () => {

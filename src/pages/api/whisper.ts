@@ -1,6 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
 import { Buffer } from 'buffer'
+import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+
+const MAX_WHISPER_REQUEST_BODY_BYTES = 25 * 1024 * 1024
+
+function createBodyTooLargeError(): NodeJS.ErrnoException {
+  const error = new Error('Request body is too large') as NodeJS.ErrnoException
+  error.code = 'BodyTooLarge'
+  return error
+}
 
 // FormDataのパース用に設定を無効化
 export const config = {
@@ -19,7 +28,7 @@ export default async function handler(
 
   try {
     // リクエストボディをバッファとして取得
-    const buffer = await getRawBody(req)
+    const buffer = await getRawBody(req, MAX_WHISPER_REQUEST_BODY_BYTES)
 
     // Content-Typeからバウンダリを抽出
     const contentTypeHeader = req.headers['content-type']
@@ -72,9 +81,17 @@ export default async function handler(
       process.env.OPENAI_API_KEY ||
       process.env.NEXT_PUBLIC_OPENAI_API_KEY ||
       process.env.NEXT_PUBLIC_OPENAI_KEY
+    const usesServerSecret = !openaiKey && Boolean(process.env.OPENAI_API_KEY)
 
     if (!apiKey) {
       return res.status(500).json({ error: 'OpenAI API key is not configured' })
+    }
+
+    if (
+      usesServerSecret &&
+      !guardServerSecretAccess(req, res, { featureName: 'whisper' })
+    ) {
+      return
     }
 
     const openai = new OpenAI({
@@ -109,6 +126,13 @@ export default async function handler(
   } catch (error: any) {
     console.error('Whisper API error:', error)
 
+    if (error?.code === 'BodyTooLarge') {
+      return res.status(413).json({
+        error: 'Request body is too large',
+        maxBytes: MAX_WHISPER_REQUEST_BODY_BYTES,
+      })
+    }
+
     // エラーの詳細をクライアントに返す
     return res.status(500).json({
       error: 'Failed to process audio',
@@ -119,19 +143,42 @@ export default async function handler(
 }
 
 // リクエストボディをRawデータとして取得する関数
-async function getRawBody(req: NextApiRequest): Promise<Buffer> {
+async function getRawBody(
+  req: NextApiRequest,
+  maxBytes: number
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    const contentLength = Number(req.headers['content-length'])
+    if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+      reject(createBodyTooLargeError())
+      return
+    }
+
     const chunks: Buffer[] = []
+    let totalBytes = 0
+    let settled = false
 
     req.on('data', (chunk) => {
+      if (settled) return
+      totalBytes += chunk.length
+      if (totalBytes > maxBytes) {
+        settled = true
+        reject(createBodyTooLargeError())
+        req.destroy()
+        return
+      }
       chunks.push(chunk)
     })
 
     req.on('end', () => {
+      if (settled) return
+      settled = true
       resolve(Buffer.concat(chunks))
     })
 
     req.on('error', (err) => {
+      if (settled) return
+      settled = true
       reject(err)
     })
   })
