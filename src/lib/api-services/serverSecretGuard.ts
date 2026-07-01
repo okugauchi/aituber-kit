@@ -104,7 +104,7 @@ function hasValidBearerToken(req: NextApiRequest): boolean {
 
 function hasValidDemoToken(req: NextApiRequest): boolean {
   const expectedToken = process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
-  if (!expectedToken) return false
+  if (!expectedToken) return true
 
   const token = getHeaderValue(req, 'x-aituberkit-demo-token')
   return safeCompare(token, expectedToken)
@@ -237,7 +237,7 @@ export function guardServerSecretAccess(
     rejectServerSecretAccess(
       res,
       options,
-      'Server-side secret settings in demo mode require an allowed same-origin request with a valid demo token.'
+      'Server-side secret settings in demo mode require an allowed same-origin request and, when configured, a valid demo token.'
     )
     return false
   }

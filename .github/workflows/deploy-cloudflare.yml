@@ -64,11 +64,42 @@ jobs:
 
       - name: Setup environment variables
         run: |
+          : > .env.local
           if [ -n "$CLOUDFLARE_ENV_FILE" ]; then
-            echo "$CLOUDFLARE_ENV_FILE" > .env.local
+            printf '%s\n' "$CLOUDFLARE_ENV_FILE" >> .env.local
           fi
+          if [ -n "$OPENAI_API_KEY" ] && ! grep -q '^OPENAI_API_KEY=' .env.local; then
+            printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY" >> .env.local
+          fi
+          if ! grep -q '^AITUBERKIT_SERVER_SECRET_ACCESS_MODE=' .env.local; then
+            printf '%s\n' 'AITUBERKIT_SERVER_SECRET_ACCESS_MODE=demo' >> .env.local
+          fi
+          if ! grep -q '^AITUBERKIT_ALLOWED_ORIGINS=' .env.local; then
+            printf '%s\n' 'AITUBERKIT_ALLOWED_ORIGINS=https://aituberkit.com,https://www.aituberkit.com' >> .env.local
+          fi
+          if ! grep -q '^AITUBERKIT_DEMO_RATE_LIMIT_PER_MINUTE=' .env.local; then
+            printf '%s\n' 'AITUBERKIT_DEMO_RATE_LIMIT_PER_MINUTE=20' >> .env.local
+          fi
+          if ! grep -q '^AITUBERKIT_TRUST_PROXY_HEADERS=' .env.local; then
+            printf '%s\n' 'AITUBERKIT_TRUST_PROXY_HEADERS=true' >> .env.local
+          fi
+          node <<'NODE'
+          const fs = require('fs')
+          const { parseEnv } = require('node:util')
+          const values = parseEnv(fs.readFileSync('.env.local', 'utf8'))
+          const runtimeSecrets = Object.fromEntries(
+            Object.entries(values).filter(
+              ([key, value]) => !key.startsWith('NEXT_PUBLIC_') && value !== ''
+            )
+          )
+          fs.writeFileSync(
+            '.cloudflare-runtime-secrets.json',
+            JSON.stringify(runtimeSecrets)
+          )
+          NODE
         env:
           CLOUDFLARE_ENV_FILE: ${{ secrets.CLOUDFLARE_ENV_FILE }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Build for Cloudflare
         run: npm run build:cloudflare
@@ -79,4 +110,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --secrets-file .cloudflare-runtime-secrets.json

@@ -76,7 +76,27 @@ describe('serverSecretGuard', () => {
     )
   })
 
-  it('allows demo mode only for same-origin requests with a demo token', () => {
+  it('allows demo mode for same-origin requests without a demo token when no token is configured', () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
+    delete process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: {
+        host: 'aituberkit.example',
+        origin: 'https://aituberkit.example',
+        'sec-fetch-site': 'same-origin',
+      },
+    })
+
+    const allowed = guardServerSecretAccess(req as any, res as any, {
+      featureName: 'test-feature',
+    })
+
+    expect(allowed).toBe(true)
+    expect(res._getStatusCode()).toBe(200)
+  })
+
+  it('allows demo mode for same-origin requests with a configured demo token', () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
     process.env.AITUBERKIT_DEMO_ACCESS_TOKEN = 'demo-token'
     const { req, res } = createMocks({
@@ -138,10 +158,10 @@ describe('serverSecretGuard', () => {
     expect(res._getStatusCode()).toBe(403)
   })
 
-  it('does not accept the protected bearer token as a demo token fallback', () => {
+  it('does not accept the protected bearer token as a configured demo token fallback', () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
     process.env.AITUBERKIT_SERVER_SECRET_TOKEN = 'server-secret-token'
-    delete process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
+    process.env.AITUBERKIT_DEMO_ACCESS_TOKEN = 'demo-token'
     const { req, res } = createMocks({
       method: 'POST',
       headers: {
