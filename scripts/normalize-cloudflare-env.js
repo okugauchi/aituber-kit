@@ -85,7 +85,27 @@ function normalizeValues(raw) {
     if (value !== undefined) values[key] = normalizeJsonEnvValue(key, value)
   }
 
+  expandEnvReferences(values)
+
   return values
+}
+
+function expandEnvReferences(values) {
+  const envReferencePattern = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/g
+
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value !== 'string' || !value.includes('$')) continue
+
+    values[key] = value.replace(
+      envReferencePattern,
+      (match, bracedKey, bareKey) => {
+        const envKey = bracedKey || bareKey
+        return Object.prototype.hasOwnProperty.call(values, envKey)
+          ? values[envKey]
+          : match
+      }
+    )
+  }
 }
 
 function parseHeaderLines(value) {
