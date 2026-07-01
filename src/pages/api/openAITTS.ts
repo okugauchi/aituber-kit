@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import OpenAI from 'openai'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
 // 感情表現を豊かにする追加指示を行うモデル、念の為リスト形式
@@ -31,14 +30,7 @@ export default async function handler(
   }
 
   try {
-    const openai = new OpenAI({ apiKey: openaiKey })
-    const options: {
-      model: any
-      voice: any
-      speed: any
-      input: any
-      instructions?: any
-    } = {
+    const options: Record<string, unknown> = {
       model: model,
       voice: voice,
       speed: speed,
@@ -49,11 +41,37 @@ export default async function handler(
       options.instructions = `Please speak "${message}" with rich emotional expression.`
     }
 
-    const mp3 = await openai.audio.speech.create(options)
+    const speechResponse = await fetch(
+      'https://api.openai.com/v1/audio/speech',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options),
+      }
+    )
 
-    const buffer = Buffer.from(await mp3.arrayBuffer())
+    if (!speechResponse.ok) {
+      const errorText = await speechResponse.text()
+      console.error('OpenAI TTS upstream error:', {
+        status: speechResponse.status,
+        body: errorText,
+      })
+      return res.status(500).json({
+        error: 'Failed to generate speech',
+        errorCode: 'OpenAITTSUpstreamError',
+        status: speechResponse.status,
+      })
+    }
 
-    res.setHeader('Content-Type', 'audio/mpeg')
+    const buffer = Buffer.from(await speechResponse.arrayBuffer())
+
+    res.setHeader(
+      'Content-Type',
+      speechResponse.headers.get('content-type') || 'audio/mpeg'
+    )
     res.send(buffer)
   } catch (error) {
     console.error('OpenAI TTS error:', error)
