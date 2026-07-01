@@ -102,6 +102,15 @@ function hasHeader(headers: Record<string, string>, name: string): boolean {
   return Object.keys(headers).some((key) => key.toLowerCase() === lowerName)
 }
 
+function getHeader(headers: Record<string, string>, name: string): string {
+  const lowerName = name.toLowerCase()
+  const headerName = Object.keys(headers).find(
+    (key) => key.toLowerCase() === lowerName
+  )
+
+  return headerName ? headers[headerName] : ''
+}
+
 function removeHeader(headers: Record<string, string>, name: string) {
   const lowerName = name.toLowerCase()
   for (const key of Object.keys(headers)) {
@@ -111,18 +120,37 @@ function removeHeader(headers: Record<string, string>, name: string) {
   }
 }
 
-function buildAnthropicRetryHeaders(
-  headers: Record<string, string>
-): Record<string, string> {
-  const retryHeaders = { ...headers }
-  removeHeader(retryHeaders, 'authorization')
-  retryHeaders['x-api-key'] = process.env.ANTHROPIC_API_KEY || ''
+function extractBearerToken(value: string): string {
+  const bearerPrefix = 'Bearer '
+  return value.startsWith(bearerPrefix)
+    ? value.slice(bearerPrefix.length).trim()
+    : value.trim()
+}
 
-  if (!hasHeader(retryHeaders, 'anthropic-version')) {
-    retryHeaders['anthropic-version'] = '2023-06-01'
+function buildAnthropicHeaders(
+  headers: Record<string, string>,
+  fallbackApiKey = ''
+): Record<string, string> {
+  const anthropicHeaders = { ...headers }
+  const xApiKey = getHeader(anthropicHeaders, 'x-api-key')
+  const authorization = getHeader(anthropicHeaders, 'authorization')
+  const apiKey =
+    fallbackApiKey ||
+    extractBearerToken(xApiKey) ||
+    extractBearerToken(authorization) ||
+    ''
+
+  if (apiKey) {
+    removeHeader(anthropicHeaders, 'authorization')
+    removeHeader(anthropicHeaders, 'x-api-key')
+    anthropicHeaders['x-api-key'] = apiKey
   }
 
-  return retryHeaders
+  if (!hasHeader(anthropicHeaders, 'anthropic-version')) {
+    anthropicHeaders['anthropic-version'] = '2023-06-01'
+  }
+
+  return anthropicHeaders
 }
 
 /**
@@ -164,9 +192,13 @@ export async function handleCustomApi(
     )
   }
 
-  const apiHeaders = {
+  let apiHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     ...parsedHeaders,
+  }
+
+  if (isAnthropicApiUrl(customApiUrl)) {
+    apiHeaders = buildAnthropicHeaders(apiHeaders)
   }
 
   // customApiIncludeMimeTypeが有効な場合は画像にmimeTypeを追加
@@ -198,7 +230,7 @@ export async function handleCustomApi(
     console.warn('Retrying Custom API request with Anthropic x-api-key header')
     apiResponse = await fetch(customApiUrl, {
       ...requestInit,
-      headers: buildAnthropicRetryHeaders(apiHeaders),
+      headers: buildAnthropicHeaders(apiHeaders, process.env.ANTHROPIC_API_KEY),
     })
   }
 
