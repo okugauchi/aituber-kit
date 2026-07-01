@@ -80,32 +80,66 @@ function readPossiblyMultilineJsonValue(raw, key) {
 function normalizeValues(raw) {
   const values = parseEnv(raw)
 
+  expandEnvReferences(values, JSON_ENV_KEYS)
+
   for (const key of JSON_ENV_KEYS) {
     const value = readPossiblyMultilineJsonValue(raw, key)
-    if (value !== undefined) values[key] = normalizeJsonEnvValue(key, value)
+    if (value !== undefined) {
+      values[key] = normalizeJsonEnvValue(key, value, values)
+    }
   }
-
-  expandEnvReferences(values)
 
   return values
 }
 
-function expandEnvReferences(values) {
-  const envReferencePattern = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/g
-
+function expandEnvReferences(values, skippedKeys = new Set()) {
   for (const [key, value] of Object.entries(values)) {
-    if (typeof value !== 'string' || !value.includes('$')) continue
+    if (skippedKeys.has(key)) continue
+    values[key] = expandEnvReferencesInValue(value, values)
+  }
+}
 
-    values[key] = value.replace(
-      envReferencePattern,
-      (match, bracedKey, bareKey) => {
-        const envKey = bracedKey || bareKey
-        return Object.prototype.hasOwnProperty.call(values, envKey)
-          ? values[envKey]
-          : match
-      }
+function expandEnvReferencesInValue(value, values) {
+  if (typeof value === 'string') {
+    return expandStringEnvReferences(value, values)
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => expandEnvReferencesInValue(item, values))
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        expandEnvReferencesInValue(item, values),
+      ])
     )
   }
+
+  return value
+}
+
+function expandStringEnvReferences(value, values) {
+  if (!value.includes('$')) return value
+
+  const envReferencePattern = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/g
+
+  return value.replace(envReferencePattern, (match, bracedKey, bareKey) => {
+    const envKey = bracedKey || bareKey
+    if (!Object.prototype.hasOwnProperty.call(values, envKey)) return match
+
+    const replacement = getEnvReferenceReplacement(values[envKey])
+    return replacement === undefined ? match : replacement
+  })
+}
+
+function getEnvReferenceReplacement(value) {
+  if (['string', 'number', 'boolean', 'bigint'].includes(typeof value)) {
+    return String(value)
+  }
+
+  return undefined
 }
 
 function parseHeaderLines(value) {
@@ -132,15 +166,19 @@ function parseHeaderLines(value) {
   return headers
 }
 
-function normalizeJsonEnvValue(key, value) {
+function normalizeJsonEnvValue(key, value, referenceValues = {}) {
   if (!value) return value
 
-  const jsonValue = parseJsonValue(key, value)
+  const jsonValue = parseJsonValue(key, value, referenceValues)
   if (jsonValue !== undefined) return jsonValue
 
   const unescapedValue = value.replace(/\\+"/g, '"')
   if (unescapedValue !== value) {
-    const unescapedJsonValue = parseJsonValue(key, unescapedValue)
+    const unescapedJsonValue = parseJsonValue(
+      key,
+      unescapedValue,
+      referenceValues
+    )
     if (unescapedJsonValue !== undefined) return unescapedJsonValue
   }
 
@@ -149,21 +187,30 @@ function normalizeJsonEnvValue(key, value) {
   const headers = parseHeaderLines(value)
   if (headers === undefined) return value
 
-  return JSON.stringify(headers)
+  const expandedHeaders = expandEnvReferencesInValue(headers, referenceValues)
+  const normalizedHeaders = normalizeHeaderObject(expandedHeaders)
+  return normalizedHeaders === undefined
+    ? value
+    : JSON.stringify(normalizedHeaders)
 }
 
-function parseJsonValue(key, value) {
+function parseJsonValue(key, value, referenceValues) {
   try {
     const parsed = JSON.parse(value)
     if (typeof parsed === 'string') {
-      return parseJsonValue(key, parsed)
+      return parseJsonValue(
+        key,
+        expandStringEnvReferences(parsed, referenceValues),
+        referenceValues
+      )
     }
+    const expandedValue = expandEnvReferencesInValue(parsed, referenceValues)
     if (HEADER_ENV_KEYS.has(key)) {
-      const headers = normalizeHeaderObject(parsed)
+      const headers = normalizeHeaderObject(expandedValue)
       if (headers === undefined) return undefined
       return JSON.stringify(headers)
     }
-    return JSON.stringify(parsed)
+    return JSON.stringify(expandedValue)
   } catch (error) {
     return undefined
   }
