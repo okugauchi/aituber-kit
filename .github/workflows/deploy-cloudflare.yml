@@ -86,20 +86,7 @@ jobs:
           if ! grep -q '^AITUBERKIT_TRUST_PROXY_HEADERS=' .env.local; then
             printf '%s\n' 'AITUBERKIT_TRUST_PROXY_HEADERS=true' >> .env.local
           fi
-          node <<'NODE'
-          const fs = require('fs')
-          const { parseEnv } = require('node:util')
-          const values = parseEnv(fs.readFileSync('.env.local', 'utf8'))
-          const runtimeSecrets = Object.fromEntries(
-            Object.entries(values).filter(
-              ([key, value]) => !key.startsWith('NEXT_PUBLIC_') && value !== ''
-            )
-          )
-          fs.writeFileSync(
-            '.cloudflare-runtime-secrets.json',
-            JSON.stringify(runtimeSecrets)
-          )
-          NODE
+          node scripts/normalize-cloudflare-env.js .env.local
         env:
           CLOUDFLARE_ENV_FILE: ${{ secrets.CLOUDFLARE_ENV_FILE }}
           CLOUDFLARE_PUBLIC_ENV_APPEND: ${{ secrets.CLOUDFLARE_PUBLIC_ENV_APPEND }}
