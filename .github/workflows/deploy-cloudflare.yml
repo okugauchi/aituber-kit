@@ -74,6 +74,9 @@ jobs:
           if [ -n "$OPENAI_API_KEY" ] && ! grep -q '^OPENAI_API_KEY=' .env.local; then
             printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY" >> .env.local
           fi
+          if [ -n "$ANTHROPIC_API_KEY" ] && ! grep -q '^ANTHROPIC_API_KEY=' .env.local; then
+            printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" >> .env.local
+          fi
           if ! grep -q '^AITUBERKIT_SERVER_SECRET_ACCESS_MODE=' .env.local; then
             printf '%s\n' 'AITUBERKIT_SERVER_SECRET_ACCESS_MODE=demo' >> .env.local
           fi
@@ -91,6 +94,7 @@ jobs:
           CLOUDFLARE_ENV_FILE: ${{ secrets.CLOUDFLARE_ENV_FILE }}
           CLOUDFLARE_PUBLIC_ENV_APPEND: ${{ secrets.CLOUDFLARE_PUBLIC_ENV_APPEND }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Build for Cloudflare
         run: npm run build:cloudflare
