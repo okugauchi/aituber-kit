@@ -115,12 +115,12 @@ function parseHeaderLines(value) {
 function normalizeJsonEnvValue(key, value) {
   if (!value) return value
 
-  const jsonValue = parseJsonValue(value)
+  const jsonValue = parseJsonValue(key, value)
   if (jsonValue !== undefined) return jsonValue
 
-  const unescapedValue = value.replace(/\\"/g, '"')
+  const unescapedValue = value.replace(/\\+"/g, '"')
   if (unescapedValue !== value) {
-    const unescapedJsonValue = parseJsonValue(unescapedValue)
+    const unescapedJsonValue = parseJsonValue(key, unescapedValue)
     if (unescapedJsonValue !== undefined) return unescapedJsonValue
   }
 
@@ -132,17 +132,59 @@ function normalizeJsonEnvValue(key, value) {
   return JSON.stringify(headers)
 }
 
-function parseJsonValue(value) {
+function parseJsonValue(key, value) {
   try {
     const parsed = JSON.parse(value)
     if (typeof parsed === 'string') {
-      JSON.parse(parsed)
-      return parsed
+      return parseJsonValue(key, parsed)
     }
-    return value
+    if (HEADER_ENV_KEYS.has(key)) {
+      const headers = normalizeHeaderObject(parsed)
+      if (headers === undefined) return undefined
+      return JSON.stringify(headers)
+    }
+    return JSON.stringify(parsed)
   } catch (error) {
     return undefined
   }
+}
+
+function normalizeHeaderObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined
+  }
+
+  const headers = {}
+  for (const [rawKey, rawValue] of Object.entries(value)) {
+    const key = normalizeHeaderName(rawKey)
+    if (!isValidHeaderName(key)) return undefined
+
+    headers[key] = normalizeHeaderValue(rawValue)
+  }
+
+  return headers
+}
+
+function normalizeHeaderName(value) {
+  return String(value)
+    .trim()
+    .replace(/\\+"/g, '"')
+    .replace(/^[{\\'"]+/, '')
+    .replace(/[}\\'"]+$/, '')
+    .trim()
+}
+
+function normalizeHeaderValue(value) {
+  return String(value)
+    .trim()
+    .replace(/\\+"/g, '"')
+    .replace(/^[\\'"]+/, '')
+    .replace(/[\\'"]+$/, '')
+    .trim()
+}
+
+function isValidHeaderName(value) {
+  return /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(value)
 }
 
 function validateJsonEnv(values) {
