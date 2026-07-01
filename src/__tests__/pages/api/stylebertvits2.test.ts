@@ -115,4 +115,84 @@ describe('/api/stylebertvits2', () => {
       })
     )
   })
+
+  it('does not treat URLs containing the RunPod host in the path as RunPod URLs', async () => {
+    const req = createMockReq({
+      body: {
+        ...runpodRequestBody,
+        stylebertvits2ServerUrl: 'https://evil.example/https://api.runpod.ai',
+        stylebertvits2ApiKey: 'client-stylebert-key',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Server URL is not allowed' })
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-allowlisted client-provided Style-Bert-VITS2 URLs', async () => {
+    const req = createMockReq({
+      body: {
+        ...runpodRequestBody,
+        stylebertvits2ServerUrl: 'https://stylebert.example',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Server URL is not allowed' })
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('uses allowlisted client-provided Style-Bert-VITS2 URLs', async () => {
+    process.env.AITUBERKIT_ALLOWED_TTS_SERVER_ORIGINS =
+      'https://stylebert.example'
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => Buffer.from('audio').buffer,
+    })
+    const req = createMockReq({
+      body: {
+        ...runpodRequestBody,
+        stylebertvits2ServerUrl: 'https://stylebert.example',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(200)
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('https://stylebert.example/voice?'),
+      expect.objectContaining({ method: 'GET' })
+    )
+  })
+
+  it('guards client-provided local Style-Bert-VITS2 URLs by default', async () => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+    const req = createMockReq({
+      body: {
+        ...runpodRequestBody,
+        stylebertvits2ServerUrl: 'http://[::ffff:127.0.0.1]:5000',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(403)
+    expect(res._json).toEqual(
+      expect.objectContaining({
+        errorCode: 'ServerSecretAccessDenied',
+        feature: 'stylebertvits2',
+      })
+    )
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
 })

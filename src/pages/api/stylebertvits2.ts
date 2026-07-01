@@ -1,5 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import {
+  isAllowedConfiguredOrListedUrl,
+  isHttpUrl,
+} from '@/lib/api-services/serverUrlGuard'
 
 type Data = {
   audio?: Buffer
@@ -27,7 +31,8 @@ export default async function handler(
   const body = req.body // JSON.parse を削除
   const message = body.message
   const stylebertvits2ModelId = body.stylebertvits2ModelId
-  const usesServerConfiguredUrl = !body.stylebertvits2ServerUrl
+  const usesClientProvidedUrl = Boolean(body.stylebertvits2ServerUrl)
+  const usesServerConfiguredUrl = !usesClientProvidedUrl
   const stylebertvits2ServerUrl =
     body.stylebertvits2ServerUrl || process.env.STYLEBERTVITS2_SERVER_URL
   const stylebertvits2ApiKey =
@@ -44,24 +49,55 @@ export default async function handler(
   const stylebertvits2Length = body.stylebertvits2Length
   const selectLanguage = getLanguageCode(body.selectLanguage)
 
+  if (!stylebertvits2ServerUrl) {
+    return res
+      .status(400)
+      .json({ error: 'Style-Bert-VITS2 server URL is required' })
+  }
+
+  let parsedUrl: URL
+  let configuredUrl: URL | undefined
+  try {
+    parsedUrl = new URL(stylebertvits2ServerUrl)
+    configuredUrl = process.env.STYLEBERTVITS2_SERVER_URL
+      ? new URL(process.env.STYLEBERTVITS2_SERVER_URL)
+      : undefined
+  } catch {
+    return res.status(400).json({ error: 'Invalid server URL' })
+  }
+
+  if (!isHttpUrl(parsedUrl)) {
+    return res.status(400).json({ error: 'Invalid server URL protocol' })
+  }
+
+  const { isProtectedServerResource, isAllowedPublicUrl } =
+    isAllowedConfiguredOrListedUrl(parsedUrl, configuredUrl)
+  const isRunPodUrl = parsedUrl.origin === 'https://api.runpod.ai'
+
   if (
-    usesServerSecret &&
+    usesClientProvidedUrl &&
+    !isRunPodUrl &&
+    !isProtectedServerResource &&
+    !isAllowedPublicUrl
+  ) {
+    return res.status(400).json({ error: 'Server URL is not allowed' })
+  }
+
+  if (
+    (usesServerSecret || isProtectedServerResource) &&
     !guardServerSecretAccess(req, res, { featureName: 'stylebertvits2' })
   ) {
     return
   }
 
   try {
-    if (
-      stylebertvits2ServerUrl.includes('https://api.runpod.ai') &&
-      !stylebertvits2ApiKey
-    ) {
+    if (isRunPodUrl && !stylebertvits2ApiKey) {
       return res
         .status(400)
         .json({ error: 'Style-Bert-VITS2 API key is required' })
     }
 
-    if (!stylebertvits2ServerUrl.includes('https://api.runpod.ai')) {
+    if (!isRunPodUrl) {
       const queryParams = new URLSearchParams({
         text: message,
         model_id: stylebertvits2ModelId,
