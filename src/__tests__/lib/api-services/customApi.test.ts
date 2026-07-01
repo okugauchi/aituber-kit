@@ -213,4 +213,56 @@ describe('handleCustomApi', () => {
       'Authorization'
     )
   })
+
+  it('uses bearer token from Custom API headers as Anthropic x-api-key', async () => {
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValueOnce(createStreamResponse('data: [DONE]\n\n'))
+
+    const response = await handleCustomApi(
+      [{ role: 'user', content: 'hi' } as any],
+      'https://api.anthropic.com/v1/messages',
+      '{"Authorization":"Bearer custom-header-secret"}',
+      '{"model":"claude-sonnet-4-5","max_tokens":128}',
+      true
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.anthropic.com/v1/messages',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-api-key': 'custom-header-secret',
+          'anthropic-version': '2023-06-01',
+        }),
+      })
+    )
+    expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty(
+      'Authorization'
+    )
+  })
+
+  it('strips bearer prefix from Anthropic x-api-key headers', async () => {
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValueOnce(createStreamResponse('data: [DONE]\n\n'))
+
+    const response = await handleCustomApi(
+      [{ role: 'user', content: 'hi' } as any],
+      'https://api.anthropic.com/v1/messages',
+      '{"x-api-key":"Bearer custom-header-secret"}',
+      '{"model":"claude-sonnet-4-5","max_tokens":128}',
+      true
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.anthropic.com/v1/messages',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-api-key': 'custom-header-secret',
+          'anthropic-version': '2023-06-01',
+        }),
+      })
+    )
+  })
 })
