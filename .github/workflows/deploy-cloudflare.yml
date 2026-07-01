@@ -71,12 +71,19 @@ jobs:
           if [ -n "$CLOUDFLARE_PUBLIC_ENV_APPEND" ]; then
             printf '\n%s\n' "$CLOUDFLARE_PUBLIC_ENV_APPEND" >> .env.local
           fi
-          if [ -n "$OPENAI_API_KEY" ] && ! grep -q '^OPENAI_API_KEY=' .env.local; then
-            printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY" >> .env.local
-          fi
-          if [ -n "$ANTHROPIC_API_KEY" ] && ! grep -q '^ANTHROPIC_API_KEY=' .env.local; then
-            printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" >> .env.local
-          fi
+          upsert_env_secret() {
+            key="$1"
+            value="$2"
+            tmp_file="$(mktemp)"
+            grep -v "^${key}=" .env.local > "$tmp_file" || true
+            mv "$tmp_file" .env.local
+            if [ -z "$value" ]; then
+              return
+            fi
+            printf '%s=%s\n' "$key" "$value" >> .env.local
+          }
+          upsert_env_secret OPENAI_API_KEY "$OPENAI_API_KEY"
+          upsert_env_secret ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
           if ! grep -q '^AITUBERKIT_SERVER_SECRET_ACCESS_MODE=' .env.local; then
             printf '%s\n' 'AITUBERKIT_SERVER_SECRET_ACCESS_MODE=demo' >> .env.local
           fi
