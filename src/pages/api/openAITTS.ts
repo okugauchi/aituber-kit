@@ -75,6 +75,10 @@ export default async function handler(
     res.send(buffer)
   } catch (error) {
     console.error('OpenAI TTS error:', error)
-    res.status(500).json({ error: 'Failed to generate speech' })
+    res.status(500).json({
+      error: 'Failed to generate speech',
+      errorCode: 'OpenAITTSError',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
   }
 }
