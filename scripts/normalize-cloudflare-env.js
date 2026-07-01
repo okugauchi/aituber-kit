@@ -115,16 +115,33 @@ function parseHeaderLines(value) {
 function normalizeJsonEnvValue(key, value) {
   if (!value) return value
 
+  const jsonValue = parseJsonValue(value)
+  if (jsonValue !== undefined) return jsonValue
+
+  const unescapedValue = value.replace(/\\"/g, '"')
+  if (unescapedValue !== value) {
+    const unescapedJsonValue = parseJsonValue(unescapedValue)
+    if (unescapedJsonValue !== undefined) return unescapedJsonValue
+  }
+
+  if (!HEADER_ENV_KEYS.has(key)) return value
+
+  const headers = parseHeaderLines(value)
+  if (headers === undefined) return value
+
+  return JSON.stringify(headers)
+}
+
+function parseJsonValue(value) {
   try {
-    JSON.parse(value)
+    const parsed = JSON.parse(value)
+    if (typeof parsed === 'string') {
+      JSON.parse(parsed)
+      return parsed
+    }
     return value
   } catch (error) {
-    if (!HEADER_ENV_KEYS.has(key)) return value
-
-    const headers = parseHeaderLines(value)
-    if (headers === undefined) return value
-
-    return JSON.stringify(headers)
+    return undefined
   }
 }
 
