@@ -74,12 +74,12 @@ jobs:
           upsert_env_secret() {
             key="$1"
             value="$2"
-            if [ -z "$value" ]; then
-              return
-            fi
             tmp_file="$(mktemp)"
             grep -v "^${key}=" .env.local > "$tmp_file" || true
             mv "$tmp_file" .env.local
+            if [ -z "$value" ]; then
+              return
+            fi
             printf '%s=%s\n' "$key" "$value" >> .env.local
           }
           upsert_env_secret OPENAI_API_KEY "$OPENAI_API_KEY"
