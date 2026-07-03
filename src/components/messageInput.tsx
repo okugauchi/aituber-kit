@@ -535,9 +535,9 @@ export const MessageInput = ({
             <div className="flex-1 relative">
               {/* 画像添付インジケーター - アイコンのみ表示設定の場合 */}
               {showIconDisplay && (
-                <div className="absolute left-3 top-3 z-10">
+                <div className="absolute left-3 top-[15px] z-10 flex h-4 w-4 items-center justify-center">
                   <div
-                    className="relative cursor-pointer"
+                    className="relative flex h-4 w-4 cursor-pointer items-center justify-center"
                     onMouseEnter={() => setShowImageActions(true)}
                     onMouseLeave={() => setShowImageActions(false)}
                     onFocus={() => setShowImageActions(true)}
@@ -553,7 +553,7 @@ export const MessageInput = ({
                     aria-label={t('RemoveImage')}
                   >
                     <svg
-                      className="h-4 w-4 text-text-primary"
+                      className="block h-4 w-4 text-text-primary"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
