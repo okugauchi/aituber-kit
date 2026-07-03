@@ -15,7 +15,6 @@ const useAutoScrollRef = (dependency: unknown) => {
       behavior: 'auto',
       block: 'center',
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -556,11 +555,11 @@ const ClassicChat = ({
       data-message-index={index}
     >
       {role === 'code' ? (
-        <pre className="theme-surface-contrast whitespace-pre-wrap break-words rounded-xl border border-primary/20 p-4 shadow-md">
+        <pre className="whitespace-pre-wrap break-words rounded-xl border border-white/45 bg-black/70 p-4 text-white shadow-[0_12px_32px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:border-white/15 dark:bg-black/45">
           <code className="font-mono text-xs sm:text-sm">{message}</code>
         </pre>
       ) : (
-        <div className="theme-surface-popover rounded-xl border border-primary/20 px-3 py-3 text-sm shadow-md backdrop-blur-md sm:px-4 sm:text-base">
+        <div className="classic-chat-card rounded-xl border border-white/45 bg-white/65 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/40 sm:px-4 sm:text-base">
           <div className="mb-2 flex items-center gap-2">
             <span
               className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-bold ${roleBadge}`}
@@ -586,7 +585,7 @@ const ClassicChat = ({
                 <span>{t('ThinkingProcess')}</span>
               </button>
               {isThinkingExpanded && (
-                <div className="theme-surface-soft mt-2 whitespace-pre-wrap rounded border border-l-2 border-l-primary px-3 py-2 text-xs italic text-theme-default">
+                <div className="mt-2 whitespace-pre-wrap rounded border border-white/40 border-l-2 border-l-primary bg-white/40 px-3 py-2 text-xs italic text-theme-default backdrop-blur-md dark:border-white/10 dark:bg-white/10">
                   {thinking}
                 </div>
               )}
@@ -617,7 +616,7 @@ const ClassicChatImage = ({
       <Image
         src={imageUrl}
         alt="Generated Image"
-        className="rounded-xl border border-primary/20 shadow-md"
+        className="rounded-xl border border-white/45 shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15"
         width={512}
         height={512}
       />
