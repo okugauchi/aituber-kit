@@ -205,7 +205,7 @@ describe('ChatLog', () => {
     expect(panel.className).toContain('left-2')
     const classicCard = container.querySelector('.classic-chat-card')
     expect(classicCard).not.toBeNull()
-    expect(classicCard?.className).toContain('bg-white/65')
+    expect(classicCard?.className).toContain('bg-white/75')
     expect(classicCard?.className).toContain('backdrop-blur-xl')
     expect(container.querySelector('.cursor-ew-resize')).not.toBeNull()
   })

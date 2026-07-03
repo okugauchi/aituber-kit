@@ -559,7 +559,7 @@ const ClassicChat = ({
           <code className="font-mono text-xs sm:text-sm">{message}</code>
         </pre>
       ) : (
-        <div className="classic-chat-card rounded-xl border border-white/45 bg-white/65 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/40 sm:px-4 sm:text-base">
+        <div className="classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base">
           <div className="mb-2 flex items-center gap-2">
             <span
               className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-bold ${roleBadge}`}
@@ -585,7 +585,7 @@ const ClassicChat = ({
                 <span>{t('ThinkingProcess')}</span>
               </button>
               {isThinkingExpanded && (
-                <div className="mt-2 whitespace-pre-wrap rounded border border-white/40 border-l-2 border-l-primary bg-white/40 px-3 py-2 text-xs italic text-theme-default backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+                <div className="mt-2 whitespace-pre-wrap rounded border border-white/40 border-l-2 border-l-primary bg-white/50 px-3 py-2 text-xs italic text-theme-default backdrop-blur-md dark:border-white/10 dark:bg-white/15">
                   {thinking}
                 </div>
               )}
