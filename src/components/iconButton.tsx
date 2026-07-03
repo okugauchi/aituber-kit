@@ -47,10 +47,12 @@ const OUTLINE_ICONS: Record<string, JSX.Element> = {
     </>
   ),
   '24/Send': (
-    <>
-      <path d="M3 5.5 22 12 3 18.5 6.8 12 3 5.5z" />
-      <path d="M6.8 12H22" />
-    </>
+    <path
+      d="M3.24 4.75a.75.75 0 0 0-.92 1.02L5.43 12l-3.11 6.23a.75.75 0 0 0 .92 1.02l18.5-6.5a.8.8 0 0 0 0-1.5l-18.5-6.5ZM6 7.05 18.8 12 6 16.95 8.3 12 6 7.05Z"
+      fill="currentColor"
+      fillRule="evenodd"
+      stroke="none"
+    />
   ),
   '24/PauseAlt': (
     <>
