@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react'
 import settingsStore from '@/features/stores/settings'
 import homeStore from '@/features/stores/home'
 import { SpeakQueue } from '@/features/messages/speakQueue'
+import { InlineOutlineIcon } from './iconButton'
 
 type Props = {
   onSelectQuestion: (text: string) => void
@@ -72,19 +73,7 @@ export const PresetQuestionButtons = ({ onSelectQuestion }: Props) => {
                 className="flex h-5 w-5 shrink-0 items-center justify-center text-secondary transition-transform duration-200 group-hover:translate-x-0.5"
                 aria-hidden="true"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
+                <InlineOutlineIcon name="24/Send" size={16} />
               </span>
             </button>
           ))}

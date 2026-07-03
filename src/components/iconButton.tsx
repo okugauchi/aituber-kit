@@ -48,8 +48,8 @@ const OUTLINE_ICONS: Record<string, JSX.Element> = {
   ),
   '24/Send': (
     <>
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
+      <path d="M22 2 11 13" />
+      <path d="m22 2-7 20-4-9-9-4 20-7z" />
     </>
   ),
   '24/PauseAlt': (
