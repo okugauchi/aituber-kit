@@ -489,6 +489,7 @@ export const MessageInput = ({
                 width={0}
                 height={0}
                 sizes="100vw"
+                unoptimized
                 className="h-auto max-h-32 w-auto max-w-full rounded-xl object-contain"
               />
             </div>
