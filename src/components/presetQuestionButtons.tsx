@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react'
 import settingsStore from '@/features/stores/settings'
 import homeStore from '@/features/stores/home'
 import { SpeakQueue } from '@/features/messages/speakQueue'
+import { InlineOutlineIcon } from './iconButton'
 
 type Props = {
   onSelectQuestion: (text: string) => void
@@ -53,7 +54,7 @@ export const PresetQuestionButtons = ({ onSelectQuestion }: Props) => {
   const sortedQuestions = [...presetQuestions].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="absolute bottom-[86px] z-20 w-full sm:bottom-[92px]">
+    <div className="absolute bottom-[94px] z-20 w-full sm:bottom-[100px]">
       <div className="mx-auto max-w-4xl px-3 sm:px-4" ref={containerRef}>
         <div
           ref={contentRef}
@@ -65,14 +66,14 @@ export const PresetQuestionButtons = ({ onSelectQuestion }: Props) => {
             <button
               key={question.id}
               onClick={() => handleQuestionClick(question.text)}
-              className="theme-surface-popover group inline-flex max-w-[82vw] items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-bold text-theme-default backdrop-blur-sm transition-colors duration-200 hover:border-secondary sm:max-w-none sm:px-4"
+              className="aurora-glass-popover group inline-flex max-w-[82vw] items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-bold text-theme-default shadow-[0_2px_8px_rgba(31,38,60,0.08)] transition-colors duration-200 hover:border-secondary sm:max-w-none sm:px-4"
             >
               <span className="truncate">{question.text}</span>
               <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center text-secondary transition-transform duration-200 group-hover:translate-x-0.5 [&_svg]:h-4 [&_svg]:w-4"
+                className="flex h-5 w-5 shrink-0 items-center justify-center text-secondary transition-transform duration-200 group-hover:translate-x-0.5"
                 aria-hidden="true"
               >
-                <pixiv-icon name="24/Send" scale="1" />
+                <InlineOutlineIcon name="24/Send" size={16} />
               </span>
             </button>
           ))}
