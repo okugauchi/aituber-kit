@@ -71,7 +71,7 @@ jobs:
               ref: 'aituberkit-nikechan-embed-skip',
               description: 'AITuberKit: allow embedded widget on nikechan.com',
               expression:
-                '(http.host in {"aituberkit.com" "www.aituberkit.com"} and ((http.referer contains "https://nikechan.com" and starts_with(http.request.uri.path, "/embed")) or ((http.referer contains "https://aituberkit.com/" or http.referer contains "https://www.aituberkit.com/") and (starts_with(http.request.uri.path, "/vrm/") or starts_with(http.request.uri.path, "/live2d/") or starts_with(http.request.uri.path, "/pngtuber/") or starts_with(http.request.uri.path, "/models/") or starts_with(http.request.uri.path, "/poses/")))))',
+                '(http.host in {"aituberkit.com" "www.aituberkit.com"} and ((http.referer contains "https://nikechan.com" and starts_with(http.request.uri.path, "/embed")) or ((http.referer contains "https://aituberkit.com/" or http.referer contains "https://www.aituberkit.com/") and (starts_with(http.request.uri.path, "/vrm/") or starts_with(http.request.uri.path, "/live2d/") or starts_with(http.request.uri.path, "/pngtuber/") or starts_with(http.request.uri.path, "/models/") or starts_with(http.request.uri.path, "/poses/") or ends_with(http.request.uri.path, ".vrma")))))',
               action: 'skip',
               action_parameters: {
                 ruleset: 'current',
