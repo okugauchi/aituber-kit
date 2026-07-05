@@ -6,18 +6,7 @@ import {
   createRestrictedModeErrorResponse,
 } from '@/utils/restrictedMode'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
-
-interface Style {
-  name: string
-  id: number
-  type: string
-}
-
-interface Speaker {
-  name: string
-  speaker_uuid: string
-  styles: Style[]
-}
+import { validateSpeakersResponse } from '@/lib/api-services/validateSpeakersResponse'
 
 interface VoicevoxSpeaker {
   speaker: string
@@ -60,17 +49,7 @@ export default async function handler(
       return res.status(400).json({ error: 'Invalid server URL protocol' })
     }
     const response = await fetch(`${serverUrl}/speakers`)
-
-    if (!response.ok) {
-      throw new Error(
-        `VOICEVOX server responded with status: ${response.status}`
-      )
-    }
-
-    const speakers: Speaker[] = await response.json()
-    if (!Array.isArray(speakers)) {
-      throw new Error('VOICEVOX speakers response must be an array')
-    }
+    const speakers = await validateSpeakersResponse(response, 'VOICEVOX')
 
     // VOICEVOX形式に変換
     const voicevoxSpeakers: VoicevoxSpeaker[] = speakers.flatMap((speaker) =>

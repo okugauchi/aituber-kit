@@ -134,7 +134,6 @@ const Live2DComponent = (): JSX.Element => {
     modelPath: string
   ) => {
     if (!canvasContainerRef.current) return
-    const hs = homeStore.getState()
     const requestId = ++loadRequestIdRef.current
     setIsModelLoading(true)
 
@@ -150,6 +149,11 @@ const Live2DComponent = (): JSX.Element => {
         newModel.once('error', (e) => reject(e))
         setTimeout(() => reject(new Error('Model load timeout')), 10000)
       })
+
+      if (requestId !== loadRequestIdRef.current) {
+        newModel.destroy()
+        return
+      }
 
       currentApp.stage.addChild(newModel as unknown as DisplayObject)
       newModel.anchor.set(0.5, 0.5)

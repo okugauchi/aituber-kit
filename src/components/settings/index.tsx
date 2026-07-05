@@ -46,11 +46,26 @@ const tabsWithRedundantPanelTitle = new Set([
 ])
 
 const Settings = (props: Props) => {
+  const { onClickClose } = props
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClickClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClickClose])
+
   const handleBackdropClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     if (event.target === event.currentTarget) {
-      props.onClickClose()
+      onClickClose()
     }
   }
 

@@ -178,6 +178,55 @@ describe('Voice Settings', () => {
       expect(screen.getByText('VoicevoxServerUrl')).toBeTruthy()
       expect(screen.getByText('SpeakerSelection')).toBeTruthy()
     })
+
+    it('should request speaker updates with POST', async () => {
+      const fetchMock = global.fetch as jest.Mock
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ message: 'ok' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ speaker: 'Speaker/Normal', id: 1 }],
+        })
+
+      render(<Voice />)
+
+      fireEvent.click(screen.getByText('UpdateSpeakerList'))
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/update-voicevox-speakers?serverUrl=',
+          { method: 'POST' }
+        )
+      })
+    })
+
+    it('should explain server resource access errors', async () => {
+      const fetchMock = global.fetch as jest.Mock
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [],
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          json: async () => ({ errorCode: 'ServerSecretAccessDenied' }),
+        })
+
+      render(<Voice />)
+
+      fireEvent.click(screen.getByText('UpdateSpeakerList'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/サーバー側リソース利用の許可/)).toBeTruthy()
+      })
+    })
   })
 
   describe('aivis speech settings', () => {
