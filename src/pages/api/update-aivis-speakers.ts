@@ -6,18 +6,7 @@ import {
   createRestrictedModeErrorResponse,
 } from '@/utils/restrictedMode'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
-
-interface Style {
-  name: string
-  id: number
-  type: string
-}
-
-interface Speaker {
-  name: string
-  speaker_uuid: string
-  styles: Style[]
-}
+import { validateSpeakersResponse } from '@/lib/api-services/validateSpeakersResponse'
 
 interface AivisSpeaker {
   speaker: string
@@ -60,7 +49,7 @@ export default async function handler(
       return res.status(400).json({ error: 'Invalid server URL protocol' })
     }
     const response = await fetch(`${serverUrl}/speakers`)
-    const speakers: Speaker[] = await response.json()
+    const speakers = await validateSpeakersResponse(response, 'AivisSpeech')
 
     // Aivis形式に変換
     const aivisSpeakers: AivisSpeaker[] = speakers.flatMap((speaker) =>

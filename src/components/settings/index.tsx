@@ -46,8 +46,34 @@ const tabsWithRedundantPanelTitle = new Set([
 ])
 
 const Settings = (props: Props) => {
+  const { onClickClose } = props
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClickClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClickClose])
+
+  const handleBackdropClick = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    if (event.target === event.currentTarget) {
+      onClickClose()
+    }
+  }
+
   return (
-    <div className="theme-settings-backdrop absolute z-40 h-full w-full overflow-hidden">
+    <div
+      className="theme-settings-backdrop absolute z-40 h-full w-full overflow-hidden"
+      onClick={handleBackdropClick}
+    >
       <div className="theme-settings-shell mx-auto flex h-full w-full max-w-[1280px] flex-col overflow-hidden border-x shadow-xl backdrop-blur-sm md:my-5 md:h-[calc(100%-2.5rem)] md:w-[calc(100%-3rem)] md:rounded-xl md:border">
         <Header {...props} />
         <Main />
@@ -966,7 +992,7 @@ const escapeRegExp = (value: string) =>
 const Footer = () => {
   return (
     <footer className="theme-surface-contrast shrink-0 border-t border-primary/20 py-1 text-center font-Montserrat text-xs">
-      powered by ChatVRM from Pixiv / ver. 2.54.0
+      powered by ChatVRM from Pixiv / ver. 2.55.0
     </footer>
   )
 }
