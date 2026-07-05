@@ -213,7 +213,11 @@ export function guardServerSecretAccess(
 
   if (mode === 'demo') {
     const fetchSite = getHeaderValue(req, 'sec-fetch-site')
-    const fetchSiteAllowed = fetchSite === 'same-origin' || fetchSite === 'none'
+    const origin = getRequestOrigin(req)
+    const fetchSiteAllowed =
+      fetchSite === 'same-origin' ||
+      fetchSite === 'none' ||
+      (fetchSite === '' && isSameHostOrigin(req, origin))
 
     if (
       fetchSiteAllowed &&
