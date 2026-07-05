@@ -8,6 +8,7 @@ import { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
 import { generateMessageId } from '@/utils/messageUtils'
 import { addEmbeddingsToMessages } from '@/features/memory/memoryStoreSync'
 import { PresenceState, PresenceError } from '@/features/presence/presenceTypes'
+import { isRestrictedMode } from '@/utils/restrictedMode'
 
 export interface PersistedState {
   userOnboarded: boolean
@@ -299,6 +300,12 @@ homeStore.subscribe((state, prevState) => {
       )
 
       if (newMessagesToSave.length > 0) {
+        if (isRestrictedMode()) {
+          lastSavedLogLength = state.chatLog.length
+          shouldCreateNewFile = false
+          return
+        }
+
         const processedMessages = newMessagesToSave.map((msg) =>
           messageSelectors.sanitizeMessageForStorage(msg)
         )
