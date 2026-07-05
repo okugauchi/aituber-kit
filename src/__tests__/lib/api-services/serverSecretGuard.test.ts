@@ -96,6 +96,44 @@ describe('serverSecretGuard', () => {
     expect(res._getStatusCode()).toBe(200)
   })
 
+  it('allows demo mode for same-host requests when Sec-Fetch-Site is unavailable', () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
+    delete process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: {
+        host: 'aituberkit.example',
+        origin: 'https://aituberkit.example',
+      },
+    })
+
+    const allowed = guardServerSecretAccess(req as any, res as any, {
+      featureName: 'test-feature',
+    })
+
+    expect(allowed).toBe(true)
+    expect(res._getStatusCode()).toBe(200)
+  })
+
+  it('rejects demo mode cross-host requests when Sec-Fetch-Site is unavailable', () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
+    delete process.env.AITUBERKIT_DEMO_ACCESS_TOKEN
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: {
+        host: 'aituberkit.example',
+        origin: 'https://evil.example',
+      },
+    })
+
+    const allowed = guardServerSecretAccess(req as any, res as any, {
+      featureName: 'test-feature',
+    })
+
+    expect(allowed).toBe(false)
+    expect(res._getStatusCode()).toBe(403)
+  })
+
   it('allows demo mode for same-origin requests with a configured demo token', () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'demo'
     process.env.AITUBERKIT_DEMO_ACCESS_TOKEN = 'demo-token'
