@@ -363,7 +363,15 @@
     "LocalLLMNotFound": "ローカルLLMのエンドポイントが見つかりません",
     "LocalLLMAPIError": "ローカルLLM APIでエラーが発生しました",
     "CustomAPIError": "カスタムAPIでエラーが発生しました",
-    "InvalidJSON": "JSON形式が正しくありません"
+    "InvalidJSON": "JSON形式が正しくありません",
+    "AIServiceError": "AIサービスでエラーが発生しました",
+    "CustomAPIEmptyBody": "カスタムAPIの応答が空です",
+    "CustomAPIInvalidRequest": "カスタムAPIへのリクエストが正しくありません",
+    "EmptyAzureDeployment": "Azureのデプロイメント名が設定されていません",
+    "InvalidAPIKey": "APIキーが正しくありません",
+    "OpenAITTSUpstreamError": "OpenAI TTSサービスでエラーが発生しました",
+    "ServerSecretAccessDenied": "サーバー側のAPIキー利用が許可されていません",
+    "ServerSecretRateLimited": "サーバー側APIキーの利用回数制限に達しました。しばらく待ってから再度お試しください"
   },
   "MessageReceiver": "外部からのAPI操作を有効にする",
   "MessageReceiverDescription": "API経由で、AIキャラの発話・会話入力・停止などを実行できるようにします。",

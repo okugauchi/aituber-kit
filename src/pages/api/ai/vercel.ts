@@ -160,8 +160,6 @@ export default async function handler(
       }
     }
 
-    console.log('options', options)
-
     // 推論モードのproviderOptionsを構築
     const providerOptions = buildReasoningProviderOptions(
       aiService,
