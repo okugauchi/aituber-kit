@@ -4,6 +4,7 @@ import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 type Data = {
   audio?: Buffer
   error?: string
+  errorCode?: string
 }
 
 export default async function handler(
@@ -20,22 +21,14 @@ export default async function handler(
   const language = body.language
 
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
+    res.status(400).json({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' })
+    return
   }
   if (!voiceId) {
-    return new Response(
-      JSON.stringify({ error: 'Empty Voice ID', errorCode: 'EMPTY_PROPERTY' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
+    res
+      .status(400)
+      .json({ error: 'Empty Voice ID', errorCode: 'EMPTY_PROPERTY' })
+    return
   }
 
   if (
