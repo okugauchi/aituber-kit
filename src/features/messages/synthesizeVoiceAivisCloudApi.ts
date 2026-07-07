@@ -1,4 +1,5 @@
 import { Talk } from './messages'
+import { synthesizeVoiceApi } from './synthesizeVoiceApi'
 
 export async function synthesizeVoiceAivisCloudApi(
   talk: Talk,
@@ -14,41 +15,30 @@ export async function synthesizeVoiceAivisCloudApi(
   prePhonemeLength: number,
   postPhonemeLength: number
 ): Promise<ArrayBuffer> {
-  try {
-    const res = await fetch('/api/tts-aivis-cloud-api', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  return synthesizeVoiceApi(
+    '/api/tts-aivis-cloud-api',
+    {
+      text: talk.message,
+      apiKey,
+      modelUuid,
+      styleId,
+      styleName,
+      useStyleName,
+      speed,
+      pitch,
+      emotionalIntensity,
+      tempoDynamics,
+      prePhonemeLength,
+      postPhonemeLength,
+      outputFormat: 'mp3',
+    },
+    'Aivis Cloud API',
+    {
+      buildErrorMessage: async (res) => {
+        const errorData = await res.json().catch(() => ({}))
+        const errorMessage = errorData.error || `HTTP ${res.status}`
+        return `Aivis Cloud APIからの応答が異常です: ${errorMessage}`
       },
-      body: JSON.stringify({
-        text: talk.message,
-        apiKey,
-        modelUuid,
-        styleId,
-        styleName,
-        useStyleName,
-        speed,
-        pitch,
-        emotionalIntensity,
-        tempoDynamics,
-        prePhonemeLength,
-        postPhonemeLength,
-        outputFormat: 'mp3',
-      }),
-    })
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      const errorMessage = errorData.error || `HTTP ${res.status}`
-      throw new Error(`Aivis Cloud APIからの応答が異常です: ${errorMessage}`)
     }
-
-    return await res.arrayBuffer()
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Aivis Cloud APIでエラーが発生しました: ${error.message}`)
-    } else {
-      throw new Error('Aivis Cloud APIで不明なエラーが発生しました')
-    }
-  }
+  )
 }

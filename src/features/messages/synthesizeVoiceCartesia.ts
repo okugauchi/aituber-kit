@@ -1,5 +1,6 @@
 import { Talk } from './messages'
 import { Language } from '@/features/constants/settings'
+import { synthesizeVoiceApi } from './synthesizeVoiceApi'
 
 export async function synthesizeVoiceCartesiaApi(
   talk: Talk,
@@ -16,39 +17,18 @@ export async function synthesizeVoiceCartesiaApi(
   if (!talk.message.trim()) {
     throw new Error('合成するメッセージが空です')
   }
-  try {
-    const body = {
-      message: talk.message,
-      voiceId,
-      apiKey,
-      language,
-    }
 
-    const res = await fetch('/api/cartesia', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  return synthesizeVoiceApi(
+    '/api/cartesia',
+    { message: talk.message, voiceId, apiKey, language },
+    'Cartesia',
+    {
+      buildErrorMessage: async (res) => {
+        const errorText = await res
+          .text()
+          .catch(() => 'エラー詳細を取得できませんでした')
+        return `Cartesia APIからの応答が異常です。ステータスコード: ${res.status}, エラー詳細: ${errorText}`
       },
-      body: JSON.stringify(body),
-    })
-
-    if (!res.ok) {
-      const errorText = await res
-        .text()
-        .catch(() => 'エラー詳細を取得できませんでした')
-      throw new Error(
-        `Cartesia APIからの応答が異常です。ステータスコード: ${res.status}, エラー詳細: ${errorText}`
-      )
     }
-
-    const buffer = await res.arrayBuffer()
-
-    return buffer
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Cartesiaでエラーが発生しました: ${error.message}`)
-    } else {
-      throw new Error('Cartesiaで不明なエラーが発生しました')
-    }
-  }
+  )
 }
