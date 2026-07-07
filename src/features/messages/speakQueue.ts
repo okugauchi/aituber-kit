@@ -1,9 +1,7 @@
 import { logger } from '@/lib/logger'
 import { Talk } from './messages'
 import homeStore from '@/features/stores/home'
-import settingsStore from '@/features/stores/settings'
-import { Live2DHandler } from './live2dHandler'
-import { PNGTuberHandler } from '@/features/pngTuber/pngTuberHandler'
+import { getCharacterRenderer } from './characterRenderer'
 
 type SpeakTask = {
   sessionId: string
@@ -49,18 +47,7 @@ export class SpeakQueue {
   }
 
   private static stopCurrentModelSpeaking() {
-    const hs = homeStore.getState()
-    const ss = settingsStore.getState()
-    if (ss.modelType === 'live2d') {
-      Live2DHandler.stopSpeaking()
-    } else if (ss.modelType === 'pngtuber') {
-      PNGTuberHandler.stopSpeaking()
-    } else {
-      hs.viewer.model?.stopSpeaking()
-      if (hs.viewer.model?.poseManager?.isActive) {
-        hs.viewer.model?.poseManager?.resetToIdle(hs.viewer.model)
-      }
-    }
+    getCharacterRenderer()?.stopSpeaking()
   }
 
   /**
@@ -139,7 +126,6 @@ export class SpeakQueue {
 
     this.isProcessing = true
     const hs = homeStore.getState()
-    const ss = settingsStore.getState()
 
     // isSpeaking はループ内部で最新値を参照するため、ここでは条件に含めない
     while (this.queue.length > 0) {
@@ -164,13 +150,7 @@ export class SpeakQueue {
         }
         try {
           const { audioBuffer, talk, isNeedDecode, onComplete } = task
-          if (ss.modelType === 'live2d') {
-            await Live2DHandler.speak(audioBuffer, talk, isNeedDecode)
-          } else if (ss.modelType === 'pngtuber') {
-            await PNGTuberHandler.speak(audioBuffer, talk, isNeedDecode)
-          } else {
-            await hs.viewer.model?.speak(audioBuffer, talk, isNeedDecode)
-          }
+          await getCharacterRenderer()?.speak(audioBuffer, talk, isNeedDecode)
           onComplete?.()
         } catch (error) {
           logger.error(
@@ -205,18 +185,7 @@ export class SpeakQueue {
     )
 
     if (this.shouldResetToNeutral(initialLength)) {
-      const hs = homeStore.getState()
-      const ss = settingsStore.getState()
-      if (ss.modelType === 'live2d') {
-        await Live2DHandler.resetToIdle()
-      } else if (ss.modelType === 'pngtuber') {
-        await PNGTuberHandler.resetToIdle()
-      } else {
-        await hs.viewer.model?.playEmotion('neutral')
-        if (hs.viewer.model?.poseManager?.isActive) {
-          hs.viewer.model?.poseManager?.resetToIdle(hs.viewer.model)
-        }
-      }
+      await getCharacterRenderer()?.resetToIdle()
     }
   }
 

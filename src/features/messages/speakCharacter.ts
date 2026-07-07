@@ -1,5 +1,4 @@
 import { logger } from '@/lib/logger'
-import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import { AIVoice } from '@/features/constants/settings'
 import { wait } from '@/utils/wait'
@@ -18,8 +17,7 @@ import { synthesizeVoiceAzureOpenAIApi } from './synthesizeVoiceAzureOpenAI'
 import toastStore from '@/features/stores/toast'
 import i18next from 'i18next'
 import { SpeakQueue } from './speakQueue'
-import { Live2DHandler } from './live2dHandler'
-import { PNGTuberHandler } from '@/features/pngTuber/pngTuberHandler'
+import { getCharacterRenderer } from './characterRenderer'
 import {
   asyncConvertEnglishToJapaneseReading,
   containsEnglish,
@@ -453,14 +451,7 @@ export const testVoice = async (voiceType: AIVoice, customText?: string) => {
     settingsStore.setState({ selectVoice: currentVoice })
 
     if (buffer) {
-      if (ss.modelType === 'vrm') {
-        const hs = homeStore.getState()
-        await hs.viewer.model?.speak(buffer, talk)
-      } else if (ss.modelType === 'live2d') {
-        Live2DHandler.speak(buffer, talk)
-      } else if (ss.modelType === 'pngtuber') {
-        await PNGTuberHandler.speak(buffer, talk)
-      }
+      await getCharacterRenderer()?.speak(buffer, talk)
     }
   } catch (error) {
     logger.error(`Error testing ${voiceType} voice:`, error)
