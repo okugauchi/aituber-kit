@@ -22,7 +22,7 @@ import {
   createRestrictedModeErrorResponse,
 } from '@/utils/restrictedMode'
 import { requireApiKey, sendMethodNotAllowed } from '@/features/api/http'
-import { evaluateSecretPairs } from './secretPairs'
+import { evaluateSecretPairs, extractClientValue } from './secretPairs'
 import type { ApiHttpMethod, RoutePolicy } from './types'
 
 /** serverUrl 宣言を持つルートに渡される解決済みURL情報 */
@@ -85,12 +85,11 @@ export function withAccessPolicy(
     let resolvedServerUrl: ResolvedServerUrl | undefined
     if (policy.serverUrl) {
       const declaration = policy.serverUrl
-      const holder = declaration.source === 'body' ? req.body : req.query
-      const rawValue =
-        holder && typeof holder === 'object'
-          ? (holder as Record<string, unknown>)[declaration.key]
-          : undefined
-      const clientValue = Array.isArray(rawValue) ? rawValue[0] : rawValue
+      const clientValue = extractClientValue(
+        req,
+        declaration.source,
+        declaration.key
+      )
       const configuredRaw =
         process.env[declaration.envVar] || declaration.defaultUrl
       const raw =

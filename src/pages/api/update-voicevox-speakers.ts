@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
 import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
 import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 import { validateSpeakersResponse } from '@/lib/api-services/validateSpeakersResponse'
 
@@ -11,20 +12,13 @@ interface VoicevoxSpeaker {
   id: number
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  gate: PolicyGate
+) {
   try {
-    // APIからデータを取得
-    const rawServerUrl = Array.isArray(req.query.serverUrl)
-      ? req.query.serverUrl[0]
-      : req.query.serverUrl
-    const serverUrl =
-      rawServerUrl ||
-      process.env.VOICEVOX_SERVER_URL ||
-      'http://localhost:50021'
-    const parsedUrl = new URL(serverUrl)
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      return res.status(400).json({ error: 'Invalid server URL protocol' })
-    }
+    const serverUrl = gate.serverUrl!.raw
     const response = await fetch(`${serverUrl}/speakers`)
     const speakers = await validateSpeakersResponse(response, 'VOICEVOX')
 

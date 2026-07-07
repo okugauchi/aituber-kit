@@ -10,6 +10,23 @@ import type { NextApiRequest } from 'next'
 import type { SecretPair } from './types'
 
 /**
+ * body/query からクライアント提供値を取り出す（配列指定は先頭要素を採用）。
+ * withAccessPolicy.ts のサーバーURL解決と共有する。
+ */
+export function extractClientValue(
+  req: NextApiRequest,
+  source: 'body' | 'query',
+  key: string
+): unknown {
+  const holder = source === 'body' ? req.body : req.query
+  const rawValue =
+    holder && typeof holder === 'object'
+      ? (holder as Record<string, unknown>)[key]
+      : undefined
+  return Array.isArray(rawValue) ? rawValue[0] : rawValue
+}
+
+/**
  * dynamicルート用の低レベルヘルパー。
  * [クライアント提供値, サーバーenv値] のペア列を受け取り、
  * いずれかのペアで「クライアント未提供かつenv有り」なら true。
@@ -30,12 +47,7 @@ export function evaluateSecretPairs(
   pairs: SecretPair[]
 ): boolean {
   return pairs.some((pair) => {
-    const holder = pair.source === 'body' ? req.body : req.query
-    const rawValue =
-      holder && typeof holder === 'object'
-        ? (holder as Record<string, unknown>)[pair.key]
-        : undefined
-    const clientValue = Array.isArray(rawValue) ? rawValue[0] : rawValue
+    const clientValue = extractClientValue(req, pair.source, pair.key)
     return (
       !clientValue && pair.envVars.some((name) => Boolean(process.env[name]))
     )

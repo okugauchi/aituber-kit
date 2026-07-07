@@ -332,8 +332,13 @@ export const routePolicies = {
     featureName: 'update-aivis-speakers',
     methods: ['POST'],
     resources: ['fs-write', 'server-secret', 'server-url'],
-    // URL検証（プロトコル検査）は現行どおりガード通過後にルート内で実施
     secret: { kind: 'always' },
+    serverUrl: {
+      source: 'query',
+      key: 'serverUrl',
+      envVar: 'AIVIS_SPEECH_SERVER_URL',
+      defaultUrl: 'http://127.0.0.1:10101',
+    },
     restrictedBehavior: 'deny',
   },
   '/api/update-pose-rotation': {
@@ -350,6 +355,12 @@ export const routePolicies = {
     methods: ['POST'],
     resources: ['fs-write', 'server-secret', 'server-url'],
     secret: { kind: 'always' },
+    serverUrl: {
+      source: 'query',
+      key: 'serverUrl',
+      envVar: 'VOICEVOX_SERVER_URL',
+      defaultUrl: 'http://localhost:50021',
+    },
     restrictedBehavior: 'deny',
   },
   '/api/updateSlideData': {
