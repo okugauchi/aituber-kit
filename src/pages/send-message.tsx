@@ -1,4 +1,3 @@
-import { logger } from '@/lib/logger'
 import { useEffect, useMemo, useState } from 'react'
 import settingsStore from '@/features/stores/settings'
 import { useTranslation } from 'react-i18next'
@@ -512,8 +511,8 @@ const response = await fetch(url, {
   ${requestOptions.join(',\n  ')}
 })
 
-logger.log(response.status)
-logger.log(await response.json())`
+console.log(response.status)
+console.log(await response.json())`
   }
 
   const buildPythonSample = () => {

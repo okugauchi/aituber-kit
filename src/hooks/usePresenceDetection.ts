@@ -1,4 +1,3 @@
-import { logger } from '@/lib/logger'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import * as faceapi from 'face-api.js'
 import settingsStore from '@/features/stores/settings'
@@ -108,7 +107,9 @@ export function usePresenceDetection({
   const logDebug = useCallback(
     (message: string, ...args: unknown[]) => {
       if (presenceDebugMode) {
-        logger.log(`[PresenceDetection] ${message}`, ...args)
+        // 設定画面のpresenceDebugModeによる明示的なオプトインのため、
+        // logger.logのビルド時ゲート（本番で抑制）を通さずconsoleへ直接出力する
+        console.log(`[PresenceDetection] ${message}`, ...args)
       }
     },
     [presenceDebugMode]

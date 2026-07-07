@@ -135,7 +135,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
 
       switch (type) {
         case 'error':
-          logger.log('Received error data', jsonData)
+          logger.error('Received error data', jsonData)
           break
         case 'conversation.item.created':
           logger.log('Received context data', jsonData)
