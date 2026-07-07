@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useCallback, useEffect, useState } from 'react'
 
 import homeStore from '@/features/stores/home'
@@ -5,8 +6,9 @@ import settingsStore from '@/features/stores/settings'
 import { loadVRMAnimation } from '@/lib/VRMAnimation/loadVRMAnimation'
 import PoseTestButton from '@/components/poseTestButton'
 import ModelLoadingOverlay from '@/components/modelLoadingOverlay'
+import ErrorBoundary from '@/components/common/ErrorBoundary'
 
-export default function VrmViewer() {
+function VrmViewerInner() {
   const [isModelLoading, setIsModelLoading] = useState(false)
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function VrmViewer() {
               if (vrma) viewer.model?.loadAnimation(vrma)
             })
             .catch((error) => {
-              console.error('Failed to load VRMA:', error)
+              logger.error('Failed to load VRMA:', error)
             })
             .finally(() => URL.revokeObjectURL(url))
         } else if (file.type.startsWith('image/')) {
@@ -83,5 +85,13 @@ export default function VrmViewer() {
       </div>
       {poseAdjustMode && <PoseTestButton />}
     </>
+  )
+}
+
+export default function VrmViewer() {
+  return (
+    <ErrorBoundary name="vrm-viewer">
+      <VrmViewerInner />
+    </ErrorBoundary>
   )
 }

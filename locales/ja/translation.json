@@ -371,7 +371,8 @@
     "InvalidAPIKey": "APIキーが正しくありません",
     "OpenAITTSUpstreamError": "OpenAI TTSサービスでエラーが発生しました",
     "ServerSecretAccessDenied": "サーバー側のAPIキー利用が許可されていません",
-    "ServerSecretRateLimited": "サーバー側APIキーの利用回数制限に達しました。しばらく待ってから再度お試しください"
+    "ServerSecretRateLimited": "サーバー側APIキーの利用回数制限に達しました。しばらく待ってから再度お試しください",
+    "ViewerRenderingError": "キャラクターの表示中にエラーが発生しました。モデルファイルや設定を確認してください"
   },
   "MessageReceiver": "外部からのAPI操作を有効にする",
   "MessageReceiverDescription": "API経由で、AIキャラの発話・会話入力・停止などを実行できるようにします。",
