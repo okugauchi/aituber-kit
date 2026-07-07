@@ -7,6 +7,7 @@ import settingsStore from '@/features/stores/settings'
 import { Live2DHandler } from '@/features/messages/live2dHandler'
 import { debounce } from 'lodash'
 import ModelLoadingOverlay from '@/components/modelLoadingOverlay'
+import { reportViewerError } from '@/components/common/ErrorBoundary'
 
 logger.log('Live2DComponent module loaded')
 
@@ -168,7 +169,8 @@ const Live2DComponent = (): JSX.Element => {
 
       await Live2DHandler.resetToIdle()
     } catch (error) {
-      logger.error('Failed to load Live2D model:', error)
+      // 非同期のロード失敗はErrorBoundaryに届かないため、ここから直接通知する
+      reportViewerError('live2d-viewer', 'Failed to load Live2D model:', error)
     } finally {
       if (requestId === loadRequestIdRef.current) {
         setIsModelLoading(false)

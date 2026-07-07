@@ -1,7 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
+import { useState } from 'react'
 
-import ErrorBoundary from '@/components/common/ErrorBoundary'
+import ErrorBoundary, {
+  reportViewerError,
+} from '@/components/common/ErrorBoundary'
 import toastStore from '@/features/stores/toast'
 
 jest.mock('i18next', () => ({
@@ -69,17 +72,71 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('fallback ui')).toBeInTheDocument()
   })
 
-  it('同じnameのエラーはtagにより重複トーストにならない', () => {
-    render(
-      <ErrorBoundary name="test-viewer">
+  it('resetKeyが変化するとエラー状態をリセットして子を再描画する', () => {
+    const MaybeThrowingChild = ({ modelPath }: { modelPath: string }) => {
+      if (modelPath === 'broken.vrm') {
+        throw new Error('boom')
+      }
+      return <div>recovered content</div>
+    }
+
+    const Harness = () => {
+      const [modelPath, setModelPath] = useState('broken.vrm')
+      return (
+        <>
+          <button onClick={() => setModelPath('valid.vrm')}>fix model</button>
+          <ErrorBoundary name="test-viewer" resetKey={modelPath}>
+            <MaybeThrowingChild modelPath={modelPath} />
+          </ErrorBoundary>
+        </>
+      )
+    }
+
+    render(<Harness />)
+    expect(screen.queryByText('recovered content')).not.toBeInTheDocument()
+
+    // ユーザーが正常なモデルを選び直す（resetKey変化）と復帰する
+    fireEvent.click(screen.getByText('fix model'))
+    expect(screen.getByText('recovered content')).toBeInTheDocument()
+  })
+
+  it('resetKeyが変化しなければエラー状態のまま', () => {
+    const { rerender } = render(
+      <ErrorBoundary name="test-viewer" resetKey="same.vrm">
         <ThrowingChild />
       </ErrorBoundary>
     )
-    render(
-      <ErrorBoundary name="test-viewer">
-        <ThrowingChild />
+    rerender(
+      <ErrorBoundary name="test-viewer" resetKey="same.vrm">
+        <div>should stay hidden</div>
       </ErrorBoundary>
     )
-    expect(toastStore.getState().toasts).toHaveLength(1)
+    expect(screen.queryByText('should stay hidden')).not.toBeInTheDocument()
+  })
+})
+
+describe('reportViewerError', () => {
+  let consoleErrorSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    toastStore.setState({ toasts: [] })
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('非同期のロード失敗のcatch節から直接呼べる（ログ+トースト）', () => {
+    reportViewerError('vrm-viewer', 'Failed to load VRM:', new Error('bad'))
+
+    expect(consoleErrorSpy).toHaveBeenCalled()
+    const toasts = toastStore.getState().toasts
+    expect(toasts).toHaveLength(1)
+    expect(toasts[0]).toMatchObject({
+      message: 'Errors.ViewerRenderingError',
+      type: 'error',
+      tag: 'error-boundary-vrm-viewer',
+    })
   })
 })

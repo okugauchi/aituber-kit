@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import settingsStore from '@/features/stores/settings'
 import ModelLoadingOverlay from '@/components/modelLoadingOverlay'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 
@@ -29,8 +30,9 @@ function PNGTuberViewerInner() {
 }
 
 export default function PNGTuberViewer() {
+  const selectedPNGTuberPath = settingsStore((s) => s.selectedPNGTuberPath)
   return (
-    <ErrorBoundary name="pngtuber-viewer">
+    <ErrorBoundary name="pngtuber-viewer" resetKey={selectedPNGTuberPath}>
       <PNGTuberViewerInner />
     </ErrorBoundary>
   )

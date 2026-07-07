@@ -89,8 +89,9 @@ function VrmViewerInner() {
 }
 
 export default function VrmViewer() {
+  const selectedVrmPath = settingsStore((s) => s.selectedVrmPath)
   return (
-    <ErrorBoundary name="vrm-viewer">
+    <ErrorBoundary name="vrm-viewer" resetKey={selectedVrmPath}>
       <VrmViewerInner />
     </ErrorBoundary>
   )

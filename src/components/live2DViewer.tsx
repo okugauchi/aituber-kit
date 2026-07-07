@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
 import homeStore from '@/features/stores/home'
+import settingsStore from '@/features/stores/settings'
 import ModelLoadingOverlay from '@/components/modelLoadingOverlay'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 
@@ -94,8 +95,9 @@ function Live2DViewerInner() {
 }
 
 export default function Live2DViewer() {
+  const selectedLive2DPath = settingsStore((s) => s.selectedLive2DPath)
   return (
-    <ErrorBoundary name="live2d-viewer">
+    <ErrorBoundary name="live2d-viewer" resetKey={selectedLive2DPath}>
       <Live2DViewerInner />
     </ErrorBoundary>
   )
