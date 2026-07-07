@@ -8,7 +8,10 @@ export type ExternalLinkageWebSocketStatus =
   | 'closed'
   | 'error'
 
-type TranslationFunction = (key: string, options?: any) => string
+type TranslationFunction = (
+  key: string,
+  options?: Record<string, unknown>
+) => string
 
 export interface ExternalLinkageWebSocketHandlers {
   onOpen: (event: Event) => void

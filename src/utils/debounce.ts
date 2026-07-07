@@ -1,10 +1,10 @@
-export const debounce = <T extends (...args: any[]) => any>(
-  func: T,
+export const debounce = <TArgs extends unknown[]>(
+  func: (...args: TArgs) => unknown,
   wait: number
-): ((...args: Parameters<T>) => void) => {
+): ((...args: TArgs) => void) => {
   let timeout: NodeJS.Timeout | null = null
 
-  return (...args: Parameters<T>) => {
+  return (...args: TArgs) => {
     if (timeout) {
       clearTimeout(timeout)
     }

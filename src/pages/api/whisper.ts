@@ -123,10 +123,11 @@ async function handler(
     logger.log('Whisper API response:', response)
 
     return res.status(200).json({ text: response.text })
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Whisper API error:', error)
 
-    if (error?.code === 'BodyTooLarge') {
+    const errnoError = error as NodeJS.ErrnoException
+    if (errnoError?.code === 'BodyTooLarge') {
       return res.status(413).json({
         error: 'Request body is too large',
         maxBytes: MAX_WHISPER_REQUEST_BODY_BYTES,
@@ -137,7 +138,10 @@ async function handler(
     return res.status(500).json({
       error: 'Failed to process audio',
       details: error instanceof Error ? error.message : String(error),
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      stack:
+        process.env.NODE_ENV === 'development' && error instanceof Error
+          ? error.stack
+          : undefined,
     })
   }
 }

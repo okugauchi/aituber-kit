@@ -40,8 +40,15 @@ function writeString(view: DataView, offset: number, str: string) {
   }
 }
 
+interface RequestBody {
+  message: string
+  voiceId?: string
+  apiKey?: string
+  language?: string
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
-  const body = req.body
+  const body = req.body as RequestBody
   const message = body.message
   const voiceId = body.voiceId || process.env.ELEVENLABS_VOICE_ID
   const apiKey = body.apiKey || process.env.ELEVENLABS_API_KEY
@@ -94,8 +101,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       'Content-Length': fullBuffer.length,
     })
     res.end(fullBuffer)
-  } catch (error: any) {
-    res.status(500).json({ error: error.message })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: error instanceof Error ? error.message : String(error) })
   }
 }
 

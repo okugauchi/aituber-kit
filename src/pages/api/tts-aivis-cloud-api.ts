@@ -64,6 +64,22 @@ function isValidApiKey(apiKey: string): boolean {
   return apiKey.startsWith('aivis_') && apiKey.length >= 20
 }
 
+interface RequestBody {
+  text: string
+  modelUuid: string
+  styleId?: number
+  styleName?: string
+  useStyleName?: boolean
+  apiKey?: string
+  speed?: number
+  pitch?: number
+  emotionalIntensity?: number
+  tempoDynamics?: number
+  prePhonemeLength?: number
+  postPhonemeLength?: number
+  outputFormat?: string
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const {
     text,
@@ -79,7 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     prePhonemeLength = 0.1,
     postPhonemeLength = 0.1,
     outputFormat = 'mp3',
-  } = req.body
+  } = req.body as RequestBody
 
   const aivisCloudApiKey = apiKey || process.env.AIVIS_CLOUD_API_KEY
   if (!aivisCloudApiKey) {
@@ -143,7 +159,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       requestBody.style_id = styleId
     }
 
-    const response = await axios.post(
+    const response = await axios.post<ArrayBuffer>(
       'https://api.aivis-project.com/v1/tts/synthesize',
       requestBody,
       {
@@ -183,10 +199,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     }
 
     res.end(Buffer.from(response.data))
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error in Aivis Cloud API TTS:', error)
 
-    if (error.response) {
+    if (axios.isAxiosError<{ detail?: string }>(error) && error.response) {
       const status = error.response.status
       const message = error.response.data?.detail || 'API Error'
 

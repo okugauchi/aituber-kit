@@ -1,5 +1,5 @@
 import { createStep } from '@mastra/core/workflows'
-import { generateText } from 'ai'
+import { generateText, type LanguageModel } from 'ai'
 import { evaluateStateOutputSchema, workflowOutputSchema } from '../schemas'
 import {
   getLastMessages,
@@ -21,7 +21,7 @@ export const generateNewTopicStep = createStep({
       inputData
 
     const { languageModel, temperature, maxTokens } = requestContext.all as {
-      languageModel: any
+      languageModel: LanguageModel
       temperature?: number
       maxTokens?: number
     }

@@ -2,26 +2,15 @@ import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { pipeResponse } from '@/utils/pipeResponse'
 import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
-import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
 import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  gate: PolicyGate
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { query, apiKey, url, conversationId, stream } = req.body
 
   const usesClientUrl = Boolean(url)
-  const usesServerDifyKey =
-    !apiKey &&
-    !usesClientUrl &&
-    Boolean(process.env.DIFY_KEY || process.env.DIFY_API_KEY)
   const difyKey =
     apiKey ||
     (!usesClientUrl ? process.env.DIFY_KEY || process.env.DIFY_API_KEY : '')
-  const usesServerSecret =
-    usesServerDifyKey || (!url && Boolean(process.env.DIFY_URL))
   if (!difyKey) {
     return res
       .status(400)
@@ -45,10 +34,6 @@ async function handler(
       error: 'Dify Empty URL',
       errorCode: 'AIInvalidProperty',
     })
-  }
-
-  if (!gate.guardServerSecret(usesServerSecret)) {
-    return
   }
 
   const headers = {

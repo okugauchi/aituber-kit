@@ -30,11 +30,16 @@ interface EmbeddingError {
   code: 'INVALID_INPUT' | 'API_KEY_MISSING' | 'RATE_LIMITED' | 'API_ERROR'
 }
 
+interface RequestBody {
+  text: string
+  apiKey?: string
+}
+
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<EmbeddingResponse | EmbeddingError>
 ) {
-  const { text, apiKey } = req.body
+  const { text, apiKey } = req.body as RequestBody
 
   // textパラメータの検証
   if (!text || typeof text !== 'string') {
@@ -74,12 +79,12 @@ async function handler(
         total_tokens: response.usage.total_tokens,
       },
     })
-  } catch (error: any) {
+  } catch (error) {
     // エラーログを出力
     logger.error('Embedding API error:', error)
 
     // レート制限エラー
-    if (error.status === 429) {
+    if (error instanceof OpenAI.APIError && error.status === 429) {
       return res.status(429).json({
         error: 'Rate limit exceeded. Please try again later.',
         code: 'RATE_LIMITED',

@@ -41,12 +41,23 @@ export function computeUsesServerSecret(
 
 /**
  * 宣言的 SecretPair をリクエストに対して評価する。
+ *
+ * onlyIfAbsent が指定されているペアは、参照先フィールドをクライアントが
+ * 提供している場合は評価対象から除外する（S18: 条件付きペア）。
  */
 export function evaluateSecretPairs(
   req: NextApiRequest,
   pairs: SecretPair[]
 ): boolean {
   return pairs.some((pair) => {
+    if (pair.onlyIfAbsent) {
+      const gateValue = extractClientValue(
+        req,
+        pair.onlyIfAbsent.source,
+        pair.onlyIfAbsent.key
+      )
+      if (gateValue) return false
+    }
     const clientValue = extractClientValue(req, pair.source, pair.key)
     return (
       !clientValue && pair.envVars.some((name) => Boolean(process.env[name]))

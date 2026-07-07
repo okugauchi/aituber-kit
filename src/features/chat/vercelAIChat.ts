@@ -5,6 +5,7 @@ import toastStore from '@/features/stores/toast'
 import {
   isVercelLocalAIService,
   AIService,
+  ReasoningEffort,
 } from '@/features/constants/settings'
 import settingsStore from '../stores/settings'
 import { getSessionId } from '@/utils/sessionId'
@@ -13,6 +14,37 @@ import type { AIChatResponseStreamOptions } from './aiChatFactory'
 // 推論/思考チャンクを通常テキストと区別するためのマーカー
 // null byteプレフィックスはLLMテキスト出力に現れないため安全
 export const THINKING_MARKER = '\x00THINK:'
+
+type VercelChatRequestData = {
+  messages: Message[]
+  stream: boolean
+  // custom-api用
+  customApiUrl?: string
+  customApiHeaders?: string
+  customApiBody?: string
+  customApiIncludeMimeType?: boolean
+  threadId?: string
+  // Vercel AI SDK用
+  apiKey?: string
+  aiService?: AIService
+  model?: string
+  localLlmUrl?: string
+  azureEndpoint?: string
+  useSearchGrounding?: boolean
+  temperature?: number
+  maxTokens?: number
+  reasoningMode?: boolean
+  reasoningEffort?: ReasoningEffort
+  reasoningTokenBudget?: number
+}
+
+type ApiErrorCause = { errorCode?: string }
+
+function getErrorCode(error: unknown): string {
+  const cause =
+    error instanceof Error ? (error.cause as ApiErrorCause | undefined) : null
+  return cause?.errorCode || 'AIAPIError'
+}
 
 const getAIConfig = () => {
   const ss = settingsStore.getState()
@@ -87,7 +119,7 @@ export async function getVercelAIChatResponse(messages: Message[]) {
 
   try {
     // 共通リクエストデータ
-    const requestData: any = {
+    const requestData: VercelChatRequestData = {
       messages,
       stream: false,
     }
@@ -144,12 +176,9 @@ export async function getVercelAIChatResponse(messages: Message[]) {
 
     const data = await response.json()
     return { text: data.text }
-  } catch (error: any) {
+  } catch (error) {
     logger.error(`Error fetching ${selectAIService} API response:`, error)
-    const errorCode = error.cause
-      ? error.cause.errorCode || 'AIAPIError'
-      : 'AIAPIError'
-    return { text: handleApiError(errorCode) }
+    return { text: handleApiError(getErrorCode(error)) }
   }
 }
 
@@ -179,7 +208,7 @@ export async function getVercelAIChatResponseStream(
   const apiEndpoint = getApiEndpoint(selectAIService)
 
   // 共通リクエストデータ
-  const requestData: any = {
+  const requestData: VercelChatRequestData = {
     messages,
     stream: true,
   }
@@ -367,14 +396,12 @@ export async function getVercelAIChatResponseStream(
         }
       },
     })
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
     }
 
-    const errorMessage = handleApiError(
-      error.cause ? error.cause.errorCode : 'AIAPIError'
-    )
+    const errorMessage = handleApiError(getErrorCode(error))
     toastStore.getState().addToast({
       message: errorMessage,
       type: 'error',

@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
 import { createStep } from '@mastra/core/workflows'
-import { generateText } from 'ai'
+import { generateText, type LanguageModel } from 'ai'
 import { workflowInputSchema, evaluateStateOutputSchema } from '../schemas'
 import { getLastMessages, continuationCheckSystemPrompt } from '../prompts'
 
@@ -47,7 +47,7 @@ export const evaluateStateStep = createStep({
         try {
           const { languageModel, temperature, maxTokens } =
             requestContext.all as {
-              languageModel: any
+              languageModel: LanguageModel
               temperature?: number
               maxTokens?: number
             }

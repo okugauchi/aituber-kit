@@ -1,4 +1,5 @@
 import { Talk } from './messages'
+import { synthesizeVoiceApi } from './synthesizeVoiceApi'
 
 export async function synthesizeVoiceAzureOpenAIApi(
   talk: Talk,
@@ -7,23 +8,9 @@ export async function synthesizeVoiceAzureOpenAIApi(
   voice: string,
   speed: number
 ): Promise<ArrayBuffer> {
-  const response = await fetch('/api/azureOpenAITTS', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: talk.message,
-      voice,
-      speed,
-      apiKey,
-      azureTTSEndpoint,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error('Failed to generate speech')
-  }
-
-  return await response.arrayBuffer()
+  return synthesizeVoiceApi(
+    '/api/azureOpenAITTS',
+    { message: talk.message, voice, speed, apiKey, azureTTSEndpoint },
+    'Azure OpenAI TTS'
+  )
 }

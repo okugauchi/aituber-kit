@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { TFunction } from 'i18next'
 import {
   ExternalLinkageWebSocketHandlers,
   ExternalLinkageWebSocketManager,
@@ -23,7 +24,7 @@ interface ExternalLinkageWebSocketState {
   reconnectDelayMs: number
   nextReconnectAt: string | null
   initializeWebSocket: (
-    t: (key: string, options?: any) => string,
+    t: TFunction,
     handlers: Partial<ExternalLinkageWebSocketHandlers>,
     connectWebsocket: () => WebSocket | null
   ) => void

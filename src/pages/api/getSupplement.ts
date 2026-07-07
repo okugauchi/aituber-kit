@@ -77,9 +77,10 @@ async function handler(
   try {
     const content = await fs.readFile(filePath, 'utf-8')
     res.status(200).json({ content })
-  } catch (error: any) {
+  } catch (error) {
     // ファイルが存在しない場合は空の内容を返す (エラーではなく正常系として扱う)
-    if (error.code === 'ENOENT') {
+    const err = error as NodeJS.ErrnoException
+    if (err.code === 'ENOENT') {
       res.status(200).json({ content: '' })
     } else {
       logger.error(`Error reading file: ${filePath}`, error)

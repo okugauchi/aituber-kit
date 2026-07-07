@@ -111,15 +111,16 @@ const SlideEditorPage: React.FC = () => {
         customStyleElement.textContent = customStyle
         customStyleElement.setAttribute('data-custom-css', 'true')
         document.head.appendChild(customStyleElement)
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
           logger.log('Fetch aborted: convertMarkdown')
           return
         }
         logger.error('Error converting markdown:', error)
         setIsError(true)
         setErrorMessage(
-          error.message || 'スライドデータの読み込み中にエラーが発生しました。'
+          (error instanceof Error && error.message) ||
+            'スライドデータの読み込み中にエラーが発生しました。'
         )
       }
     }
@@ -192,15 +193,15 @@ const SlideEditorPage: React.FC = () => {
           setScripts([])
           setInitialScripts([])
         }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
           logger.log('Fetch aborted: fetchScripts')
           return
         }
         logger.error('Error fetching scripts:', error)
         setIsError(true)
         setErrorMessage(
-          error.message ||
+          (error instanceof Error && error.message) ||
             'スクリプトデータの読み込み中にエラーが発生しました。'
         )
         setScripts([])
@@ -245,15 +246,16 @@ const SlideEditorPage: React.FC = () => {
 
         setSupplementContent(fetchedContent)
         setInitialSupplementContent(fetchedContent)
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
           logger.log('Fetch aborted: fetchSupplement')
           return
         }
         logger.error('Error fetching supplement content:', error)
         setIsError(true)
         setErrorMessage(
-          error.message || '補足情報の読み込み中にエラーが発生しました。'
+          (error instanceof Error && error.message) ||
+            '補足情報の読み込み中にエラーが発生しました。'
         )
         setSupplementContent('')
         setInitialSupplementContent('')

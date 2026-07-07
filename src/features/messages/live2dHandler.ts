@@ -120,7 +120,7 @@ export class Live2DHandler {
         expression,
         resetExpression: true,
         onFinish: finish,
-        onError: (e: any) => {
+        onError: (e: Error) => {
           logger.error('speak error:', e)
           finish()
         },
@@ -179,7 +179,7 @@ export class Live2DHandler {
       const viewer = hs.live2dViewer
 
       // Viewerが存在しない、または破棄済みの場合はインターバルを停止
-      if (!viewer || (viewer as any).destroyed) {
+      if (!viewer || viewer.destroyed) {
         this.stopIdleMotion()
         return
       }

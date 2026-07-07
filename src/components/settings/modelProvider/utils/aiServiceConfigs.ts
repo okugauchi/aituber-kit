@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import { AIService } from '@/features/constants/settings'
 
 export interface AIServiceConfig {
@@ -32,7 +33,7 @@ export const aiServiceOptions: AIServiceConfig[] = [
 ]
 
 export const getServiceConfigByKey = (
-  t: any
+  t: TFunction
 ): Record<AIService, AIServiceConfig> => ({
   openai: {
     value: 'openai',

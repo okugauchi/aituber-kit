@@ -1,0 +1,98 @@
+import { useTranslation } from 'react-i18next'
+
+import homeStore from '@/features/stores/home'
+import settingsStore, { PoseConfigItem } from '@/features/stores/settings'
+import { ToggleSwitch } from '../../toggleSwitch'
+import { PoseConfigSettings } from './PoseConfigSettings'
+
+interface CharacterVrmExtrasSectionProps {
+  lightingIntensity: number
+  poseAdjustMode: boolean
+  thinkingPoseEnabled: boolean
+  thinkingPoseId: string
+  poseConfigs: PoseConfigItem[]
+}
+
+export const CharacterVrmExtrasSection = ({
+  lightingIntensity,
+  poseAdjustMode,
+  thinkingPoseEnabled,
+  thinkingPoseId,
+  poseConfigs,
+}: CharacterVrmExtrasSectionProps) => {
+  const { t } = useTranslation()
+
+  return (
+    <>
+      {/* VRM Lighting Controls */}
+      <div className="my-6">
+        <div className="text-xl font-bold mb-4">照明の強度</div>
+        <div className="mb-4">VRMキャラクターの照明の明るさを調整します。</div>
+        <div className="font-bold">
+          照明の強度: {lightingIntensity.toFixed(1)}
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="3.0"
+          step="0.1"
+          value={lightingIntensity}
+          onChange={(e) => {
+            const intensity = parseFloat(e.target.value)
+            settingsStore.setState({ lightingIntensity: intensity })
+            const { viewer } = homeStore.getState()
+            if (
+              viewer &&
+              typeof viewer.updateLightingIntensity === 'function'
+            ) {
+              viewer.updateLightingIntensity(intensity)
+            }
+          }}
+          className="mt-2 mb-4 input-range"
+        />
+      </div>
+
+      <PoseConfigSettings />
+
+      <div className="my-6">
+        <div className="text-xl font-bold mb-4">{t('ThinkingPose')}</div>
+        <div className="mb-4 text-sm">{t('ThinkingPoseDescription')}</div>
+        <ToggleSwitch
+          enabled={thinkingPoseEnabled}
+          onChange={(v) => settingsStore.setState({ thinkingPoseEnabled: v })}
+        />
+        {thinkingPoseEnabled && (
+          <div className="mt-4">
+            <div className="text-sm font-bold mb-2">
+              {t('ThinkingPoseSelect')}
+            </div>
+            <select
+              className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+              value={thinkingPoseId}
+              onChange={(e) =>
+                settingsStore.setState({ thinkingPoseId: e.target.value })
+              }
+            >
+              {poseConfigs.map((pose) => (
+                <option key={pose.id} value={pose.id}>
+                  {pose.id}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="my-6">
+        <div className="text-xl font-bold mb-4">ポーズ角度調整</div>
+        <div className="mb-4 text-sm">
+          ONにすると画面上にポーズ調整UIが表示されます。ポーズごとのY軸回転を微調整できます。
+        </div>
+        <ToggleSwitch
+          enabled={poseAdjustMode}
+          onChange={(v) => settingsStore.setState({ poseAdjustMode: v })}
+        />
+      </div>
+    </>
+  )
+}

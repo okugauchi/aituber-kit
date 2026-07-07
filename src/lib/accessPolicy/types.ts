@@ -31,12 +31,19 @@ export type ApiResource =
 /**
  * usesServerSecret 判定の1ペア:
  * クライアントが key を提供せず、envVars のいずれかが設定されていれば
- * サーバー秘匿リソースを使うと判定する
+ * サーバー秘匿リソースを使うと判定する。
+ *
+ * onlyIfAbsent（S18）: 指定した場合、そのフィールド（別の source/key）を
+ * クライアントが提供しているとこのペア自体を評価しない（false扱い）。
+ * 「他フィールドが未指定の場合のみenvを見る」という条件結合
+ * （difyChat.ts の apiKey 判定が url 未指定時のみ有効、等）を表現するための
+ * ゲート条件。参照先の値自体は envVars 判定には使わない。
  */
 export type SecretPair = {
   source: 'body' | 'query'
   key: string
   envVars: string[]
+  onlyIfAbsent?: { source: 'body' | 'query'; key: string }
 }
 
 /**
