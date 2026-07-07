@@ -879,68 +879,103 @@ type PersistedSettingsState = Partial<SettingsState> & {
   gameCommentaryVideoDelay?: number
 }
 
-const migratePersistedSettings = (
-  state?: PersistedSettingsState
-): Partial<SettingsState> | undefined => {
-  if (!state) return state
+type SettingsMigrationStep = (
+  state: PersistedSettingsState
+) => PersistedSettingsState
 
-  const migrated = { ...state }
+// 各ステップは「バージョン N-1 → N」の変換のみを担当する。
+// 新しいマイグレーションが必要になったら CURRENT_SETTINGS_VERSION をインクリメントし、
+// 対応する番号のステップを追加する。既存ステップは変更しない。
+// 詳細: docs/settings-migration-design.md
+const settingsMigrationSteps: Record<number, SettingsMigrationStep> = {
+  1: (state) => {
+    const migrated = { ...state }
+    if (
+      migrated.selectAIService === 'openai' &&
+      typeof migrated.selectAIModel === 'string'
+    ) {
+      migrated.selectAIModel = migrateOpenAIModelName(migrated.selectAIModel)
+    }
+    return migrated
+  },
+  2: (state) => {
+    const migrated = { ...state }
 
-  if (
-    migrated.selectAIService === 'openai' &&
-    typeof migrated.selectAIModel === 'string'
+    if (typeof migrated.presenceGreetingMessage === 'string') {
+      if (!migrated.presenceGreetingPhrases?.length) {
+        migrated.presenceGreetingPhrases = migrated.presenceGreetingMessage
+          ? [createIdlePhrase(migrated.presenceGreetingMessage, 'happy', 0)]
+          : []
+      }
+      delete migrated.presenceGreetingMessage
+    }
+
+    if (typeof migrated.presenceDepartureMessage === 'string') {
+      if (!migrated.presenceDeparturePhrases?.length) {
+        migrated.presenceDeparturePhrases = migrated.presenceDepartureMessage
+          ? [createIdlePhrase(migrated.presenceDepartureMessage, 'neutral', 0)]
+          : []
+      }
+      delete migrated.presenceDepartureMessage
+    }
+
+    return migrated
+  },
+  3: (state) => {
+    const migrated = { ...state }
+    if (migrated.multiModalMode !== undefined) {
+      migrated.enableMultiModal = migrated.multiModalMode !== 'never'
+      delete migrated.multiModalMode
+    }
+    return migrated
+  },
+  4: (state) => {
+    const migrated = { ...state }
+
+    if (migrated.gameCommentaryEnabled === undefined) {
+      migrated.gameCommentaryEnabled =
+        DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryEnabled
+    }
+    if (migrated.gameCommentaryPromptTemplate === undefined) {
+      migrated.gameCommentaryPromptTemplate =
+        DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryPromptTemplate
+    }
+    if (migrated.gameCommentaryBackgroundAnalysisPromptTemplate === undefined) {
+      migrated.gameCommentaryBackgroundAnalysisPromptTemplate =
+        DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryBackgroundAnalysisPromptTemplate
+    }
+    if (migrated.gameCommentaryBackgroundAnalysisEnabled === undefined) {
+      migrated.gameCommentaryBackgroundAnalysisEnabled =
+        DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryBackgroundAnalysisEnabled
+    }
+    if (migrated.gameCommentaryBackgroundAnalysisInterval === undefined) {
+      migrated.gameCommentaryBackgroundAnalysisInterval =
+        DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryBackgroundAnalysisInterval
+    }
+    delete migrated.gameCommentaryVideoBufferWidth
+    delete migrated.gameCommentaryVideoDelay
+
+    return migrated
+  },
+}
+
+const CURRENT_SETTINGS_VERSION = Object.keys(settingsMigrationSteps).length
+
+const runSettingsMigrations = (
+  state: PersistedSettingsState,
+  storedVersion: number
+): Partial<SettingsState> => {
+  let migrated = { ...state }
+  for (
+    let version = storedVersion + 1;
+    version <= CURRENT_SETTINGS_VERSION;
+    version += 1
   ) {
-    migrated.selectAIModel = migrateOpenAIModelName(migrated.selectAIModel)
-  }
-
-  if (typeof migrated.presenceGreetingMessage === 'string') {
-    if (!migrated.presenceGreetingPhrases?.length) {
-      migrated.presenceGreetingPhrases = migrated.presenceGreetingMessage
-        ? [createIdlePhrase(migrated.presenceGreetingMessage, 'happy', 0)]
-        : []
+    const step = settingsMigrationSteps[version]
+    if (step) {
+      migrated = step(migrated)
     }
-    delete migrated.presenceGreetingMessage
   }
-
-  if (typeof migrated.presenceDepartureMessage === 'string') {
-    if (!migrated.presenceDeparturePhrases?.length) {
-      migrated.presenceDeparturePhrases = migrated.presenceDepartureMessage
-        ? [createIdlePhrase(migrated.presenceDepartureMessage, 'neutral', 0)]
-        : []
-    }
-    delete migrated.presenceDepartureMessage
-  }
-
-  // multiModalMode → enableMultiModal へのマイグレーション
-  if (migrated.multiModalMode !== undefined) {
-    migrated.enableMultiModal = migrated.multiModalMode !== 'never'
-    delete migrated.multiModalMode
-  }
-
-  // Game commentary migration: ensure defaults for new fields
-  if (migrated.gameCommentaryEnabled === undefined) {
-    migrated.gameCommentaryEnabled =
-      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryEnabled
-  }
-  if (migrated.gameCommentaryPromptTemplate === undefined) {
-    migrated.gameCommentaryPromptTemplate =
-      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryPromptTemplate
-  }
-  if (migrated.gameCommentaryBackgroundAnalysisPromptTemplate === undefined) {
-    migrated.gameCommentaryBackgroundAnalysisPromptTemplate =
-      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryBackgroundAnalysisPromptTemplate
-  }
-  if (migrated.gameCommentaryBackgroundAnalysisEnabled === undefined) {
-    migrated.gameCommentaryBackgroundAnalysisEnabled =
-      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryBackgroundAnalysisEnabled
-  }
-  if (migrated.gameCommentaryBackgroundAnalysisInterval === undefined) {
-    migrated.gameCommentaryBackgroundAnalysisInterval =
-      DEFAULT_GAME_COMMENTARY_CONFIG.gameCommentaryBackgroundAnalysisInterval
-  }
-  delete migrated.gameCommentaryVideoBufferWidth
-  delete migrated.gameCommentaryVideoDelay
-
   return migrated as Partial<SettingsState>
 }
 
@@ -948,12 +983,9 @@ const mergePersistedSettings = (
   persistedState: unknown,
   currentState: SettingsState
 ): SettingsState => {
-  const migratedState = migratePersistedSettings(
-    persistedState as PersistedSettingsState | undefined
-  )
   const mergedState = {
     ...currentState,
-    ...migratedState,
+    ...(persistedState as Partial<SettingsState> | undefined),
   }
 
   if (process.env.NEXT_PUBLIC_ALWAYS_OVERRIDE_WITH_ENV_VARIABLES === 'true') {
@@ -970,6 +1002,12 @@ const settingsStore = create<SettingsState>()(
   exclusivityMiddleware(
     persist(() => getInitialValuesFromEnv(), {
       name: 'aitube-kit-settings',
+      version: CURRENT_SETTINGS_VERSION,
+      migrate: (persistedState, storedVersion) =>
+        runSettingsMigrations(
+          persistedState as PersistedSettingsState,
+          storedVersion
+        ),
       merge: mergePersistedSettings,
       partialize: (state) => ({
         openaiKey: state.openaiKey,
