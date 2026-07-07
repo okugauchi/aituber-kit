@@ -5,6 +5,8 @@
 const mockAxiosPost = jest.fn()
 jest.mock('axios', () => ({
   post: (...args: unknown[]) => mockAxiosPost(...args),
+  isAxiosError: (error: unknown): boolean =>
+    typeof error === 'object' && error !== null && 'response' in error,
 }))
 
 import handler from '@/pages/api/tts-aivis-cloud-api'

@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd'
 
 import settingsStore, { PresetQuestion } from '@/features/stores/settings'
 import { TextButton } from '../textButton'
@@ -64,7 +69,7 @@ const PresetQuestions = () => {
     setIsClient(true)
   }, [])
 
-  const handleDragEnd = (result: any) => {
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return
 
     const items = Array.from(sortedQuestions)

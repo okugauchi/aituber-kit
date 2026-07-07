@@ -1,11 +1,12 @@
 import { create } from 'zustand'
+import type { TFunction } from 'i18next'
 import { WebSocketManager } from '@/utils/WebSocketManager'
 import { TmpMessage } from '@/components/realtimeAPIUtils'
 
 interface WebSocketState {
   wsManager: WebSocketManager | null
   initializeWebSocket: (
-    t: (key: string, options?: any) => string,
+    t: TFunction,
     handlers: {
       onOpen?: (event: Event) => void
       onMessage?: (event: MessageEvent) => Promise<void>

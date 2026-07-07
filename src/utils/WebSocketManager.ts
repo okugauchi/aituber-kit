@@ -2,7 +2,10 @@ import { logger } from '@/lib/logger'
 import toastStore from '@/features/stores/toast'
 import settingsStore from '@/features/stores/settings'
 
-type TranslationFunction = (key: string, options?: any) => string
+type TranslationFunction = (
+  key: string,
+  options?: Record<string, unknown>
+) => string
 
 export class WebSocketManager {
   private ws: WebSocket | null = null

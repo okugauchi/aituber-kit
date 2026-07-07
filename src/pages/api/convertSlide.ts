@@ -8,7 +8,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { generateObject } from 'ai'
+import { generateObject, GenerateObjectResult } from 'ai'
 import { z } from 'zod'
 
 import { AIService } from '@/features/constants/settings'
@@ -16,6 +16,10 @@ import { isMultiModalModel } from '@/features/constants/aiModels'
 import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
 import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
+// NOTE: createOpenAI/createAnthropic/createGoogleGenerativeAI はそれぞれ
+// 呼び出しシグネチャの異なるプロバイダーファクトリを返すため、共通の
+// providerInstance(model) 呼び出し形だけを許容する最小限の any を維持する
+// （ロジック変更なしに正確な統一型を作るには各SDKの型を再設計する必要がある）
 type AIServiceConfig = Record<AIService, () => any>
 
 export const config = {
@@ -131,6 +135,9 @@ async function convertPdfToImages(pdfBuffer: Buffer): Promise<string[]> {
     const context = canvas.getContext('2d')
 
     // ページをレンダリング
+    // NOTE: node-canvas の CanvasRenderingContext2D と pdfjs-dist が期待する
+    // DOM lib の CanvasRenderingContext2D は構造的に非互換のため、
+    // ロジックを変更せずに安全にブリッジする目的で any を維持する
     const renderContext = {
       canvasContext: context as any,
       viewport: viewport,
@@ -186,7 +193,7 @@ export async function createSlideLine(
 
   const instance = aiServiceInstance()
 
-  let response: any
+  let response: GenerateObjectResult<unknown> | undefined
   try {
     if (aiService == 'anthropic') {
       response = await generateObject({

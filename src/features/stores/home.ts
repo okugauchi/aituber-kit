@@ -8,8 +8,18 @@ import { messageSelectors } from '../messages/messageSelectors'
 import { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
 import { generateMessageId } from '@/utils/messageUtils'
 import { addEmbeddingsToMessages } from '@/features/memory/memoryStoreSync'
+import type { SanitizedMessage } from '../messages/messageSelectors'
 import { PresenceState, PresenceError } from '@/features/presence/presenceTypes'
 import { isRestrictedMode } from '@/utils/restrictedMode'
+import { PNGTuberEngine } from '@/features/pngTuber/pngTuberEngine'
+
+// Live2DComponent が Object.assign で位置制御関数を合成した Live2D モデル
+type Live2DViewer = InstanceType<typeof Live2DModel> & {
+  fixPosition?: () => void
+  unfixPosition?: () => void
+  resetPosition?: () => void
+  saveModelPosition?: () => void
+}
 
 export interface PersistedState {
   userOnboarded: boolean
@@ -19,8 +29,8 @@ export interface PersistedState {
 
 export interface TransientState {
   viewer: Viewer
-  live2dViewer: any
-  pngTuberViewer: any
+  live2dViewer: Live2DViewer | null
+  pngTuberViewer: PNGTuberEngine | null
   slideMessages: string[]
   chatProcessing: boolean
   chatProcessingCount: number
@@ -312,10 +322,11 @@ homeStore.subscribe((state, prevState) => {
         )
 
         // メモリ機能が有効な場合、Embeddingを付与してから保存
-        let messagesWithEmbedding: Message[]
+        let messagesWithEmbedding: SanitizedMessage[]
         try {
-          messagesWithEmbedding =
-            await addEmbeddingsToMessages(processedMessages)
+          messagesWithEmbedding = await addEmbeddingsToMessages(
+            processedMessages as Message[]
+          )
         } catch (error) {
           logger.warn(
             'Failed to add embeddings, saving without embeddings:',

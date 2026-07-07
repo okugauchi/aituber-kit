@@ -14,6 +14,20 @@ import { AudioBufferManager } from '@/utils/audioBufferManager'
 import toastStore from '@/features/stores/toast'
 import { resetSessionId } from '@/utils/sessionId'
 
+// Realtime APIのサーバーイベント（各typeごとに関連プロパティのみ使用するため緩やかな形にする）
+interface RealtimeServerEvent {
+  type?: string
+  delta?: string
+  part?: { transcript?: string }
+  name?: string
+  arguments?: string
+  call_id?: string
+  [key: string]: unknown
+}
+
+// RealtimeAPITools内の呼び出し可能な関数の型
+type RealtimeAPIToolFunction = (...args: unknown[]) => Promise<string>
+
 interface Params {
   handleReceiveTextFromRt: (
     text: string,
@@ -51,7 +65,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   )
 
   const sendFunctionCallOutput = useCallback(
-    (callId: string, output: Record<string, unknown>) => {
+    (callId: string, output: unknown) => {
       const wsManager = webSocketStore.getState().wsManager
       if (wsManager) {
         const response = {
@@ -81,7 +95,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   )
 
   const handleFunctionCall = useCallback(
-    async (jsonData: any) => {
+    async (jsonData: RealtimeServerEvent) => {
       if (jsonData.name && jsonData.arguments && jsonData.call_id) {
         const { name: funcName, arguments: argsString, call_id } = jsonData
         let toastId: string | null = null
@@ -98,9 +112,13 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
               duration: 120000,
               tag: `run-${funcName}`,
             })
-            const result = await (RealtimeAPITools as any)[funcName](
-              ...Object.values(args)
-            )
+            const toolFunction = (
+              RealtimeAPITools as unknown as Record<
+                string,
+                RealtimeAPIToolFunction
+              >
+            )[funcName]
+            const result = await toolFunction(...Object.values(args))
             sendFunctionCallOutput(call_id, result)
             if (toastId) {
               toastStore.getState().removeToast(toastId)
@@ -128,7 +146,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   )
 
   const handleMessageType = useCallback(
-    async (jsonData: any, type: string) => {
+    async (jsonData: RealtimeServerEvent, type: string) => {
       const wsManager = webSocketStore.getState().wsManager
 
       logger.log('Received message type:', type)
@@ -200,8 +218,8 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
 
       // realtimeAPITools.jsonからツール情報を取得
       if (RealtimeAPIToolsJson && RealtimeAPIToolsJson.length > 0) {
-        ;(wsConfig.session as any).tools = RealtimeAPIToolsJson
-        ;(wsConfig.session as any).tool_choice = 'auto'
+        wsConfig.session.tools = RealtimeAPIToolsJson
+        wsConfig.session.tool_choice = 'auto'
       }
 
       const wsConfigString = JSON.stringify(wsConfig)
@@ -212,7 +230,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   const onMessage = useCallback(
     async (event: MessageEvent) => {
       try {
-        const jsonData = JSON.parse(event.data)
+        const jsonData: RealtimeServerEvent = JSON.parse(event.data)
         const type = jsonData.type || ''
         await handleMessageType(jsonData, type)
       } catch (error) {

@@ -8,8 +8,15 @@ type Data = {
   errorCode?: string
 }
 
+interface RequestBody {
+  message: string
+  voiceId?: string
+  apiKey?: string
+  language?: string
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
-  const body = req.body
+  const body = req.body as RequestBody
   const message = body.message
   const voiceId = body.voiceId || process.env.CARTESIA_VOICE_ID
   const apiKey = body.apiKey || process.env.CARTESIA_API_KEY
@@ -64,8 +71,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       'Content-Length': buffer.length,
     })
     res.end(buffer)
-  } catch (error: any) {
-    res.status(500).json({ error: error.message })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: error instanceof Error ? error.message : String(error) })
   }
 }
 
