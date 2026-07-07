@@ -38,7 +38,19 @@ jobs:
         run: npm run lint
 
       - name: Run tests
-        run: npm test
+        run: |
+          set -o pipefail
+          npm run test:coverage -- --coverageReporters=text-summary 2>&1 | tee test-output.log
+
+      - name: Add coverage to job summary
+        if: always()
+        run: |
+          {
+            echo '## Test Coverage'
+            echo '```'
+            grep -A 6 'Coverage summary' test-output.log || echo 'Coverage summary not found'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   e2e:
     runs-on: ubuntu-latest
