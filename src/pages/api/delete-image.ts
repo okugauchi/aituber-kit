@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
@@ -52,7 +53,7 @@ export default async function handler(
       filename,
     })
   } catch (error) {
-    console.error('Failed to delete file:', error)
+    logger.error('Failed to delete file:', error)
     res.status(500).json({ error: 'Failed to delete file' })
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Talk } from './messages'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
@@ -144,7 +145,7 @@ export class SpeakQueue {
     while (this.queue.length > 0) {
       // StopAll() によりトークンが変化していたら直ちに処理を中断
       if (startToken !== SpeakQueue.currentStopToken) {
-        console.log('Stop token changed. Abort current queue processing.')
+        logger.log('Stop token changed. Abort current queue processing.')
         break
       }
 
@@ -172,12 +173,12 @@ export class SpeakQueue {
           }
           onComplete?.()
         } catch (error) {
-          console.error(
+          logger.error(
             'An error occurred while processing the speech synthesis task:',
             error
           )
           if (error instanceof Error) {
-            console.error('Error details:', error.message)
+            logger.error('Error details:', error.message)
           }
         }
       }
@@ -225,7 +226,7 @@ export class SpeakQueue {
 
     // 発話完了時にコールバックを呼び出す
     if (isComplete) {
-      console.log('🎤 発話が完了しました。登録されたコールバックを実行します。')
+      logger.log('🎤 発話が完了しました。登録されたコールバックを実行します。')
       // 発話完了時に isSpeaking を必ず false に設定
       homeStore.setState({ isSpeaking: false })
       // 停止フラグもリセットして次回の動作に備える
@@ -235,7 +236,7 @@ export class SpeakQueue {
         try {
           callback()
         } catch (error) {
-          console.error(
+          logger.error(
             '発話完了コールバックの実行中にエラーが発生しました:',
             error
           )

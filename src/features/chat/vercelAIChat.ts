@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Message } from '../messages/messages'
 import i18next from 'i18next'
 import toastStore from '@/features/stores/toast'
@@ -144,7 +145,7 @@ export async function getVercelAIChatResponse(messages: Message[]) {
     const data = await response.json()
     return { text: data.text }
   } catch (error: any) {
-    console.error(`Error fetching ${selectAIService} API response:`, error)
+    logger.error(`Error fetching ${selectAIService} API response:`, error)
     const errorCode = error.cause
       ? error.cause.errorCode || 'AIAPIError'
       : 'AIAPIError'
@@ -305,7 +306,7 @@ export async function getVercelAIChatResponseStream(
                       data.payload?.toolName)
                   ) {
                     const toolName = data.toolName || data.payload?.toolName
-                    console.log(`Tool called: ${toolName}`)
+                    logger.log(`Tool called: ${toolName}`)
                     const message = i18next.t('Toasts.UsingTool', {
                       toolName,
                     })
@@ -316,7 +317,7 @@ export async function getVercelAIChatResponseStream(
                       duration: 3000,
                     })
                   } else if (data.type === 'error') {
-                    console.error(
+                    logger.error(
                       `Error fetching ${selectAIService} API response:`,
                       data.errorText || data
                     )
@@ -328,7 +329,7 @@ export async function getVercelAIChatResponseStream(
                   }
                   // その他のイベント（start, finish, text-start, text-end等）は無視
                 } catch (error) {
-                  console.error('Error parsing SSE JSON:', error)
+                  logger.error('Error parsing SSE JSON:', error)
                 }
               } else if (line.trim() !== '') {
                 // Ollamaなど、JSONLフォーマットのストリーミングデータに対応
@@ -338,7 +339,7 @@ export async function getVercelAIChatResponseStream(
                     controller.enqueue(data.message.content)
                   }
                 } catch (error) {
-                  console.error('Error parsing JSONL:', error, line)
+                  logger.error('Error parsing JSONL:', error, line)
                 }
               }
             }
@@ -352,10 +353,7 @@ export async function getVercelAIChatResponseStream(
             return
           }
 
-          console.error(
-            `Error fetching ${selectAIService} API response:`,
-            error
-          )
+          logger.error(`Error fetching ${selectAIService} API response:`, error)
 
           const errorMessage = handleApiError('AIAPIError')
           toastStore.getState().addToast({

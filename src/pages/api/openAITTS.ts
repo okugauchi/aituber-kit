@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 
@@ -55,7 +56,7 @@ export default async function handler(
 
     if (!speechResponse.ok) {
       const errorText = await speechResponse.text()
-      console.error('OpenAI TTS upstream error:', {
+      logger.error('OpenAI TTS upstream error:', {
         status: speechResponse.status,
         body: errorText,
       })
@@ -74,7 +75,7 @@ export default async function handler(
     )
     res.send(buffer)
   } catch (error) {
-    console.error('OpenAI TTS error:', error)
+    logger.error('OpenAI TTS error:', error)
     res.status(500).json({ error: 'Failed to generate speech' })
   }
 }

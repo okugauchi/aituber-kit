@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
@@ -22,7 +23,7 @@ export default async function handler(
     const vrmFiles = files.filter((file) => file.endsWith('.vrm'))
     res.status(200).json(vrmFiles)
   } catch (error) {
-    console.error('Error reading VRM directory:', error)
+    logger.error('Error reading VRM directory:', error)
     res.status(500).json({
       error: 'Failed to get VRM file list',
     })

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Message } from '@/features/messages/messages'
 import { NextResponse } from 'next/server'
 
@@ -79,7 +80,7 @@ function normalizeParsedHeaders(headers: unknown): Record<string, string> {
   for (const [rawKey, rawValue] of Object.entries(headers)) {
     const headerName = normalizeHeaderName(rawKey)
     if (!VALID_HEADER_NAME.test(headerName)) {
-      console.warn('Skipping invalid Custom API header name')
+      logger.warn('Skipping invalid Custom API header name')
       continue
     }
 
@@ -227,7 +228,7 @@ export async function handleCustomApi(
     process.env.ANTHROPIC_API_KEY &&
     getHeader(apiHeaders, 'x-api-key') !== process.env.ANTHROPIC_API_KEY
   ) {
-    console.warn('Retrying Custom API request with Anthropic x-api-key header')
+    logger.warn('Retrying Custom API request with Anthropic x-api-key header')
     apiResponse = await fetch(customApiUrl, {
       ...requestInit,
       headers: buildAnthropicHeaders(apiHeaders, process.env.ANTHROPIC_API_KEY),
@@ -235,14 +236,14 @@ export async function handleCustomApi(
   }
 
   if (!apiResponse.ok) {
-    console.error(
+    logger.error(
       `Custom API Error: Status ${apiResponse.status}, URL: ${customApiUrl}`
     )
 
     try {
       // エラーレスポンスの内容も可能であればログに出力
       const errorResponseText = await apiResponse.text()
-      console.error(`Error Response: ${errorResponseText}`)
+      logger.error(`Error Response: ${errorResponseText}`)
 
       // レスポンスを再作成するため、新しいResponseオブジェクトを作成
       return new Response(
@@ -256,7 +257,7 @@ export async function handleCustomApi(
         }
       )
     } catch (e) {
-      console.error('Failed to read error response body:', e)
+      logger.error('Failed to read error response body:', e)
       return new Response(
         JSON.stringify({
           error: `Custom API Error: ${apiResponse.status}`,

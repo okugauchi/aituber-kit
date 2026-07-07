@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import settingsStore from '@/features/stores/settings'
 import { Message } from '../messages/messages'
 import i18next from 'i18next'
@@ -83,7 +84,7 @@ export async function getDifyChatResponseStream(
                     })
                   }
                 } catch (error) {
-                  console.error('Error parsing JSON:', error)
+                  logger.error('Error parsing JSON:', error)
                 }
               }
             })
@@ -93,7 +94,7 @@ export async function getDifyChatResponseStream(
             return
           }
 
-          console.error(`Error fetching Dify API response:`, error)
+          logger.error(`Error fetching Dify API response:`, error)
 
           toastStore.getState().addToast({
             message: i18next.t('Errors.AIAPIError'),

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, {
   forwardRef,
   useCallback,
@@ -176,7 +177,7 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
     useEffect(() => {
       if (mediaStream && showBackgroundVideo && backgroundVideoRef.current) {
         backgroundVideoRef.current.srcObject = mediaStream
-        backgroundVideoRef.current.play().catch(console.error)
+        backgroundVideoRef.current.play().catch(logger.error)
       }
     }, [mediaStream, showBackgroundVideo])
 
@@ -198,7 +199,7 @@ export const VideoDisplay = forwardRef<HTMLDivElement, VideoDisplayProps>(
       const data = canvas.toDataURL('image/png')
 
       if (data !== '') {
-        console.log('capture')
+        logger.log('capture')
         homeStore.setState({
           modalImage: data,
           triggerShutter: false,

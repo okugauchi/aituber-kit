@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import homeStore from '@/features/stores/home'
@@ -70,7 +71,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
             })
           )
         } else {
-          console.error(
+          logger.error(
             'WebSocket is not open. Cannot send function call output.'
           )
         }
@@ -90,7 +91,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
             (tool) => tool.name === funcName
           )
           if (functionDef) {
-            console.log(`Executing function ${funcName}`)
+            logger.log(`Executing function ${funcName}`)
             toastId = toastStore.getState().addToast({
               message: t('Toasts.FunctionExecuting', { funcName }),
               type: 'info',
@@ -105,12 +106,12 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
               toastStore.getState().removeToast(toastId)
             }
           } else {
-            console.error(
+            logger.error(
               `Error: Function ${funcName} is not defined in RealtimeAPITools`
             )
           }
         } catch (error) {
-          console.error('Error parsing function arguments:', error)
+          logger.error('Error parsing function arguments:', error)
           if (toastId) {
             toastStore.getState().removeToast(toastId)
           }
@@ -130,14 +131,14 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
     async (jsonData: any, type: string) => {
       const wsManager = webSocketStore.getState().wsManager
 
-      console.log('Received message type:', type)
+      logger.log('Received message type:', type)
 
       switch (type) {
         case 'error':
-          console.log('Received error data', jsonData)
+          logger.log('Received error data', jsonData)
           break
         case 'conversation.item.created':
-          console.log('Received context data', jsonData)
+          logger.log('Received context data', jsonData)
           break
         case 'response.audio.delta':
           if (jsonData.delta) {
@@ -145,7 +146,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
             if (arrayBuffer.byteLength > 0) {
               accumulatedAudioDataRef.current.addData(arrayBuffer)
             } else {
-              console.error('Received invalid audio buffer')
+              logger.error('Received invalid audio buffer')
             }
           }
           break
@@ -160,7 +161,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
           }
           break
         case 'conversation.item.input_audio_transcription.completed':
-          console.log('Audio data transcription completed', jsonData)
+          logger.log('Audio data transcription completed', jsonData)
           break
         case 'response.function_call_arguments.done':
           await handleFunctionCall(jsonData)
@@ -215,7 +216,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
         const type = jsonData.type || ''
         await handleMessageType(jsonData, type)
       } catch (error) {
-        console.error('Error handling message:', error)
+        logger.error('Error handling message:', error)
       }
     },
     [handleMessageType]
@@ -286,7 +287,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
         wsManager.websocket.readyState !== WebSocket.CONNECTING
       ) {
         homeStore.setState({ chatProcessing: false })
-        console.log('try reconnecting...')
+        logger.log('try reconnecting...')
         wsManager.disconnect()
         webSocketStore
           .getState()

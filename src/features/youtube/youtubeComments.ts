@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import settingsStore from '@/features/stores/settings'
 import { processAIResponse } from '../chat/handlers'
 import homeStore from '@/features/stores/home'
@@ -38,7 +39,7 @@ export const getLiveChatId = async (
     }
   )
   if (!response.ok) {
-    console.error(
+    logger.error(
       `YouTube API error (videos): ${response.status} ${response.statusText}`
     )
     return ''
@@ -66,7 +67,7 @@ const retrieveLiveComments = async (
   youtubeNextPageToken: string,
   setYoutubeNextPageToken: (token: string) => void
 ): Promise<YouTubeComments> => {
-  console.log('retrieveLiveComments')
+  logger.log('retrieveLiveComments')
   let url =
     'https://youtube.googleapis.com/youtube/v3/liveChat/messages?liveChatId=' +
     activeLiveChatId +
@@ -82,7 +83,7 @@ const retrieveLiveComments = async (
     },
   })
   if (!response.ok) {
-    console.error(
+    logger.error(
       `YouTube API error (liveChat): ${response.status} ${response.statusText}`
     )
     return []
@@ -186,10 +187,10 @@ const callContinuationApi = async (params: {
   if (!response.ok) {
     try {
       const errorData = await response.json()
-      console.error('Continuation API error:', errorData.error)
+      logger.error('Continuation API error:', errorData.error)
     } catch {
       const text = await response.text()
-      console.error('Continuation API error (non-JSON response):', text)
+      logger.error('Continuation API error (non-JSON response):', text)
     }
     return null
   }
@@ -286,7 +287,7 @@ export const fetchAndProcessComments = async (
       // アクションに応じた処理
       switch (result.action) {
         case 'send_comment':
-          console.log(
+          logger.log(
             'selectedYoutubeComment:',
             result.comment,
             'userName:',
@@ -327,7 +328,7 @@ export const fetchAndProcessComments = async (
         youtubeComments[Math.floor(Math.random() * youtubeComments.length)]
       const selectedComment = randomComment.userComment
       const selectedUserName = randomComment.userName
-      console.log(
+      logger.log(
         'selectedYoutubeComment:',
         selectedComment,
         'userName:',
@@ -337,10 +338,10 @@ export const fetchAndProcessComments = async (
       await handleSendChat(selectedComment, selectedUserName)
     } else {
       const noCommentCount = ss.youtubeNoCommentCount + 1
-      console.log('YoutubeNoCommentCount:', noCommentCount)
+      logger.log('YoutubeNoCommentCount:', noCommentCount)
       settingsStore.setState({ youtubeNoCommentCount: noCommentCount })
     }
   } catch (error) {
-    console.error('Error fetching comments:', error)
+    logger.error('Error fetching comments:', error)
   }
 }

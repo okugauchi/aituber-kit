@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
@@ -65,7 +66,7 @@ export default async function handler(
 
     res.status(200).json({ message: 'Speakers file updated successfully' })
   } catch (error) {
-    console.error('Error updating speakers:', error)
+    logger.error('Error updating speakers:', error)
     res.status(500).json({ error: 'Failed to update speakers file' })
   }
 }

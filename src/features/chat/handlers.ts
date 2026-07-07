@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { getAIChatResponseStream } from '@/features/chat/aiChatFactory'
 import { Message, EmotionType } from '@/features/messages/messages'
 import { speakCharacter } from '@/features/messages/speakCharacter'
@@ -324,7 +325,7 @@ export const speakMessageHandler = async (receivedMessage: string) => {
           localRemaining === prevLocalRemaining &&
           !sentence
         ) {
-          console.warn(
+          logger.warn(
             'Potential infinite loop detected in speakMessageHandler, breaking. Remaining:',
             localRemaining
           )
@@ -365,7 +366,7 @@ export const speakMessageHandler = async (receivedMessage: string) => {
     })
   }
   if (isCodeBlock && codeBlockContent.trim()) {
-    console.warn('Loop ended unexpectedly while in code block state.')
+    logger.warn('Loop ended unexpectedly while in code block state.')
     homeStore.getState().upsertMessage({
       role: 'code',
       content: codeBlockContent.trim(),
@@ -393,7 +394,7 @@ export const processAIResponse = async (messages: Message[]) => {
         void model.poseManager
           .applyPose(model, ss.thinkingPoseId, poseConfig)
           .catch((e: unknown) =>
-            console.error('Failed to apply thinking pose:', e)
+            logger.error('Failed to apply thinking pose:', e)
           )
       }
     }
@@ -415,7 +416,7 @@ export const processAIResponse = async (messages: Message[]) => {
   try {
     stream = await getAIChatResponseStream(messages)
   } catch (e) {
-    console.error(e)
+    logger.error(e)
     resetThinkingPose()
     homeStore.setState({ chatProcessing: false })
     return
@@ -603,7 +604,7 @@ export const processAIResponse = async (messages: Message[]) => {
                 textToProcessBeforeCode.length > 0 &&
                 textToProcessBeforeCode === prevText
               ) {
-                console.warn('Speech processing loop stuck on:', prevText)
+                logger.warn('Speech processing loop stuck on:', prevText)
                 receivedChunksForSpeech =
                   textToProcessBeforeCode + receivedChunksForSpeech
                 break
@@ -665,7 +666,7 @@ export const processAIResponse = async (messages: Message[]) => {
           processableTextForSpeech.length > 0 &&
           processableTextForSpeech === originalProcessableText
         ) {
-          console.warn(
+          logger.warn(
             'Main speech processing loop stuck on:',
             originalProcessableText
           )
@@ -699,7 +700,7 @@ export const processAIResponse = async (messages: Message[]) => {
                 currentMotionTag || undefined
               ) || hasSpeakBeenCalled
           } else {
-            console.warn(
+            logger.warn(
               'Stream ended while still in code block state. Saving remaining code.',
               codeBlockContent
             )
@@ -716,7 +717,7 @@ export const processAIResponse = async (messages: Message[]) => {
         }
 
         if (isCodeBlock && codeBlockContent.trim()) {
-          console.warn(
+          logger.warn(
             'Stream ended unexpectedly while in code block state. Saving buffered code.'
           )
           homeStore.getState().upsertMessage({
@@ -731,7 +732,7 @@ export const processAIResponse = async (messages: Message[]) => {
     }
   } catch (e) {
     didStreamProcessingFail = true
-    console.error('Error processing AI response stream:', e)
+    logger.error('Error processing AI response stream:', e)
   } finally {
     reader.releaseLock()
   }
@@ -758,7 +759,7 @@ export const processAIResponse = async (messages: Message[]) => {
     }).catch(() => {})
   }
   if (isCodeBlock && codeBlockContent.trim()) {
-    console.warn(
+    logger.warn(
       'Stream ended unexpectedly while in code block state. Saving buffered code.'
     )
     homeStore.getState().upsertMessage({
@@ -829,7 +830,7 @@ export const handleSendChatFn =
         try {
           externalWsManager.websocket.send(JSON.stringify(wsPayload))
         } catch (error) {
-          console.error('Failed to send external linkage message:', error)
+          logger.error('Failed to send external linkage message:', error)
           if ('id' in wsPayload) {
             externalWsState.failRequest(wsPayload.id, 'WebSocket send failed')
           }
@@ -898,7 +899,7 @@ export const handleSendChatFn =
             supplement = data.supplement
             systemPrompt = systemPrompt.replace('{{SUPPLEMENT}}', supplement)
           } catch (e) {
-            console.error('supplement.txtの読み込みに失敗しました:', e)
+            logger.error('supplement.txtの読み込みに失敗しました:', e)
           }
 
           const answerString = await judgeSlide(newMessage, scripts, supplement)
@@ -908,7 +909,7 @@ export const handleSendChatFn =
             systemPrompt += `\n\nEspecial Page Number is ${answer.page}.`
           }
         } catch (e) {
-          console.error(e)
+          logger.error(e)
         }
       }
 
@@ -999,7 +1000,7 @@ export const handleSendChatFn =
       try {
         await processAIResponse(messages)
       } catch (e) {
-        console.error(e)
+        logger.error(e)
         // 思考中ポーズのリセット
         if (ss.thinkingPoseEnabled && ss.modelType === 'vrm') {
           const model = homeStore.getState().viewer.model
@@ -1033,9 +1034,9 @@ export const handleReceiveTextFromWsFn =
     const wsManager = externalLinkageWebSocketStore.getState().wsManager
 
     if (ss.externalLinkageMode) {
-      console.log('ExternalLinkage Mode: true')
+      logger.log('ExternalLinkage Mode: true')
     } else {
-      console.log('ExternalLinkage Mode: false')
+      logger.log('ExternalLinkage Mode: false')
       return
     }
 
@@ -1052,7 +1053,7 @@ export const handleReceiveTextFromWsFn =
     if (role !== 'user') {
       if (type === 'start') {
         // startの場合は何もしない（textは空文字のため）
-        console.log('Starting new response')
+        logger.log('Starting new response')
         wsManager?.setTextBlockStarted(false)
       } else if (
         hs.chatLog.length > 0 &&
@@ -1175,7 +1176,7 @@ export const handleReceiveTextFromWsFn =
             }
           )
         } catch (e) {
-          console.error('Error in speakCharacter:', e)
+          logger.error('Error in speakCharacter:', e)
           if (requestId) {
             const lifecycleState = getExternalSpeechLifecycleState(requestId)
             lifecycleState.pendingSpeechCount = Math.max(
@@ -1200,7 +1201,7 @@ export const handleReceiveTextFromWsFn =
 
       if (type === 'end') {
         // レスポンスの終了処理
-        console.log('Response ended')
+        logger.log('Response ended')
         wsManager?.setTextBlockStarted(false)
         homeStore.setState({ chatProcessing: false })
         if (requestId) {
@@ -1240,11 +1241,11 @@ export const handleReceiveTextFromRtFn = () => {
     const hs = homeStore.getState()
 
     if (ss.realtimeAPIMode) {
-      console.log('realtime api mode: true')
+      logger.log('realtime api mode: true')
     } else if (ss.audioMode) {
-      console.log('audio mode: true')
+      logger.log('audio mode: true')
     } else {
-      console.log('realtime api mode: false')
+      logger.log('realtime api mode: false')
       return
     }
 
@@ -1252,7 +1253,7 @@ export const handleReceiveTextFromRtFn = () => {
 
     if (role == 'assistant') {
       if (type?.includes('response.audio') && buffer !== undefined) {
-        console.log('response.audio:')
+        logger.log('response.audio:')
         try {
           speakCharacter(
             sessionId,
@@ -1265,7 +1266,7 @@ export const handleReceiveTextFromRtFn = () => {
             () => {}
           )
         } catch (e) {
-          console.error('Error in speakCharacter:', e)
+          logger.error('Error in speakCharacter:', e)
         }
       } else if (type === 'response.content_part.done' && text !== undefined) {
         homeStore.getState().upsertMessage({

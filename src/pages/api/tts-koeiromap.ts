@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
 
@@ -34,7 +35,7 @@ export default async function handler(
     const audio = response.data.audio
     res.status(200).json({ audio })
   } catch (error) {
-    console.error('Error in Koeiromap TTS:', error)
+    logger.error('Error in Koeiromap TTS:', error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }

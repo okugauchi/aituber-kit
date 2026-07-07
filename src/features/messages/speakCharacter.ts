@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import { AIVoice } from '@/features/constants/settings'
@@ -320,7 +321,7 @@ const createSpeakCharacter = () => {
             await asyncConvertEnglishToJapaneseReading(processedMessage)
           talk.message = convertedText
         } catch (error) {
-          console.error('Error converting English to Japanese:', error)
+          logger.error('Error converting English to Japanese:', error)
         }
       }
 
@@ -367,7 +368,7 @@ const createSpeakCharacter = () => {
         flushPendingResults()
       })
       .catch((error) => {
-        console.error('Error in processAndSynthesizePromise chain:', error)
+        logger.error('Error in processAndSynthesizePromise chain:', error)
         if (currentSessionId !== sessionId) {
           guardedOnComplete()
           return
@@ -406,7 +407,7 @@ export function handleTTSError(error: unknown, serviceName: string): void {
     tag: 'tts-error',
   })
 
-  console.error(errorMessage)
+  logger.error(errorMessage)
 }
 
 export const speakCharacter = createSpeakCharacter()
@@ -462,7 +463,7 @@ export const testVoice = async (voiceType: AIVoice, customText?: string) => {
       }
     }
   } catch (error) {
-    console.error(`Error testing ${voiceType} voice:`, error)
+    logger.error(`Error testing ${voiceType} voice:`, error)
     handleTTSError(error, voiceType)
   }
 }

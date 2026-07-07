@@ -5,6 +5,7 @@
  * Used for kiosk mode fullscreen display
  */
 
+import { logger } from '@/lib/logger'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 
 export interface UseFullscreenReturn {
@@ -62,7 +63,7 @@ export function useFullscreen(): UseFullscreenReturn {
       await document.documentElement.requestFullscreen()
     } catch (error) {
       // Fullscreen request may fail due to user gesture requirements
-      console.warn('Fullscreen request failed:', error)
+      logger.warn('Fullscreen request failed:', error)
     }
   }, [isSupported])
 
@@ -73,7 +74,7 @@ export function useFullscreen(): UseFullscreenReturn {
     try {
       await document.exitFullscreen()
     } catch (error) {
-      console.warn('Exit fullscreen failed:', error)
+      logger.warn('Exit fullscreen failed:', error)
     }
   }, [])
 

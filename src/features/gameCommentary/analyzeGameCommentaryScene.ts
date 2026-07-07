@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { getAIChatResponseStream } from '@/features/chat/aiChatFactory'
 import { THINKING_MARKER } from '@/features/chat/vercelAIChat'
 import { Message } from '@/features/messages/messages'
@@ -67,7 +68,7 @@ export async function analyzeGameCommentaryScene(
     const normalized = normalizeGameCommentarySceneAnalysis(fullText)
     return normalized || null
   } catch (error) {
-    console.error('ゲーム実況シーン解析エラー:', error)
+    logger.error('ゲーム実況シーン解析エラー:', error)
     return null
   }
 }

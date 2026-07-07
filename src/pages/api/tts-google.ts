@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import textToSpeech from '@google-cloud/text-to-speech'
 import { google } from '@google-cloud/text-to-speech/build/protos/protos'
@@ -64,7 +65,7 @@ export default async function handler(
       res.status(200).json({ audio: audioContent })
     }
   } catch (error) {
-    console.error('Error in Google Text-to-Speech:', error)
+    logger.error('Error in Google Text-to-Speech:', error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }

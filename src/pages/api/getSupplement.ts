@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
@@ -86,7 +87,7 @@ export default async function handler(
     if (error.code === 'ENOENT') {
       res.status(200).json({ content: '' })
     } else {
-      console.error(`Error reading file: ${filePath}`, error)
+      logger.error(`Error reading file: ${filePath}`, error)
       res.status(500).json({
         message: 'Internal Server Error',
         error: error instanceof Error ? error.message : String(error),

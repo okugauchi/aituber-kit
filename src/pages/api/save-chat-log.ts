@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
@@ -142,7 +143,7 @@ export default async function handler(
 
     res.status(200).json({ message: 'Logs saved successfully' })
   } catch (error) {
-    console.error('Error saving chat log:', error)
+    logger.error('Error saving chat log:', error)
     res.status(500).json({ message: 'Error saving chat log' })
   }
 }
@@ -165,7 +166,7 @@ function getLatestLogFile(dir: string): string | null {
       .reverse()
     return files[0] ?? null
   } catch (error) {
-    console.error('Error reading log directory:', error)
+    logger.error('Error reading log directory:', error)
     return null
   }
 }
@@ -176,12 +177,12 @@ function readExistingMessages(filePath: string, fileName: string): Message[] {
   try {
     const messages = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
     if (!Array.isArray(messages)) {
-      console.warn(`Invalid format in ${fileName}, resetting file.`)
+      logger.warn(`Invalid format in ${fileName}, resetting file.`)
       return []
     }
     return messages
   } catch (error) {
-    console.error(`Error parsing ${fileName}, resetting file.`, error)
+    logger.error(`Error parsing ${fileName}, resetting file.`, error)
     return []
   }
 }

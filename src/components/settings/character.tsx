@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
@@ -57,7 +58,7 @@ const PoseConfigSettings = () => {
       .then((res) => res.json())
       .then((files: PoseFile[]) => setPoseFiles(files))
       .catch((error) => {
-        console.error('Error fetching pose list:', error)
+        logger.error('Error fetching pose list:', error)
       })
   }, [])
 
@@ -464,7 +465,7 @@ const Live2DSettingsForm = () => {
         )
         setCurrentModel(selected || null)
       } catch (error) {
-        console.error('Error fetching Live2D model info:', error)
+        logger.error('Error fetching Live2D model info:', error)
       }
     }
 
@@ -815,7 +816,7 @@ const Character = () => {
       .then((res) => res.json())
       .then((files) => setVrmFiles(files))
       .catch((error) => {
-        console.error('Error fetching VRM list:', error)
+        logger.error('Error fetching VRM list:', error)
       })
 
     if (isLive2DEnabled) {
@@ -823,7 +824,7 @@ const Character = () => {
         .then((res) => res.json())
         .then((models) => setLive2dModels(models))
         .catch((error) => {
-          console.error('Error fetching Live2D list:', error)
+          logger.error('Error fetching Live2D list:', error)
         })
     }
 
@@ -831,7 +832,7 @@ const Character = () => {
       .then((res) => res.json())
       .then((models) => setPngTuberModels(models))
       .catch((error) => {
-        console.error('Error fetching PNGTuber list:', error)
+        logger.error('Error fetching PNGTuber list:', error)
       })
   }, [])
   const handlePositionAction = (action: 'fix' | 'unfix' | 'reset') => {
@@ -876,7 +877,7 @@ const Character = () => {
         tag: `position-${action}`,
       })
     } catch (error) {
-      console.error(`Position ${action} failed:`, error)
+      logger.error(`Position ${action} failed:`, error)
       toastStore.getState().addToast({
         message: t('Toasts.PositionActionFailed'),
         type: 'error',
@@ -905,7 +906,7 @@ const Character = () => {
         .then((res) => res.json())
         .then((files) => setVrmFiles(files))
         .catch((error) => {
-          console.error('Error fetching VRM list:', error)
+          logger.error('Error fetching VRM list:', error)
         })
     }
   }
@@ -1288,7 +1289,7 @@ const Character = () => {
                       tag: 'env-vars-copied',
                     })
                   } catch (error) {
-                    console.error('Env vars copy failed:', error)
+                    logger.error('Env vars copy failed:', error)
                     toastStore.getState().addToast({
                       message: t('Errors.UnexpectedError'),
                       type: 'error',

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { getAIChatResponseStream } from '@/features/chat/aiChatFactory'
 import type { AIChatResponseStreamOptions } from '@/features/chat/aiChatFactory'
 import { THINKING_MARKER } from '@/features/chat/vercelAIChat'
@@ -118,7 +119,7 @@ export async function generateGameCommentary(
       return null
     }
 
-    console.error('ゲーム実況コメント生成エラー:', error)
+    logger.error('ゲーム実況コメント生成エラー:', error)
     return null
   }
 }

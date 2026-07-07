@@ -2,6 +2,7 @@
  * PNGTuberHandler - speakQueueとの連携用ハンドラー
  */
 
+import { logger } from '@/lib/logger'
 import { Talk } from '../messages/messages'
 import homeStore from '@/features/stores/home'
 
@@ -31,7 +32,7 @@ export class PNGTuberHandler {
       pngTuberViewer
         .playAudioFromBuffer(audioBuffer, isNeedDecode, finish)
         .catch((e: Error) => {
-          console.error('PNGTuber speak error:', e)
+          logger.error('PNGTuber speak error:', e)
           finish()
         })
 

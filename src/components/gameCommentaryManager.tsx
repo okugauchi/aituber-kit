@@ -4,6 +4,7 @@
  * ゲーム実況モード機能を管理し、画面キャプチャからAI実況コメントを制御する
  */
 
+import { logger } from '@/lib/logger'
 import { useGameCommentaryMode } from '@/hooks/useGameCommentaryMode'
 import { useTranslation } from 'react-i18next'
 
@@ -14,20 +15,17 @@ function GameCommentaryManager(): JSX.Element | null {
     useGameCommentaryMode({
       onCommentaryStart: (phrase) => {
         if (process.env.NODE_ENV !== 'production') {
-          console.log(
-            '[GameCommentaryManager] Commentary started:',
-            phrase.text
-          )
+          logger.log('[GameCommentaryManager] Commentary started:', phrase.text)
         }
       },
       onCommentaryComplete: () => {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[GameCommentaryManager] Commentary completed')
+          logger.log('[GameCommentaryManager] Commentary completed')
         }
       },
       onCommentaryInterrupted: () => {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[GameCommentaryManager] Commentary interrupted')
+          logger.log('[GameCommentaryManager] Commentary interrupted')
         }
       },
     })

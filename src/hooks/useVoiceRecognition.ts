@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useCallback, useRef } from 'react'
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect'
 import settingsStore from '@/features/stores/settings'
@@ -84,7 +85,7 @@ export function useVoiceRecognition({
       settingsStore.getState().speechRecognitionMode === 'browser' &&
       !homeStore.getState().chatProcessing
     ) {
-      console.log('🔄 ストップボタンが押されました。音声認識を再開します。')
+      logger.log('🔄 ストップボタンが押されました。音声認識を再開します。')
       setTimeout(() => {
         currentHookRef.current.startListening()
       }, 300)
@@ -99,7 +100,7 @@ export function useVoiceRecognition({
       speechRecognitionMode === 'browser' &&
       !homeStore.getState().chatProcessing
     ) {
-      console.log('🔄 AIの発話が完了しました。音声認識を自動的に再開します。')
+      logger.log('🔄 AIの発話が完了しました。音声認識を自動的に再開します。')
       setTimeout(() => {
         currentHookRef.current.startListening()
       }, 300) // マイク起動までに少し遅延を入れる
@@ -116,7 +117,7 @@ export function useVoiceRecognition({
       !homeStore.getState().chatProcessing
     ) {
       // 常時マイク入力モードがONになった場合、自動的にマイク入力を開始
-      console.log(
+      logger.log(
         '🎤 常時マイク入力モードがONになりました。音声認識を開始します。'
       )
       currentHookRef.current.startListening()
@@ -140,7 +141,7 @@ export function useVoiceRecognition({
 
       // マイクがOFFで、発話中でも処理中でもない場合は再開
       if (!isListening && !isSpeaking && !chatProcessing) {
-        console.log(
+        logger.log(
           '🔄 常時マイク入力モード: マイクがOFFになっていたため、自動で再開します。'
         )
         currentHookRef.current.startListening()
@@ -155,7 +156,7 @@ export function useVoiceRecognition({
         checkRecognitionActive
       ) {
         if (!checkRecognitionActive()) {
-          console.log(
+          logger.log(
             '🔄 常時マイク入力モード: 音声認識が非アクティブのため再起動します。'
           )
           currentHookRef.current.stopListening()
@@ -198,7 +199,7 @@ export function useVoiceRecognition({
       !homeStore.getState().chatProcessing
     ) {
       const delayedStart = async () => {
-        console.log('🎤 コンポーネントマウント時に音声認識を自動的に開始します')
+        logger.log('🎤 コンポーネントマウント時に音声認識を自動的に開始します')
         // コンポーネントマウント時に少し遅延させてから開始
         await new Promise((resolve) => setTimeout(resolve, 1000))
         if (

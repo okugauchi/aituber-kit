@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { pipeResponse } from '@/utils/pipeResponse'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
@@ -94,7 +95,7 @@ export default async function handler(
       return res.status(200).json(data)
     }
   } catch (error) {
-    console.error('Error in Dify API call:', error)
+    logger.error('Error in Dify API call:', error)
     return res.status(500).json({
       error: 'Dify Internal Server Error',
       errorCode: 'AIAPIError',

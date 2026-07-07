@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useState, useCallback } from 'react'
 import {
   speakMessageHandler,
@@ -103,7 +104,7 @@ const MessageReceiver = () => {
                   capturedImage = hs.modalImage || ''
                 }
               } catch (error) {
-                console.error('Failed to capture image:', error)
+                logger.error('Failed to capture image:', error)
                 // エラー時は画像なしで続行
                 capturedImage = ''
               }
@@ -182,7 +183,7 @@ const MessageReceiver = () => {
                   ])
                 }
               } catch (error) {
-                console.error('Failed to capture image:', error)
+                logger.error('Failed to capture image:', error)
               }
             }
 
@@ -191,7 +192,7 @@ const MessageReceiver = () => {
             break
           }
           default:
-            console.error('Invalid message type:', message.type)
+            logger.error('Invalid message type:', message.type)
         }
       }
     },
@@ -227,7 +228,7 @@ const MessageReceiver = () => {
           }),
         })
       } catch (error) {
-        console.error('Error reporting client status:', error)
+        logger.error('Error reporting client status:', error)
       }
     }
 
@@ -264,7 +265,7 @@ const MessageReceiver = () => {
           await reportStatus()
         }
       } catch (error) {
-        console.error('Error fetching commands:', error)
+        logger.error('Error fetching commands:', error)
       }
     }
 
@@ -284,7 +285,7 @@ const MessageReceiver = () => {
           setLastTimestamp(newLastTimestamp)
         }
       } catch (error) {
-        console.error('Error fetching messages:', error)
+        logger.error('Error fetching messages:', error)
       }
     }
 

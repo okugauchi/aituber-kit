@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Message } from '@/features/messages/messages'
 import { NextApiRequest, NextApiResponse } from 'next'
 import {
@@ -196,7 +197,7 @@ export default async function handler(
 
     return pipeResponse(response, res)
   } catch (error) {
-    console.error('Error in AI API call:', error)
+    logger.error('Error in AI API call:', error)
 
     return res.status(500).json({
       error: 'Unexpected Error',

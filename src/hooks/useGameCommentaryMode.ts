@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import settingsStore from '@/features/stores/settings'
 import homeStore from '@/features/stores/home'
@@ -366,7 +367,7 @@ export function useGameCommentaryMode({
         gameCommentaryImageQuality
       )
     } catch (error) {
-      console.error('ゲーム実況: キャプチャ取得エラー:', error)
+      logger.error('ゲーム実況: キャプチャ取得エラー:', error)
       isProcessingRef.current = false
       if (isRunningRef.current) {
         applyState('waiting')
@@ -389,7 +390,7 @@ export function useGameCommentaryMode({
     }
 
     if (!imageData) {
-      console.warn('ゲーム実況: キャプチャ取得失敗')
+      logger.warn('ゲーム実況: キャプチャ取得失敗')
       isProcessingRef.current = false
       applyState('waiting')
       scheduleNext()
@@ -519,7 +520,7 @@ export function useGameCommentaryMode({
         return
       }
 
-      console.error('ゲーム実況コメント生成エラー:', error)
+      logger.error('ゲーム実況コメント生成エラー:', error)
       isProcessingRef.current = false
       if (isRunningRef.current) {
         applyState('waiting')

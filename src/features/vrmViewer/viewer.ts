@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import * as THREE from 'three'
 import { Model } from './model'
 import { loadVRMAnimation } from '@/lib/VRMAnimation/loadVRMAnimation'
@@ -91,7 +92,7 @@ export class Viewer {
         })
       })
       .catch((error) => {
-        console.error('Failed to load VRM:', error)
+        logger.error('Failed to load VRM:', error)
       })
       .finally(() => {
         if (requestId === this._loadVrmRequestId) {

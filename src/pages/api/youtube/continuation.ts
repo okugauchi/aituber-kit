@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import {
   VercelAIService,
@@ -159,7 +160,7 @@ export default async function handler(
     if (result.status === 'success') {
       return res.status(200).json(result.result)
     } else {
-      console.error('Workflow failed:', result)
+      logger.error('Workflow failed:', result)
       return res.status(500).json({
         error:
           result.status === 'failed'
@@ -170,7 +171,7 @@ export default async function handler(
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
-    console.error('Error in youtube continuation API:', errorMessage)
+    logger.error('Error in youtube continuation API:', errorMessage)
     return res.status(500).json({ error: errorMessage })
   }
 }

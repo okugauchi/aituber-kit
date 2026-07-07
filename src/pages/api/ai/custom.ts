@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { handleCustomApi } from '@/lib/api-services/customApi'
 import { pipeResponse } from '@/utils/pipeResponse'
@@ -58,7 +59,7 @@ export default async function handler(
       const server = JSON.parse(serverHeaders)
       mergedHeaders = JSON.stringify({ ...front, ...server })
     } catch (e) {
-      console.warn('Failed to parse/merge custom API headers:', e)
+      logger.warn('Failed to parse/merge custom API headers:', e)
       mergedHeaders = serverHeaders
     }
   }
@@ -73,7 +74,7 @@ export default async function handler(
       const server = JSON.parse(serverBody)
       mergedBody = JSON.stringify({ ...front, ...server })
     } catch (e) {
-      console.warn('Failed to parse/merge custom API body:', e)
+      logger.warn('Failed to parse/merge custom API body:', e)
       mergedBody = serverBody
     }
   }
@@ -85,7 +86,7 @@ export default async function handler(
       bodyObj.threadId = threadId
       mergedBody = JSON.stringify(bodyObj)
     } catch (e) {
-      console.warn('Failed to inject threadId into mergedBody:', e)
+      logger.warn('Failed to inject threadId into mergedBody:', e)
     }
   }
 
@@ -101,7 +102,7 @@ export default async function handler(
 
     return pipeResponse(response, res)
   } catch (error) {
-    console.error('Error in Custom API call:', error)
+    logger.error('Error in Custom API call:', error)
 
     if (error instanceof Response) {
       return pipeResponse(error, res)

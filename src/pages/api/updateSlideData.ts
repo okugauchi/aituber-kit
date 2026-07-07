@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
@@ -70,7 +71,7 @@ export default async function handler(
     try {
       await fs.access(targetDir)
     } catch (error) {
-      console.error(`Directory not found: ${targetDir}`, error)
+      logger.error(`Directory not found: ${targetDir}`, error)
       return res
         .status(404)
         .json({ message: 'Not Found: Slide directory does not exist.' })
@@ -108,7 +109,7 @@ export default async function handler(
 
     res.status(200).json({ message: 'Slide data updated successfully' }) // メッセージ変更
   } catch (error) {
-    console.error(`Error writing slide data for ${sanitizedSlideName}:`, error)
+    logger.error(`Error writing slide data for ${sanitizedSlideName}:`, error)
     res.status(500).json({
       message: 'Internal Server Error',
       error: error instanceof Error ? error.message : String(error),

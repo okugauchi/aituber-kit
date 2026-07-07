@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useEffect, useState, useCallback } from 'react'
 import slideStore from '@/features/stores/slide'
 import homeStore from '@/features/stores/home'
@@ -114,7 +115,7 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
       }
 
       const currentLines = getCurrentLines()
-      console.log(currentLines)
+      logger.log(currentLines)
       speakMessageHandler(currentLines)
     },
     [selectedSlideDocs]

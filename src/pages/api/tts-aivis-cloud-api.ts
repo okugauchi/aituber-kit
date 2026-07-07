@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
@@ -193,7 +194,7 @@ export default async function handler(
 
     res.end(Buffer.from(response.data))
   } catch (error: any) {
-    console.error('Error in Aivis Cloud API TTS:', error)
+    logger.error('Error in Aivis Cloud API TTS:', error)
 
     if (error.response) {
       const status = error.response.status

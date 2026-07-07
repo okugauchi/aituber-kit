@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Message } from '@/features/messages/messages'
 import OpenAI from 'openai'
 import settingsStore from '@/features/stores/settings'
@@ -85,7 +86,7 @@ export async function getOpenAIAudioChatResponseStream(
       throw error
     }
 
-    console.error('OpenAI Audio API error:', error)
+    logger.error('OpenAI Audio API error:', error)
     throw error
   }
 }

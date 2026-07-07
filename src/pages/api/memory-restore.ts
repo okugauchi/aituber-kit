@@ -5,6 +5,7 @@
  * Requirements: 5.7, 5.8
  */
 
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
@@ -79,7 +80,7 @@ export default async function handler(
 
     res.status(200).json(response)
   } catch (error) {
-    console.error('Error restoring memory:', error)
+    logger.error('Error restoring memory:', error)
     res.status(500).json({ message: 'Error restoring memory' })
   }
 }

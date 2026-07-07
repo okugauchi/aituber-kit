@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Application, Ticker, DisplayObject } from 'pixi.js'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Live2DModel } from 'pixi-live2d-display-lipsyncpatch/cubism4'
@@ -7,7 +8,7 @@ import { Live2DHandler } from '@/features/messages/live2dHandler'
 import { debounce } from 'lodash'
 import ModelLoadingOverlay from '@/components/modelLoadingOverlay'
 
-console.log('Live2DComponent module loaded')
+logger.log('Live2DComponent module loaded')
 
 const setModelPosition = (
   app: Application,
@@ -35,7 +36,7 @@ const setModelPosition = (
 }
 
 const Live2DComponent = (): JSX.Element => {
-  console.log('Live2DComponent rendering')
+  logger.log('Live2DComponent rendering')
 
   const canvasContainerRef = useRef<HTMLCanvasElement>(null)
   const appRef = useRef<Application | null>(null)
@@ -125,7 +126,7 @@ const Live2DComponent = (): JSX.Element => {
       appRef.current = app
       setApp(app)
     } catch (error) {
-      console.error('Failed to initialize PIXI Application:', error)
+      logger.error('Failed to initialize PIXI Application:', error)
     }
   }
 
@@ -167,7 +168,7 @@ const Live2DComponent = (): JSX.Element => {
 
       await Live2DHandler.resetToIdle()
     } catch (error) {
-      console.error('Failed to load Live2D model:', error)
+      logger.error('Failed to load Live2D model:', error)
     } finally {
       if (requestId === loadRequestIdRef.current) {
         setIsModelLoading(false)

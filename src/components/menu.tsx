@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -127,7 +128,7 @@ export const Menu = () => {
       .then((response) => response.text())
       .then((text) => setMarkdownContent(text))
       .catch((error) =>
-        console.error('Failed to fetch markdown content:', error)
+        logger.error('Failed to fetch markdown content:', error)
       )
   }, [selectedSlideDocs])
 
@@ -174,7 +175,7 @@ export const Menu = () => {
   }, [canAccessSettings])
 
   useEffect(() => {
-    console.log('onChangeWebcamStatus')
+    logger.log('onChangeWebcamStatus')
     homeStore.setState({ webcamStatus: showWebcam })
 
     if (showWebcam) {
@@ -192,7 +193,7 @@ export const Menu = () => {
   }, [showWebcam])
 
   useEffect(() => {
-    console.log('onChangeCaptureStatus')
+    logger.log('onChangeCaptureStatus')
     homeStore.setState({ captureStatus: showCapture })
   }, [showCapture])
 

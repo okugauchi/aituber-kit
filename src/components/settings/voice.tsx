@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useTranslation } from 'react-i18next'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -127,7 +128,7 @@ const Voice = () => {
       const data = await response.json()
       setSpeakers_aivis(data)
     } catch (error) {
-      console.error('Failed to fetch AIVIS speakers:', error)
+      logger.error('Failed to fetch AIVIS speakers:', error)
     }
   }
 
@@ -138,7 +139,7 @@ const Voice = () => {
       const data = await response.json()
       setSpeakers_voicevox(data)
     } catch (error) {
-      console.error('Failed to fetch VOICEVOX speakers:', error)
+      logger.error('Failed to fetch VOICEVOX speakers:', error)
     }
   }
 

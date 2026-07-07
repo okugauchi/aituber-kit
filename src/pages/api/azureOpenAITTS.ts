@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { AzureOpenAI } from 'openai'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
@@ -57,7 +58,7 @@ export default async function handler(
     res.setHeader('Content-Type', 'audio/mpeg')
     res.send(buffer)
   } catch (error) {
-    console.error('Azure OpenAI TTS error:', error)
+    logger.error('Azure OpenAI TTS error:', error)
     res.status(500).json({ error: 'Failed to generate speech' })
   }
 }

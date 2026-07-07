@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import * as THREE from 'three'
 import { VRMHumanBoneName } from '@pixiv/three-vrm'
 import { VRMAnimation } from '@/lib/VRMAnimation/VRMAnimation'
@@ -68,7 +69,7 @@ export async function loadPoseFromJSON(
       json = raw
     }
   } catch {
-    console.error(`Failed to load pose JSON: ${url}`)
+    logger.error(`Failed to load pose JSON: ${url}`)
     return null
   }
 

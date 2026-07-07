@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
@@ -58,7 +59,7 @@ export default async function handler(
           })
         }
       } catch (error) {
-        console.warn(`Skip invalid pose JSON: ${file}`, error)
+        logger.warn(`Skip invalid pose JSON: ${file}`, error)
       }
     }
 
@@ -71,7 +72,7 @@ export default async function handler(
     ) {
       return res.status(200).json([])
     }
-    console.error('Error reading pose files:', error)
+    logger.error('Error reading pose files:', error)
     res.status(500).json({ error: 'Failed to get pose file list' })
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiResponse } from 'next'
 
 /**
@@ -34,7 +35,7 @@ export async function pipeResponse(
         }
       }
     } catch (error) {
-      console.error('Error while piping response body:', error)
+      logger.error('Error while piping response body:', error)
     } finally {
       reader.releaseLock()
       res.end()

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 class RealtimeAPITools {
   async get_current_weather(
     latitude: number,
@@ -5,7 +7,7 @@ class RealtimeAPITools {
     timezone: string,
     location: string
   ): Promise<string> {
-    console.log(
+    logger.log(
       `Getting weather for ${location} (${latitude}, ${longitude}), timezone: ${timezone}`
     )
 
@@ -14,7 +16,7 @@ class RealtimeAPITools {
     const response = await fetch(url)
     const data = await response.json()
 
-    console.log(data)
+    logger.log(data)
 
     // 最初の値を取得
     const temperature = data.hourly.temperature_2m[0]

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
@@ -95,7 +96,7 @@ export default async function handler(
     res.setHeader('Content-Type', 'audio/wav')
     res.end(Buffer.from(synthesisResponse.data))
   } catch (error) {
-    console.error('Error in AivisSpeech TTS:', error)
+    logger.error('Error in AivisSpeech TTS:', error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }

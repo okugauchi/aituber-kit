@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
 import { Buffer } from 'buffer'
@@ -68,7 +69,7 @@ export default async function handler(
       return res.status(400).json({ error: 'No audio file provided' })
     }
 
-    console.log('Received audio file:', {
+    logger.log('Received audio file:', {
       filename: audioFilePart.filename,
       contentType: audioFilePart.type,
       dataSize: audioFilePart.data.length,
@@ -112,7 +113,7 @@ export default async function handler(
     )
 
     // Whisper APIに送信
-    console.log(`Sending audio data to Whisper API using model: ${model}`)
+    logger.log(`Sending audio data to Whisper API using model: ${model}`)
     const response = await openai.audio.transcriptions.create({
       file: audioFile,
       model: model,
@@ -120,11 +121,11 @@ export default async function handler(
       response_format: 'json',
     })
 
-    console.log('Whisper API response:', response)
+    logger.log('Whisper API response:', response)
 
     return res.status(200).json({ text: response.text })
   } catch (error: any) {
-    console.error('Whisper API error:', error)
+    logger.error('Whisper API error:', error)
 
     if (error?.code === 'BodyTooLarge') {
       return res.status(413).json({

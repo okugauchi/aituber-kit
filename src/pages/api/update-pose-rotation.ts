@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
@@ -43,7 +44,7 @@ export default async function handler(
     await fs.writeFile(filePath, JSON.stringify(json, null, 2))
     return res.status(200).json({ message: 'Pose rotation updated' })
   } catch (e) {
-    console.error('Failed to update pose rotation:', e)
+    logger.error('Failed to update pose rotation:', e)
     return res.status(500).json({ error: 'Failed to update file' })
   }
 }

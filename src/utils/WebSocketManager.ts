@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import toastStore from '@/features/stores/toast'
 import settingsStore from '@/features/stores/settings'
 
@@ -31,7 +32,7 @@ export class WebSocketManager {
   }
 
   private handleOpen = (event: Event) => {
-    console.log('WebSocket connection opened:', event)
+    logger.log('WebSocket connection opened:', event)
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionSuccess'),
@@ -43,12 +44,12 @@ export class WebSocketManager {
   }
 
   private handleMessage = async (event: MessageEvent) => {
-    console.log('WebSocket received message:', event)
+    logger.log('WebSocket received message:', event)
     await this.handlers.onMessage(event)
   }
 
   private handleError = (event: Event) => {
-    console.error('WebSocket error:', event)
+    logger.error('WebSocket error:', event)
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionError'),
@@ -60,7 +61,7 @@ export class WebSocketManager {
   }
 
   private handleClose = (event: Event) => {
-    console.log('WebSocket connection closed:', event)
+    logger.log('WebSocket connection closed:', event)
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionClosed'),

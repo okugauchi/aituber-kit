@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
@@ -70,7 +71,7 @@ export default async function handler(
 
     res.status(200).json(live2dModels)
   } catch (error) {
-    console.error('Error reading Live2D directory:', error)
+    logger.error('Error reading Live2D directory:', error)
     res.status(500).json({
       error: 'Failed to get Live2D model list',
     })

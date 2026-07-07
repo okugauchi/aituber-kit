@@ -5,6 +5,7 @@
  * Requirements: 5.7, 5.8
  */
 
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
@@ -73,7 +74,7 @@ export default async function handler(
             hasEmbeddings,
           }
         } catch (error) {
-          console.error(`Error reading file ${filename}:`, error)
+          logger.error(`Error reading file ${filename}:`, error)
           return null
         }
       })
@@ -81,7 +82,7 @@ export default async function handler(
 
     res.status(200).json({ files: fileInfos })
   } catch (error) {
-    console.error('Error listing memory files:', error)
+    logger.error('Error listing memory files:', error)
     res.status(500).json({ message: 'Error listing memory files' })
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { LipSyncAnalyzeResult } from './lipSyncAnalyzeResult'
 
 const TIME_DOMAIN_DATA_LENGTH = 2048
@@ -22,7 +23,7 @@ export class LipSync {
     if (this.forceStart) {
       this.userInteracted = true
       this.tryResumeAudio().catch((error) => {
-        console.warn('Failed to force resume AudioContext:', error)
+        logger.warn('Failed to force resume AudioContext:', error)
       })
     } else {
       // 通常のユーザーインタラクション検出を設定
@@ -35,11 +36,11 @@ export class LipSync {
     if (this.audio.state === 'suspended') {
       try {
         await this.audio.resume()
-        console.log('AudioContext resumed successfully')
+        logger.log('AudioContext resumed successfully')
         // 保留中の再生を処理
         this.processPendingPlaybacks()
       } catch (error) {
-        console.error('Failed to resume AudioContext:', error)
+        logger.error('Failed to resume AudioContext:', error)
       }
     }
   }
@@ -59,9 +60,9 @@ export class LipSync {
       if (this.audio.state === 'suspended') {
         try {
           await this.audio.resume()
-          console.log('AudioContext resumed successfully')
+          logger.log('AudioContext resumed successfully')
         } catch (error) {
-          console.error('Failed to resume AudioContext:', error)
+          logger.error('Failed to resume AudioContext:', error)
         }
       }
 
@@ -82,7 +83,7 @@ export class LipSync {
 
   private processPendingPlaybacks(): void {
     if (this.pendingPlaybacks.length > 0) {
-      console.log(
+      logger.log(
         `Processing ${this.pendingPlaybacks.length} pending audio playbacks`
       )
       const playbacks = [...this.pendingPlaybacks]
@@ -107,13 +108,13 @@ export class LipSync {
         await this.audio.resume()
         return true
       } catch (error) {
-        console.error('Failed to resume AudioContext:', error)
+        logger.error('Failed to resume AudioContext:', error)
         return false
       }
     }
 
     this.waitingForInteraction = true
-    console.warn('AudioContext cannot start: waiting for user interaction')
+    logger.warn('AudioContext cannot start: waiting for user interaction')
     return false
   }
 
@@ -195,7 +196,7 @@ export class LipSync {
         try {
           audioBuffer = await this.audio.decodeAudioData(buffer)
         } catch (decodeError) {
-          console.error('Failed to decode audio data:', decodeError)
+          logger.error('Failed to decode audio data:', decodeError)
           throw new Error('The audio data could not be decoded')
         }
       }
@@ -218,7 +219,7 @@ export class LipSync {
         onEnded?.()
       }
     } catch (error) {
-      console.error('Failed to play audio:', error)
+      logger.error('Failed to play audio:', error)
       if (onEnded) {
         onEnded()
       }
@@ -233,7 +234,7 @@ export class LipSync {
       const buffer = await res.arrayBuffer()
       await this.playFromArrayBuffer(buffer, onEnded)
     } catch (error) {
-      console.error('Failed to fetch audio from URL:', error)
+      logger.error('Failed to fetch audio from URL:', error)
       if (onEnded) {
         onEnded()
       }
@@ -279,7 +280,7 @@ export class LipSync {
     try {
       this.currentSource?.stop()
     } catch (e) {
-      console.warn('LipSync stopCurrentPlayback error:', e)
+      logger.warn('LipSync stopCurrentPlayback error:', e)
     }
     this.currentSource = null
   }

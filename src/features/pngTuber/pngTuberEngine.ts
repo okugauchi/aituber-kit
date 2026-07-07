@@ -3,6 +3,7 @@
  * MotionPNGTuber_Player/lipsync.js のTypeScript移植版
  */
 
+import { logger } from '@/lib/logger'
 import {
   MouthState,
   MouthTrackData,
@@ -168,11 +169,11 @@ export class PNGTuberEngine implements IPNGTuberEngine {
       // 初期状態をセット
       this.setMouthState('closed', true)
 
-      console.log(
+      logger.log(
         `PNGTuber asset loaded: ${this.trackData?.frames.length} frames, ${this.trackData?.fps}fps`
       )
     } catch (error) {
-      console.error('Failed to load PNGTuber asset:', error)
+      logger.error('Failed to load PNGTuber asset:', error)
       throw error
     }
   }
@@ -262,11 +263,11 @@ export class PNGTuberEngine implements IPNGTuberEngine {
 
     // AudioContextがsuspended状態の場合はresumeする
     if (this.audioContext.state === 'suspended') {
-      console.log('[PNGTuber] AudioContext is suspended, resuming...')
+      logger.log('[PNGTuber] AudioContext is suspended, resuming...')
       await this.audioContext.resume()
     }
 
-    console.log('[PNGTuber] Playing audio, duration:', audioBuffer.duration)
+    logger.log('[PNGTuber] Playing audio, duration:', audioBuffer.duration)
 
     // 前の再生を停止
     this.stopAudio()
@@ -297,7 +298,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
 
     // 再生終了時の処理
     this.currentSource.onended = () => {
-      console.log('[PNGTuber] Audio playback ended')
+      logger.log('[PNGTuber] Audio playback ended')
       this.resetMouth()
       if (this.onAudioFinishCallback) {
         this.onAudioFinishCallback()
@@ -307,7 +308,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
 
     // 再生開始
     this.currentSource.start()
-    console.log(
+    logger.log(
       '[PNGTuber] Audio started, context state:',
       this.audioContext.state
     )
@@ -616,7 +617,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
    */
   start(): void {
     if (!this.video || !this.trackData) {
-      console.warn('Cannot start: video or trackData not loaded')
+      logger.warn('Cannot start: video or trackData not loaded')
       return
     }
 
@@ -636,7 +637,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
     // 動画を再生
     this.video.currentTime = 0
     this.video.play().catch((err) => {
-      console.warn('Video play failed:', err)
+      logger.warn('Video play failed:', err)
     })
 
     // レンダリングループを開始

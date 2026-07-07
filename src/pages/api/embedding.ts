@@ -5,6 +5,7 @@
  * Requirements: 1.1, 1.3, 1.4, 1.5
  */
 
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
 import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
@@ -92,7 +93,7 @@ export default async function handler(
     })
   } catch (error: any) {
     // エラーログを出力
-    console.error('Embedding API error:', error)
+    logger.error('Embedding API error:', error)
 
     // レート制限エラー
     if (error.status === 429) {

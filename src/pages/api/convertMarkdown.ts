@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Marpit } from '@marp-team/marpit'
 import fs from 'fs/promises'
@@ -55,7 +56,7 @@ export default async function handler(
         )
         css = await fs.readFile(cssPath, 'utf-8')
       } catch (cssError) {
-        console.warn(`CSSファイルが見つかりません: ${slideName}/theme.css`)
+        logger.warn(`CSSファイルが見つかりません: ${slideName}/theme.css`)
         // CSSファイルが見つからない場合は空文字列を使用
       }
 
@@ -70,7 +71,7 @@ export default async function handler(
 
       res.status(200).json({ html, css: generatedCss })
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       res.status(500).json({
         message: 'Error processing markdown',
         error: (error as Error).message,

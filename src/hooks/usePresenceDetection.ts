@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import * as faceapi from 'face-api.js'
 import settingsStore from '@/features/stores/settings'
@@ -107,7 +108,7 @@ export function usePresenceDetection({
   const logDebug = useCallback(
     (message: string, ...args: unknown[]) => {
       if (presenceDebugMode) {
-        console.log(`[PresenceDetection] ${message}`, ...args)
+        logger.log(`[PresenceDetection] ${message}`, ...args)
       }
     },
     [presenceDebugMode]
