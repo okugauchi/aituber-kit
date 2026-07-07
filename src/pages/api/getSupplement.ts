@@ -4,6 +4,8 @@ import fs from 'fs/promises'
 import path from 'path'
 import { isRestrictedMode } from '@/utils/restrictedMode'
 import assetManifest from '@/constants/assetManifest.json'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type ResponseData = {
   content?: string
@@ -11,14 +13,11 @@ type ResponseData = {
   error?: string
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
   if (isRestrictedMode()) {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ message: 'Method Not Allowed' })
-    }
     const { slideName } = req.query
     if (typeof slideName !== 'string' || !slideName) {
       return res.status(400).json({
@@ -43,10 +42,6 @@ export default async function handler(
         | undefined) ?? {}
     const content = supplements[sanitizedSlideName] ?? ''
     return res.status(200).json({ content })
-  }
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method Not Allowed' })
   }
 
   const { slideName } = req.query
@@ -95,3 +90,5 @@ export default async function handler(
     }
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/getSupplement'], handler)

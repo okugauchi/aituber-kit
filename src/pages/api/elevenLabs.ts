@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: Buffer
@@ -39,17 +40,11 @@ function writeString(view: DataView, offset: number, str: string) {
   }
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const body = req.body
   const message = body.message
   const voiceId = body.voiceId || process.env.ELEVENLABS_VOICE_ID
   const apiKey = body.apiKey || process.env.ELEVENLABS_API_KEY
-  const usesServerSecret =
-    (!body.apiKey && Boolean(process.env.ELEVENLABS_API_KEY)) ||
-    (!body.voiceId && Boolean(process.env.ELEVENLABS_VOICE_ID))
   const language = body.language
 
   if (!apiKey) {
@@ -60,13 +55,6 @@ export default async function handler(
     res
       .status(400)
       .json({ error: 'Empty Voice ID', errorCode: 'EMPTY_PROPERTY' })
-    return
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'elevenLabs' })
-  ) {
     return
   }
 
@@ -110,3 +98,5 @@ export default async function handler(
     res.status(500).json({ error: error.message })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/elevenLabs'], handler)

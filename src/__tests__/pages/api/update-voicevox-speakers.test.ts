@@ -67,7 +67,7 @@ describe('/api/update-voicevox-speakers', () => {
     await handler(req as any, res as any)
 
     expect(res._getStatusCode()).toBe(405)
-    expect(res._getJSONData()).toEqual({ error: 'Method Not Allowed' })
+    expect(res._getJSONData()).toEqual({ error: 'Method not allowed' })
     expect(global.fetch).not.toHaveBeenCalled()
     expect(mockWriteFile).not.toHaveBeenCalled()
   })

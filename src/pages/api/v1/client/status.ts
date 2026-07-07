@@ -1,28 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { updateClientStatus } from '@/features/api/messageGateway'
-import {
-  getClientIdFromRequest,
-  requireApiKey,
-  sendMethodNotAllowed,
-} from '@/features/api/http'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { getClientIdFromRequest } from '@/features/api/http'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 const handler = (req: NextApiRequest, res: NextApiResponse) => {
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('v1/client/status'))
-  }
-
-  if (req.method !== 'POST') {
-    return sendMethodNotAllowed(res)
-  }
-
-  if (!requireApiKey(req, res)) return
-
   const clientId = getClientIdFromRequest(req, req.body?.clientId)
   if (!clientId) {
     return res.status(400).json({ error: 'Client ID is required' })
@@ -47,4 +29,4 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(200).json({ ok: true, status })
 }
 
-export default handler
+export default withAccessPolicy(routePolicies['/api/v1/client/status'], handler)

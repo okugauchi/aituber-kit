@@ -3,10 +3,8 @@ import formidable from 'formidable'
 import fs from 'fs'
 import path from 'path'
 import { IMAGE_CONSTANTS } from '@/constants/images'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 export const config = {
   api: {
@@ -21,20 +19,7 @@ const formOptions: formidable.Options = {
   },
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('upload-image'))
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const form = formidable(formOptions)
 
   try {
@@ -96,3 +81,5 @@ export default async function handler(
     res.status(500).json({ error: 'Failed to upload file' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/upload-image'], handler)

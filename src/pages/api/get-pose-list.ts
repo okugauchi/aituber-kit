@@ -4,6 +4,8 @@ import fs from 'fs'
 import path from 'path'
 import { isRestrictedMode } from '@/utils/restrictedMode'
 import assetManifest from '@/constants/assetManifest.json'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 interface PoseListItem {
   name: string
@@ -17,14 +19,7 @@ interface AssetManifest {
 
 const manifest = assetManifest as AssetManifest
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (isRestrictedMode()) {
     const poses = Array.isArray(manifest.poses)
       ? manifest.poses.filter(
@@ -76,3 +71,5 @@ export default async function handler(
     res.status(500).json({ error: 'Failed to get pose file list' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/get-pose-list'], handler)

@@ -8,13 +8,9 @@ import {
   getClientIdFromRequest,
   normalizeImage,
   normalizeMessages,
-  requireApiKey,
-  sendMethodNotAllowed,
 } from '@/features/api/http'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 export const config = {
   api: {
@@ -30,16 +26,6 @@ const normalizeChatMode = (mode: unknown): MessageType => {
 }
 
 const handler = (req: NextApiRequest, res: NextApiResponse) => {
-  if (isRestrictedMode()) {
-    return res.status(403).json(createRestrictedModeErrorResponse('v1/chat'))
-  }
-
-  if (req.method !== 'POST') {
-    return sendMethodNotAllowed(res)
-  }
-
-  if (!requireApiKey(req, res)) return
-
   const clientId = getClientIdFromRequest(req, req.body?.clientId)
   if (!clientId) {
     return res.status(400).json({ error: 'Client ID is required' })
@@ -98,4 +84,4 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
   })
 }
 
-export default handler
+export default withAccessPolicy(routePolicies['/api/v1/chat'], handler)

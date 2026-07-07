@@ -90,10 +90,7 @@ describe('/api/ai/vercel handler', () => {
     const { req, res } = createMocks({ method: 'GET' })
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(405)
-    expect(res._getJSONData()).toEqual({
-      error: 'Method Not Allowed',
-      errorCode: 'METHOD_NOT_ALLOWED',
-    })
+    expect(res._getJSONData()).toEqual({ error: 'Method not allowed' })
   })
 
   it('returns 400 when API key is missing for cloud providers', async () => {

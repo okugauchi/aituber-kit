@@ -2,7 +2,10 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
 import { Buffer } from 'buffer'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
+import { computeUsesServerSecret } from '@/lib/accessPolicy/secretPairs'
 
 const MAX_WHISPER_REQUEST_BODY_BYTES = 25 * 1024 * 1024
 
@@ -19,14 +22,11 @@ export const config = {
   },
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  gate: PolicyGate
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   try {
     // リクエストボディをバッファとして取得
     const buffer = await getRawBody(req, MAX_WHISPER_REQUEST_BODY_BYTES)
@@ -82,16 +82,15 @@ export default async function handler(
       process.env.OPENAI_API_KEY ||
       process.env.NEXT_PUBLIC_OPENAI_API_KEY ||
       process.env.NEXT_PUBLIC_OPENAI_KEY
-    const usesServerSecret = !openaiKey && Boolean(process.env.OPENAI_API_KEY)
+    const usesServerSecret = computeUsesServerSecret([
+      [openaiKey, process.env.OPENAI_API_KEY],
+    ])
 
     if (!apiKey) {
       return res.status(500).json({ error: 'OpenAI API key is not configured' })
     }
 
-    if (
-      usesServerSecret &&
-      !guardServerSecretAccess(req, res, { featureName: 'whisper' })
-    ) {
+    if (!gate.guardServerSecret(usesServerSecret)) {
       return
     }
 
@@ -142,6 +141,8 @@ export default async function handler(
     })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/whisper'], handler)
 
 // リクエストボディをRawデータとして取得する関数
 async function getRawBody(

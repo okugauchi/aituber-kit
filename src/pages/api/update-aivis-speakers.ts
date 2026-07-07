@@ -2,11 +2,8 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 import { validateSpeakersResponse } from '@/lib/api-services/validateSpeakersResponse'
 
 interface AivisSpeaker {
@@ -14,28 +11,7 @@ interface AivisSpeaker {
   id: number
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('update-aivis-speakers'))
-  }
-
-  if (
-    !guardServerSecretAccess(req, res, {
-      featureName: 'update-aivis-speakers',
-    })
-  ) {
-    return
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // APIからデータを取得
     const rawServerUrl = Array.isArray(req.query.serverUrl)
@@ -70,3 +46,8 @@ export default async function handler(
     res.status(500).json({ error: 'Failed to update speakers file' })
   }
 }
+
+export default withAccessPolicy(
+  routePolicies['/api/update-aivis-speakers'],
+  handler
+)

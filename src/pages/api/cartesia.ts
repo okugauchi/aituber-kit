@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: Buffer
@@ -7,17 +8,11 @@ type Data = {
   errorCode?: string
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const body = req.body
   const message = body.message
   const voiceId = body.voiceId || process.env.CARTESIA_VOICE_ID
   const apiKey = body.apiKey || process.env.CARTESIA_API_KEY
-  const usesServerSecret =
-    (!body.apiKey && Boolean(process.env.CARTESIA_API_KEY)) ||
-    (!body.voiceId && Boolean(process.env.CARTESIA_VOICE_ID))
   const language = body.language
 
   if (!apiKey) {
@@ -28,13 +23,6 @@ export default async function handler(
     res
       .status(400)
       .json({ error: 'Empty Voice ID', errorCode: 'EMPTY_PROPERTY' })
-    return
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'cartesia' })
-  ) {
     return
   }
 
@@ -80,3 +68,5 @@ export default async function handler(
     res.status(500).json({ error: error.message })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/cartesia'], handler)

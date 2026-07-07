@@ -1,19 +1,15 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { pipeResponse } from '@/utils/pipeResponse'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  gate: PolicyGate
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'DifyMethod Not Allowed',
-      errorCode: 'MethodNotAllowed',
-    })
-  }
-
   const { query, apiKey, url, conversationId, stream } = req.body
 
   const usesClientUrl = Boolean(url)
@@ -51,10 +47,7 @@ export default async function handler(
     })
   }
 
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'difyChat' })
-  ) {
+  if (!gate.guardServerSecret(usesServerSecret)) {
     return
   }
 
@@ -102,3 +95,5 @@ export default async function handler(
     })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/difyChat'], handler)

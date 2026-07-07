@@ -2,7 +2,9 @@ import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { handleCustomApi } from '@/lib/api-services/customApi'
 import { pipeResponse } from '@/utils/pipeResponse'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 export const config = {
   api: {
@@ -12,17 +14,11 @@ export const config = {
   },
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  gate: PolicyGate
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method Not Allowed',
-      errorCode: 'METHOD_NOT_ALLOWED',
-    })
-  }
-
   const {
     messages,
     stream,
@@ -33,16 +29,14 @@ export default async function handler(
     threadId,
   } = req.body
 
+  // env優先の解決順（他ルートと逆方向）のため dynamic 扱い（設計§4.1）
   const usesServerSecret = Boolean(
     process.env.CUSTOM_API_URL ||
     process.env.CUSTOM_API_HEADERS ||
     process.env.CUSTOM_API_BODY
   )
 
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'ai/custom' })
-  ) {
+  if (!gate.guardServerSecret(usesServerSecret)) {
     return
   }
 
@@ -125,3 +119,5 @@ export default async function handler(
     })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/ai/custom'], handler)
