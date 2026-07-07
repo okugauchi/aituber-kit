@@ -139,6 +139,65 @@ describe('/api/azureOpenAITTS', () => {
     expect(res._ended).toBe(true)
   })
 
+  it('should respond 400 for unparsable endpoint URL (S13)', async () => {
+    const req = createMockReq({
+      body: { ...validBody, endpoint: 'not a url' },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Invalid Azure TTS endpoint URL' })
+    expect(mockSpeechCreate).not.toHaveBeenCalled()
+  })
+
+  it('should respond 400 for non-http endpoint protocol (S13)', async () => {
+    const req = createMockReq({
+      body: { ...validBody, endpoint: 'ftp://example.openai.azure.com/x' },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Invalid Azure TTS endpoint URL' })
+    expect(mockSpeechCreate).not.toHaveBeenCalled()
+  })
+
+  it('should respond 400 for deployment name with invalid characters (S13)', async () => {
+    const req = createMockReq({
+      body: {
+        ...validBody,
+        endpoint:
+          'https://example.openai.azure.com/openai/deployments/bad%20name%3B/audio/speech',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Invalid Azure TTS deployment name' })
+    expect(mockSpeechCreate).not.toHaveBeenCalled()
+  })
+
+  it('should respond 400 when deployments segment has no following name (S13)', async () => {
+    const req = createMockReq({
+      body: {
+        ...validBody,
+        endpoint: 'https://example.openai.azure.com/openai/deployments',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Invalid Azure TTS deployment name' })
+    expect(mockSpeechCreate).not.toHaveBeenCalled()
+  })
+
   it('should respond 500 on upstream error', async () => {
     mockSpeechCreate.mockRejectedValue(new Error('upstream failure'))
 

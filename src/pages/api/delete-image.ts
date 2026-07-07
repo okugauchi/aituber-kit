@@ -2,25 +2,10 @@ import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'DELETE') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('delete-image'))
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { filename } = req.body
 
   if (!filename) {
@@ -57,3 +42,5 @@ export default async function handler(
     res.status(500).json({ error: 'Failed to delete file' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/delete-image'], handler)

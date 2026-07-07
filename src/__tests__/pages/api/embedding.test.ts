@@ -120,6 +120,9 @@ describe('/api/embedding', () => {
     it('textパラメータがない場合は400エラーを返す', async () => {
       // Arrange
       process.env.OPENAI_API_KEY = 'test-api-key'
+      // 統一アクセスポリシーではガード評価がパラメータ検証より先に走るため、
+      // env キー使用時はガードを通過させた上で 400 を検証する
+      process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: 'POST',
         body: {},

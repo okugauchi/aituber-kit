@@ -2,24 +2,18 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import textToSpeech from '@google-cloud/text-to-speech'
 import { google } from '@google-cloud/text-to-speech/build/protos/protos'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: string | Uint8Array // Base64 encoded string or Uint8Array
   error?: string
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const message = req.body.message
   const ttsType = req.body.ttsType
   const languageCode = req.body.languageCode || 'ja-JP'
-
-  if (!guardServerSecretAccess(req, res, { featureName: 'tts-google' })) {
-    return
-  }
 
   try {
     // Check if GOOGLE_TTS_KEY exists
@@ -69,3 +63,5 @@ export default async function handler(
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/tts-google'], handler)

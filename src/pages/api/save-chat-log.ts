@@ -4,11 +4,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
 import { Message } from '@/features/messages/messages'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 // Supabaseクライアントの初期化
 let supabase: SupabaseClient | null = null
@@ -19,24 +16,7 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
   )
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('save-chat-log'))
-  }
-
-  if (!guardServerSecretAccess(req, res, { featureName: 'save-chat-log' })) {
-    return
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const {
       messages: newMessages,
@@ -147,6 +127,8 @@ export default async function handler(
     res.status(500).json({ message: 'Error saving chat log' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/save-chat-log'], handler)
 
 function getSafeLogFileName(fileName: unknown): string | null {
   if (typeof fileName !== 'string') return null

@@ -4,11 +4,10 @@ import fs from 'fs'
 import path from 'path'
 import { isRestrictedMode } from '@/utils/restrictedMode'
 import assetManifest from '@/constants/assetManifest.json'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (isRestrictedMode()) {
     return res.status(200).json(assetManifest.backgrounds)
   }
@@ -33,3 +32,8 @@ export default async function handler(
     res.status(500).json({ error: 'Failed to fetch background list' })
   }
 }
+
+export default withAccessPolicy(
+  routePolicies['/api/get-background-list'],
+  handler
+)

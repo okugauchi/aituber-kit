@@ -8,7 +8,8 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 /** Embeddingモデル名 */
 const EMBEDDING_MODEL = 'text-embedding-3-small'
@@ -29,18 +30,10 @@ interface EmbeddingError {
   code: 'INVALID_INPUT' | 'API_KEY_MISSING' | 'RATE_LIMITED' | 'API_ERROR'
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<EmbeddingResponse | EmbeddingError>
 ) {
-  // POSTメソッド以外は拒否
-  if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method not allowed',
-      code: 'INVALID_INPUT',
-    })
-  }
-
   const { text, apiKey } = req.body
 
   // textパラメータの検証
@@ -54,9 +47,6 @@ export default async function handler(
   // APIキーの取得（リクエスト > 環境変数の優先順位）
   const openaiKey =
     apiKey || process.env.OPENAI_EMBEDDING_KEY || process.env.OPENAI_API_KEY
-  const usesServerSecret =
-    !apiKey &&
-    Boolean(process.env.OPENAI_EMBEDDING_KEY || process.env.OPENAI_API_KEY)
 
   // APIキーの存在確認
   if (!openaiKey) {
@@ -64,13 +54,6 @@ export default async function handler(
       error: 'OpenAI API key is not configured',
       code: 'API_KEY_MISSING',
     })
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'embedding' })
-  ) {
-    return
   }
 
   try {
@@ -110,3 +93,5 @@ export default async function handler(
     })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/embedding'], handler)

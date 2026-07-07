@@ -10,6 +10,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
 import { isRestrictedMode } from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 interface MemoryFileInfo {
   filename: string
@@ -18,14 +20,7 @@ interface MemoryFileInfo {
   hasEmbeddings: boolean
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' })
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (isRestrictedMode()) {
     return res.status(200).json({ files: [] })
   }
@@ -86,3 +81,5 @@ export default async function handler(
     res.status(500).json({ message: 'Error listing memory files' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/memory-files'], handler)

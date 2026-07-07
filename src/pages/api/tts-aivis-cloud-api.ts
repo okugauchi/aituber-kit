@@ -1,7 +1,8 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: ArrayBuffer
@@ -63,10 +64,7 @@ function isValidApiKey(apiKey: string): boolean {
   return apiKey.startsWith('aivis_') && apiKey.length >= 20
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const {
     text,
     modelUuid,
@@ -84,16 +82,8 @@ export default async function handler(
   } = req.body
 
   const aivisCloudApiKey = apiKey || process.env.AIVIS_CLOUD_API_KEY
-  const usesServerSecret = !apiKey && Boolean(process.env.AIVIS_CLOUD_API_KEY)
   if (!aivisCloudApiKey) {
     return res.status(400).json({ error: 'API key is required' })
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'tts-aivis-cloud-api' })
-  ) {
-    return
   }
 
   if (!isValidApiKey(aivisCloudApiKey)) {
@@ -219,3 +209,8 @@ export default async function handler(
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }
+
+export default withAccessPolicy(
+  routePolicies['/api/tts-aivis-cloud-api'],
+  handler
+)

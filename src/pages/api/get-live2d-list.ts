@@ -8,6 +8,8 @@ import {
 } from '@/utils/live2dRestriction'
 import { isRestrictedMode } from '@/utils/restrictedMode'
 import assetManifest from '@/constants/assetManifest.json'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 interface Live2DModelInfo {
   path: string
@@ -16,10 +18,7 @@ interface Live2DModelInfo {
   motions: string[]
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isLive2DEnabled()) {
     return res.status(403).json(createLive2DRestrictionErrorResponse())
   }
@@ -77,3 +76,5 @@ export default async function handler(
     })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/get-live2d-list'], handler)

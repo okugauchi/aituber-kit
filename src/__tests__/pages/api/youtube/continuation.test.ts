@@ -83,7 +83,7 @@ describe('/api/youtube/continuation handler', () => {
 
     expect(res._getStatusCode()).toBe(405)
     expect(JSON.parse(res._getData())).toEqual({
-      error: 'Method Not Allowed',
+      error: 'Method not allowed',
     })
   })
 

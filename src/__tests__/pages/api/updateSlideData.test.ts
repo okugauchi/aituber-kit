@@ -71,7 +71,7 @@ describe('/api/updateSlideData', () => {
     await handler(req, res)
 
     expect(res._status).toBe(405)
-    expect(res._json).toEqual({ message: 'Method Not Allowed' })
+    expect(res._json).toEqual({ error: 'Method not allowed' })
   })
 
   it('should return 403 when restricted mode is active', async () => {

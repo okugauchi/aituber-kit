@@ -1,9 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 import {
   isAllowedConfiguredOrListedUrl,
   isHttpUrl,
 } from '@/lib/api-services/serverUrlGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: Buffer
@@ -24,9 +26,10 @@ const getLanguageCode = (selectLanguage: string): string => {
   }
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Data>,
+  gate: PolicyGate
 ) {
   const body = req.body // JSON.parse を削除
   const message = body.message
@@ -83,10 +86,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Server URL is not allowed' })
   }
 
-  if (
-    (usesServerSecret || isProtectedServerResource) &&
-    !guardServerSecretAccess(req, res, { featureName: 'stylebertvits2' })
-  ) {
+  if (!gate.guardServerSecret(usesServerSecret || isProtectedServerResource)) {
     return
   }
 
@@ -173,3 +173,5 @@ export default async function handler(
     res.status(500).json({ error: error.message })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/stylebertvits2'], handler)

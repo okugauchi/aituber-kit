@@ -59,10 +59,7 @@ describe('/api/ai/custom handler', () => {
     await handler(req as any, res as any)
 
     expect(res._getStatusCode()).toBe(405)
-    expect(res._getJSONData()).toEqual({
-      error: 'Method Not Allowed',
-      errorCode: 'METHOD_NOT_ALLOWED',
-    })
+    expect(res._getJSONData()).toEqual({ error: 'Method not allowed' })
   })
 
   it('rejects server-side custom API settings by default', async () => {
