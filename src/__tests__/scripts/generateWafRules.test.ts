@@ -27,14 +27,19 @@ type WafRule = {
 
 /**
  * ワークフローYAMLにハードコードされていた移行前のルール定義
- * （.github/workflows/apply-cloudflare-waf.yml の 2026-07-06 時点）
+ * （.github/workflows/apply-cloudflare-waf.yml の 2026-07-06 時点）を
+ * ベースラインとした期待値スナップショット。
+ *
+ * 移行後のポリシー追加は以下のみ（それ以外は移行時と完全等価であること）:
+ * - 2026-07-08 F3: `/api/ai/audio` を embed許可集合へ追加
+ *   （audioモードのサーバー中継ルート。docs/audio-mode-auth-design.md）
  */
 const LEGACY_RULES: WafRule[] = [
   {
     ref: 'aituberkit-nikechan-embed-skip',
     description: 'AITuberKit: allow embedded widget on nikechan.com',
     expression:
-      '(http.host in {"aituberkit.com" "www.aituberkit.com"} and ((http.referer contains "https://nikechan.com" and starts_with(http.request.uri.path, "/embed")) or ((http.referer contains "https://aituberkit.com/" or http.referer contains "https://www.aituberkit.com/") and (starts_with(http.request.uri.path, "/vrm/") or starts_with(http.request.uri.path, "/live2d/") or starts_with(http.request.uri.path, "/pngtuber/") or starts_with(http.request.uri.path, "/models/") or starts_with(http.request.uri.path, "/poses/") or ends_with(http.request.uri.path, ".vrma"))) or (http.request.method eq "POST" and (http.referer contains "https://aituberkit.com/embed" or http.referer contains "https://www.aituberkit.com/embed") and http.request.uri.path in {"/api/ai/custom" "/api/ai/vercel" "/api/tts-aivis-cloud-api" "/api/save-chat-log"})))',
+      '(http.host in {"aituberkit.com" "www.aituberkit.com"} and ((http.referer contains "https://nikechan.com" and starts_with(http.request.uri.path, "/embed")) or ((http.referer contains "https://aituberkit.com/" or http.referer contains "https://www.aituberkit.com/") and (starts_with(http.request.uri.path, "/vrm/") or starts_with(http.request.uri.path, "/live2d/") or starts_with(http.request.uri.path, "/pngtuber/") or starts_with(http.request.uri.path, "/models/") or starts_with(http.request.uri.path, "/poses/") or ends_with(http.request.uri.path, ".vrma"))) or (http.request.method eq "POST" and (http.referer contains "https://aituberkit.com/embed" or http.referer contains "https://www.aituberkit.com/embed") and http.request.uri.path in {"/api/ai/audio" "/api/ai/custom" "/api/ai/vercel" "/api/tts-aivis-cloud-api" "/api/save-chat-log"})))',
     action: 'skip',
     action_parameters: {
       ruleset: 'current',
