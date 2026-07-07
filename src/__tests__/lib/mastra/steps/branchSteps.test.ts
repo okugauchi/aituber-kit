@@ -10,53 +10,14 @@ import { generateNewTopicStep } from '@/lib/mastra/steps/generateNewTopic'
 import { buildSleepStep } from '@/lib/mastra/steps/buildSleep'
 import { buildContinueNoCommentStep } from '@/lib/mastra/steps/buildContinueNoComment'
 import { buildDoNothingStep } from '@/lib/mastra/steps/buildDoNothing'
+import {
+  baseExecuteParams,
+  buildEvaluateOutput,
+} from '../../../helpers/mastraTestUtils'
 
 const mockGenerateText = generateText as jest.MockedFunction<
   typeof generateText
 >
-
-const buildEvaluateOutput = (overrides: any = {}) => ({
-  shouldContinue: false,
-  hasComments: false,
-  newNoCommentCount: 1,
-  chatLog: [
-    { role: 'user', content: 'hello' },
-    { role: 'assistant', content: 'hi there' },
-  ],
-  systemPrompt: 'You are helpful.',
-  youtubeComments: [],
-  continuationCount: 0,
-  sleepMode: false,
-  ...overrides,
-})
-
-const mockRequestContext = {
-  all: {
-    languageModel: 'mock-model',
-    temperature: 1.0,
-    maxTokens: 4096,
-  },
-}
-
-const baseExecuteParams = {
-  requestContext: mockRequestContext,
-  mastra: {} as any,
-  runId: 'test-run',
-  workflowId: 'test',
-  resourceId: undefined,
-  state: undefined,
-  setState: jest.fn(),
-  retryCount: 0,
-  tracingContext: {} as any,
-  getInitData: jest.fn(),
-  getStepResult: jest.fn(),
-  suspend: jest.fn() as any,
-  bail: jest.fn() as any,
-  abort: jest.fn(),
-  engine: {} as any,
-  abortSignal: new AbortController().signal,
-  writer: {} as any,
-}
 
 describe('branch steps', () => {
   beforeEach(() => {

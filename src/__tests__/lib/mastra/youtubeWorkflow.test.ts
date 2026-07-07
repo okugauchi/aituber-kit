@@ -7,36 +7,21 @@ jest.mock('ai', () => ({
 // Import after mock
 import { RequestContext } from '@mastra/core/request-context'
 import { mastra } from '@/lib/mastra'
+import {
+  buildWorkflowInput as buildInput,
+  mockModelSettings,
+} from '../../helpers/mastraTestUtils'
 
 const mockGenerateText = generateText as jest.MockedFunction<
   typeof generateText
 >
-
-const buildInput = (overrides: any = {}) => ({
-  chatLog: [
-    { role: 'user', content: 'hello' },
-    { role: 'assistant', content: 'hi there' },
-  ],
-  systemPrompt: 'You are helpful.',
-  youtubeComments: [],
-  noCommentCount: 0,
-  continuationCount: 0,
-  sleepMode: false,
-  newTopicThreshold: 3,
-  sleepThreshold: 6,
-  ...overrides,
-})
 
 const runWorkflow = async (inputData: any) => {
   const workflow = mastra.getWorkflow('conversationWorkflow')
   const run = await workflow.createRun()
   return run.start({
     inputData,
-    requestContext: new RequestContext([
-      ['languageModel', 'mock-model'],
-      ['temperature', 1.0],
-      ['maxTokens', 4096],
-    ]),
+    requestContext: new RequestContext(Object.entries(mockModelSettings)),
   })
 }
 

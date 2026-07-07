@@ -6,6 +6,7 @@ import type React from 'react'
 import { usePresenceDetection } from '@/hooks/usePresenceDetection'
 import settingsStore from '@/features/stores/settings'
 import homeStore from '@/features/stores/home'
+import { applySettingsState } from '../helpers/settingsStoreMock'
 
 // Mock face-api.js - detectSingleFace returns a Promise that resolves to detection result
 const mockDetectSingleFace = jest.fn()
@@ -26,18 +27,10 @@ jest.mock(
 
 // Mock stores
 // 注意: モック実装はモジュールファクトリに埋め込まず、各テストのbeforeEachで
-// setupSettingsMock()により再設定する。jest.clearAllMocks()はmockImplementationを
-// リセットしないため、テスト内での実装上書きが後続テストへ漏れるのを防ぐ。
-jest.mock('@/features/stores/settings', () => {
-  const mockFn = jest.fn()
-  return {
-    __esModule: true,
-    default: Object.assign(mockFn, {
-      getState: jest.fn(),
-      setState: jest.fn(),
-    }),
-  }
-})
+// setupSettingsMock()により再設定する（詳細はsettingsStoreMock.ts参照）。
+jest.mock('@/features/stores/settings', () =>
+  require('../helpers/settingsStoreMock').createMockSettingsStore()
+)
 
 // Helper function to setup mock settings
 function setupSettingsMock(overrides = {}) {
@@ -61,14 +54,7 @@ function setupSettingsMock(overrides = {}) {
     presenceSelectedCameraId: '',
     ...overrides,
   }
-  const mockSettingsStore = settingsStore as unknown as jest.Mock & {
-    getState: jest.Mock
-  }
-  mockSettingsStore.mockImplementation(
-    (selector: (state: typeof defaultState) => unknown) =>
-      selector ? selector(defaultState) : defaultState
-  )
-  mockSettingsStore.getState.mockReturnValue(defaultState)
+  applySettingsState(settingsStore, defaultState)
 }
 
 jest.mock('@/features/stores/home', () => ({

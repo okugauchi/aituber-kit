@@ -4,30 +4,16 @@
 import { renderHook, act } from '@testing-library/react'
 import { useTheme } from '@/hooks/useTheme'
 import settingsStore from '@/features/stores/settings'
+import { applySettingsState } from '../helpers/settingsStoreMock'
 
 // Mock settings store
-jest.mock('@/features/stores/settings', () => {
-  const mockFn = jest.fn()
-  return {
-    __esModule: true,
-    default: Object.assign(mockFn, {
-      getState: jest.fn(),
-      setState: jest.fn(),
-    }),
-  }
-})
+jest.mock('@/features/stores/settings', () =>
+  require('../helpers/settingsStoreMock').createMockSettingsStore()
+)
 
 // Helper function to setup mock settings
 function setupSettingsMock(colorTheme = 'default') {
-  const state = { colorTheme }
-  const mockSettingsStore = settingsStore as unknown as jest.Mock & {
-    getState: jest.Mock
-  }
-  mockSettingsStore.mockImplementation(
-    (selector: (s: typeof state) => unknown) =>
-      selector ? selector(state) : state
-  )
-  mockSettingsStore.getState.mockReturnValue(state)
+  applySettingsState(settingsStore, { colorTheme })
 }
 
 describe('useTheme', () => {

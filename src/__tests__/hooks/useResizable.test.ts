@@ -2,25 +2,12 @@
  * @jest-environment jsdom
  */
 import { renderHook, act } from '@testing-library/react'
-import type React from 'react'
 import { useResizable } from '@/hooks/useResizable'
-
-// React.MouseEvent互換のモックイベントを生成
-const createReactMouseEvent = (clientX: number, clientY: number) =>
-  ({
-    clientX,
-    clientY,
-    preventDefault: jest.fn(),
-    stopPropagation: jest.fn(),
-  }) as unknown as React.MouseEvent
-
-const dispatchMouseMove = (clientX: number, clientY: number) => {
-  document.dispatchEvent(new MouseEvent('mousemove', { clientX, clientY }))
-}
-
-const dispatchMouseUp = () => {
-  document.dispatchEvent(new MouseEvent('mouseup'))
-}
+import {
+  createReactMouseEvent,
+  dispatchMouseMove,
+  dispatchMouseUp,
+} from '../helpers/mouseEventTestUtils'
 
 // リサイズを開始してマウス移動する共通ヘルパー
 const startResizeAndMove = (

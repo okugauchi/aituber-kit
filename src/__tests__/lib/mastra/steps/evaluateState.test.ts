@@ -6,33 +6,14 @@ jest.mock('ai', () => ({
 
 // Import after mock
 import { evaluateStateStep } from '@/lib/mastra/steps/evaluateState'
+import {
+  baseExecuteParams,
+  buildWorkflowInput as buildInput,
+} from '../../../helpers/mastraTestUtils'
 
 const mockGenerateText = generateText as jest.MockedFunction<
   typeof generateText
 >
-
-const buildInput = (overrides: any = {}) => ({
-  chatLog: [
-    { role: 'user', content: 'hello' },
-    { role: 'assistant', content: 'hi there' },
-  ],
-  systemPrompt: 'You are helpful.',
-  youtubeComments: [],
-  noCommentCount: 0,
-  continuationCount: 0,
-  sleepMode: false,
-  newTopicThreshold: 3,
-  sleepThreshold: 6,
-  ...overrides,
-})
-
-const mockRequestContext = {
-  all: {
-    languageModel: 'mock-model',
-    temperature: 1.0,
-    maxTokens: 4096,
-  },
-}
 
 describe('evaluateStateStep', () => {
   beforeEach(() => {
@@ -54,23 +35,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.hasComments).toBe(true)
@@ -86,23 +51,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.shouldContinue).toBe(false)
@@ -118,23 +67,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.shouldContinue).toBe(true)
@@ -146,23 +79,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.shouldContinue).toBe(false)
@@ -174,23 +91,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.shouldContinue).toBe(false)
@@ -206,23 +107,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.shouldContinue).toBe(false)
@@ -235,23 +120,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.shouldContinue).toBe(false)
@@ -263,23 +132,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.chatLog).toEqual(input.chatLog)
@@ -296,23 +149,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(mockGenerateText).not.toHaveBeenCalled()
@@ -329,23 +166,7 @@ describe('evaluateStateStep', () => {
 
     await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(mockGenerateText).toHaveBeenCalledWith(
@@ -368,23 +189,7 @@ describe('evaluateStateStep', () => {
 
     const result = await evaluateStateStep.execute({
       inputData: input,
-      requestContext: mockRequestContext,
-      mastra: {} as any,
-      runId: 'test-run',
-      workflowId: 'test',
-      resourceId: undefined,
-      state: undefined,
-      setState: jest.fn(),
-      retryCount: 0,
-      tracingContext: {} as any,
-      getInitData: jest.fn(),
-      getStepResult: jest.fn(),
-      suspend: jest.fn() as any,
-      bail: jest.fn() as any,
-      abort: jest.fn(),
-      engine: {} as any,
-      abortSignal: new AbortController().signal,
-      writer: {} as any,
+      ...baseExecuteParams,
     } as any)
 
     expect(result.promptContinuation).toBe('継続プロンプト')
