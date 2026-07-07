@@ -18,7 +18,11 @@ export const routePolicies = {
     featureName: 'ai/custom',
     methods: ['POST'],
     resources: ['server-secret', 'server-url'],
-    // env優先（CUSTOM_API_URL/HEADERS/BODY）の解決順のため宣言的に表現できない
+    // S18検討済み・dynamicのまま維持: usesServerSecretはクライアント値の
+    // 有無を問わずenv(CUSTOM_API_URL/HEADERS/BODY)の存在だけで決まる
+    // （env優先で上書きマージするため）。SecretPairは
+    // 「クライアント値が無い場合に限りenvを見る」という形しか表現できず、
+    // この「envが常に優先」という逆方向の解決順は表現不可能。
     secret: { kind: 'dynamic' },
     restrictedBehavior: 'none',
     waf: { challenge: true, embedAllowed: true },
@@ -92,9 +96,19 @@ export const routePolicies = {
     featureName: 'difyChat',
     methods: ['POST'],
     resources: ['server-secret', 'server-url'],
-    // apiKeyの解決が「クライアントURL不使用時のみ」に条件結合しているため
-    // pairs では表現できない（設計§4.1と同型の条件結合）
-    secret: { kind: 'dynamic' },
+    // S18: onlyIfAbsent（url未指定時のみ評価）でapiKey/urlの条件結合を宣言的に表現
+    secret: {
+      kind: 'pairs',
+      pairs: [
+        {
+          source: 'body',
+          key: 'apiKey',
+          envVars: ['DIFY_KEY', 'DIFY_API_KEY'],
+          onlyIfAbsent: { source: 'body', key: 'url' },
+        },
+        { source: 'body', key: 'url', envVars: ['DIFY_URL'] },
+      ],
+    },
     restrictedBehavior: 'none',
   },
   '/api/elevenLabs': {
@@ -249,8 +263,16 @@ export const routePolicies = {
     featureName: 'stylebertvits2',
     methods: ['POST'],
     resources: ['server-secret', 'server-url'],
-    // APIキー解決が「サーバー設定URL使用時のみ」に条件結合 + RunPod例外のため
-    // URL検証含めルート内の既存実装を維持
+    // S18検討済み・dynamicのまま維持: serverUrl/apiKeyのenv使用条件自体は
+    // onlyIfAbsentで pairs 化できるが、本ルートはRunPod例外を含む独自の
+    // URL解決（isAllowedConfiguredOrListedUrl呼び出し）をルート内で行っており
+    // serverUrlPolicy宣言を持たない。そのため usesServerSecret には
+    // isProtectedServerResource（URL検証結果）もORされる必要があるが、
+    // withAccessPolicy の pairs 分岐はこの値を resolvedServerUrl 経由でしか
+    // 合成できず、resolvedServerUrl は serverUrl 宣言がないと計算されない。
+    // pairs化するとこのOR項が失われ挙動が変わる（既存テスト
+    // 「guards client-provided local Style-Bert-VITS2 URLs by default」が
+    // 検証している境界）ため、dynamicのまま維持する。
     secret: { kind: 'dynamic' },
     restrictedBehavior: 'none',
   },
