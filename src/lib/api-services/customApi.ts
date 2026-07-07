@@ -19,21 +19,29 @@ function extractMimeTypeFromDataUrl(dataUrl: string): string | null {
   return mimeType
 }
 
+type MessageContentItem =
+  | { type: 'text'; text: string }
+  | { type: 'image'; image: string; mimeType?: string }
+
+type ProcessedMessage = Omit<Message, 'content'> & {
+  content?: Message['content'] | MessageContentItem[]
+}
+
 /**
  * メッセージ内の画像オブジェクトにmimeTypeを追加する
  * @param messages 処理するメッセージ配列
  * @returns mimeTypeが追加されたメッセージ配列
  */
-function processMessagesWithMimeType(messages: Message[]): any[] {
+function processMessagesWithMimeType(messages: Message[]): ProcessedMessage[] {
   return messages.map((message) => {
     if (
       message.content &&
       Array.isArray(message.content) &&
-      message.content.some((content: any) => content.type === 'image')
+      message.content.some((content) => content.type === 'image')
     ) {
       return {
         ...message,
-        content: message.content.map((content: any) => {
+        content: message.content.map((content): MessageContentItem => {
           if (content.type === 'image' && content.image) {
             const mimeType = extractMimeTypeFromDataUrl(content.image)
             return mimeType
@@ -175,7 +183,7 @@ export async function handleCustomApi(
   stream = true
 
   let parsedHeaders: Record<string, string> = {}
-  let parsedBody: Record<string, any> = {}
+  let parsedBody: Record<string, unknown> = {}
 
   try {
     parsedHeaders = normalizeParsedHeaders(JSON.parse(customApiHeaders))
