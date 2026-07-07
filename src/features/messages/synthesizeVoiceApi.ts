@@ -25,7 +25,7 @@ export async function synthesizeVoiceApi<T = ArrayBuffer>(
     if (!res.ok) {
       const message = options.buildErrorMessage
         ? await options.buildErrorMessage(res)
-        : `${serviceName}からの応答が異常です。ステータスコード: ${res.status}`
+        : `${serviceName} APIからの応答が異常です。ステータスコード: ${res.status}`
       throw new Error(message)
     }
 
