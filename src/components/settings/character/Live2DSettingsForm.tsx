@@ -13,17 +13,17 @@ const emotionFields = [
   {
     key: 'happyEmotions',
     label: 'Happy Emotions',
-    defaultValue: ['Happy,Happy2'],
+    defaultValue: ['Happy', 'Happy2'],
   },
   {
     key: 'sadEmotions',
     label: 'Sad Emotions',
-    defaultValue: ['Sad,Sad2,Troubled'],
+    defaultValue: ['Sad', 'Sad2', 'Troubled'],
   },
   {
     key: 'angryEmotions',
     label: 'Angry Emotions',
-    defaultValue: ['Angry,Focus'],
+    defaultValue: ['Angry', 'Focus'],
   },
   {
     key: 'relaxedEmotions',

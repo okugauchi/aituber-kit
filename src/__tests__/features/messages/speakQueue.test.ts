@@ -422,6 +422,28 @@ describe('SpeakQueue', () => {
       expect(goodCallback).toHaveBeenCalled()
     })
 
+    it('should skip idle reset if a callback starts another response', async () => {
+      const homeState = {
+        isSpeaking: false,
+        chatProcessing: false,
+        viewer: {
+          model: {
+            speak: mockModelSpeak,
+            stopSpeaking: mockModelStopSpeaking,
+            playEmotion: mockModelPlayEmotion,
+          },
+        },
+      }
+      mockHomeGetState.mockImplementation(() => homeState)
+      SpeakQueue.onSpeakCompletion(() => {
+        homeState.isSpeaking = true
+      })
+
+      await SpeakQueue.finalizeIfIdle()
+
+      expect(mockModelPlayEmotion).not.toHaveBeenCalled()
+    })
+
     it('should remove callback with removeSpeakCompletionCallback', async () => {
       const callback = jest.fn()
       SpeakQueue.onSpeakCompletion(callback)

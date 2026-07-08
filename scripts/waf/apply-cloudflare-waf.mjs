@@ -27,13 +27,16 @@ const api = async (path, options = {}) => {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
+    signal: AbortSignal.timeout(30_000),
   })
   const text = await response.text()
   const json = text ? JSON.parse(text) : {}
   if (!response.ok || json.success === false) {
-    throw new Error(
+    const httpError = new Error(
       `${options.method || 'GET'} ${path} failed: ${response.status} ${text}`
     )
+    httpError.status = response.status
+    throw httpError
   }
   return json
 }
@@ -57,7 +60,7 @@ try {
   )
   ruleset = current.result
 } catch (error) {
-  if (!String(error.message).includes('404')) {
+  if (error.status !== 404) {
     throw error
   }
 }

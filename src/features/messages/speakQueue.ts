@@ -129,18 +129,35 @@ export class SpeakQueue {
     ) {
       return
     }
-    instance.stopped = false
-    SpeakQueue.speakCompletionCallbacks.forEach((callback) => {
-      try {
-        callback()
-      } catch (error) {
-        logger.error(
-          '発話完了コールバックの実行中にエラーが発生しました:',
-          error
-        )
+
+    let shouldResumeQueue = false
+    instance.isProcessing = true
+    try {
+      instance.stopped = false
+      SpeakQueue.speakCompletionCallbacks.forEach((callback) => {
+        try {
+          callback()
+        } catch (error) {
+          logger.error(
+            '発話完了コールバックの実行中にエラーが発生しました:',
+            error
+          )
+        }
+      })
+
+      if (instance.queue.length > 0 || homeStore.getState().isSpeaking) {
+        shouldResumeQueue =
+          instance.queue.length > 0 && homeStore.getState().isSpeaking
+      } else {
+        await getCharacterRenderer()?.resetToIdle()
       }
-    })
-    await getCharacterRenderer()?.resetToIdle()
+    } finally {
+      instance.isProcessing = false
+    }
+
+    if (shouldResumeQueue) {
+      await instance.processQueue()
+    }
   }
 
   async addTask(task: SpeakTask) {

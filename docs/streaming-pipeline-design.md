@@ -201,13 +201,26 @@ reader駆動ループ。チャンクを `THINKING_MARKER` で分類し、thinkin
 public static async finalizeIfIdle(): Promise<void> {
   const q = SpeakQueue.getInstance()
   if (q.queue.length > 0 || q.isProcessing || homeStore.getState().isSpeaking) return
-  q.stopped = false
-  SpeakQueue.speakCompletionCallbacks.forEach(...)   // 既存の完了通知と同じ
-  await getCharacterRenderer()?.resetToIdle()
+  let shouldResumeQueue = false
+  q.isProcessing = true
+  try {
+    q.stopped = false
+    SpeakQueue.speakCompletionCallbacks.forEach(...)   // 既存の完了通知と同じ
+    if (q.queue.length > 0 || homeStore.getState().isSpeaking) {
+      shouldResumeQueue = q.queue.length > 0 && homeStore.getState().isSpeaking
+    } else {
+      await getCharacterRenderer()?.resetToIdle()
+    }
+  } finally {
+    q.isProcessing = false
+  }
+  if (shouldResumeQueue) {
+    await q.processQueue()
+  }
 }
 ```
 
-`processAIResponse` はストリーム終端で「dispatcherがdisabledになっていた（=停止で殺された）」場合に `finalizeIfIdle()` を呼ぶ。新しい応答が既に発話中の場合は `isSpeaking === true` でno-opになるため、C7（後述）のケースで誤発火しない。
+`processAIResponse` はストリーム終端で「dispatcherがdisabledになっていた（=停止で殺された）」場合に `finalizeIfIdle()` を呼ぶ。新しい応答が既に発話中の場合は `isSpeaking === true` でno-opになる。完了コールバック中に次の発話が積まれた場合も、`resetToIdle` 前に再チェックして表情リセットを避け、直列化を解除したあとキュー処理へ戻すため、C7（後述）のケースで誤発火しない。
 
 ### 5.5 思考ポーズと chatProcessing（レビューF11対応 — 現行踏襲の明文化）
 

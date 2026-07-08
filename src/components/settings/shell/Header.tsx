@@ -32,8 +32,12 @@ export const Header = ({ onClickClose }: HeaderProps) => {
   const kioskModeEnabled = settingsStore((s) => s.kioskModeEnabled)
   const gameCommentaryEnabled = settingsStore((s) => s.gameCommentaryEnabled)
   const modeItems: ModeStatusItem[] = [
-    { label: 'YouTube', active: youtubeMode, tab: 'youtube' },
-    { label: 'Realtime API', active: realtimeAPIMode, tab: 'ai' },
+    { label: t('SettingsModeYoutube'), active: youtubeMode, tab: 'youtube' },
+    {
+      label: t('SettingsModeRealtimeAPI'),
+      active: realtimeAPIMode,
+      tab: 'ai',
+    },
     { label: t('SettingsModeVoiceChat'), active: audioMode, tab: 'ai' },
     { label: t('SettingsModeSlides'), active: slideMode, tab: 'slide' },
     {
@@ -263,7 +267,8 @@ const ModeStatusSummary = ({
   const { t } = useTranslation()
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const activeItems = items.filter((item) => item.active)
-  const summaryLabel = activeItems.length === 0 ? t('SettingsModeAllOff') : 'ON'
+  const summaryLabel =
+    activeItems.length === 0 ? t('SettingsModeAllOff') : t('SettingsModeOn')
   const modeLabel = t('SettingsModeModes')
   const detailLabel =
     activeItems.length === 0
@@ -312,7 +317,7 @@ const ModeStatusSummary = ({
                     : 'bg-text-primary/10 text-text-primary'
                 }`}
               >
-                {item.active ? 'ON' : 'OFF'}
+                {item.active ? t('SettingsModeOn') : t('SettingsModeOff')}
               </span>
             </button>
           ))}

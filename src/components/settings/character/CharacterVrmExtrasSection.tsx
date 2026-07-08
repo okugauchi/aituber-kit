@@ -26,10 +26,10 @@ export const CharacterVrmExtrasSection = ({
     <>
       {/* VRM Lighting Controls */}
       <div className="my-6">
-        <div className="text-xl font-bold mb-4">照明の強度</div>
-        <div className="mb-4">VRMキャラクターの照明の明るさを調整します。</div>
+        <div className="text-xl font-bold mb-4">{t('LightingIntensity')}</div>
+        <div className="mb-4">{t('LightingIntensityDescription')}</div>
         <div className="font-bold">
-          照明の強度: {lightingIntensity.toFixed(1)}
+          {t('LightingIntensity')}: {lightingIntensity.toFixed(1)}
         </div>
         <input
           type="range"
@@ -84,10 +84,8 @@ export const CharacterVrmExtrasSection = ({
       </div>
 
       <div className="my-6">
-        <div className="text-xl font-bold mb-4">ポーズ角度調整</div>
-        <div className="mb-4 text-sm">
-          ONにすると画面上にポーズ調整UIが表示されます。ポーズごとのY軸回転を微調整できます。
-        </div>
+        <div className="text-xl font-bold mb-4">{t('PoseAdjustMode')}</div>
+        <div className="mb-4 text-sm">{t('PoseAdjustModeDescription')}</div>
         <ToggleSwitch
           enabled={poseAdjustMode}
           onChange={(v) => settingsStore.setState({ poseAdjustMode: v })}
