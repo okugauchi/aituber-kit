@@ -12,7 +12,18 @@
  */
 export type SegmenterEvent =
   | { kind: 'display'; text: string }
-  | { kind: 'speech'; text: string; emotionTag: string; motionTag?: string }
+  | {
+      kind: 'speech'
+      text: string
+      emotionTag: string
+      motionTag?: string
+      /**
+       * このイベントの文の直前にタグが明示的に出現したか。
+       * falseなら持ち越し（C4）によるタグ。正規化表示
+       * （NormalizedMessageLogWriter）はtrueの場合のみタグを表示に含める。
+       */
+      emotionTagExplicit?: boolean
+    }
   | { kind: 'code'; content: string }
 
 export type SpeechEvent = Extract<SegmenterEvent, { kind: 'speech' }>

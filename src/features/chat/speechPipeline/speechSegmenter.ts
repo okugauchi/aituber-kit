@@ -28,6 +28,9 @@ export class SpeechSegmenter {
   private codeBuffer = ''
   private emotionTag = ''
   private motionTag = ''
+  // 直近に明示的なタグが出現し、まだ文として発話されていない状態か
+  // （正規化表示でのタグ重複防止用。types.tsのemotionTagExplicit参照）
+  private tagExplicitPending = false
   // コードブロック開始直後の言語指定行（```js 等）の除去待ちフラグ
   private awaitingLangLine = false
 
@@ -63,6 +66,7 @@ export class SpeechSegmenter {
     }
     this.emotionTag = ''
     this.motionTag = ''
+    this.tagExplicitPending = false
     return events
   }
 
@@ -134,6 +138,7 @@ export class SpeechSegmenter {
     // コードブロック境界でタグ持ち越しをリセット（現行踏襲）
     this.emotionTag = ''
     this.motionTag = ''
+    this.tagExplicitPending = false
     return rest
   }
 
@@ -152,7 +157,10 @@ export class SpeechSegmenter {
       const { emotionTag, remainingText: afterEmotion } = extractEmotion(
         this.speechBuffer
       )
-      if (emotionTag) this.emotionTag = emotionTag
+      if (emotionTag) {
+        this.emotionTag = emotionTag
+        this.tagExplicitPending = true
+      }
       const { motionTag, remainingText: afterMotion } =
         extractMotionTag(afterEmotion)
       if (motionTag) this.motionTag = motionTag
@@ -194,6 +202,8 @@ export class SpeechSegmenter {
       text,
       emotionTag: this.emotionTag,
       motionTag: this.motionTag || undefined,
+      emotionTagExplicit: this.tagExplicitPending,
     })
+    this.tagExplicitPending = false
   }
 }

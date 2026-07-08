@@ -248,6 +248,36 @@ describe('openAIAudioChat', () => {
       expect(bufferManagerInstance.flush).toHaveBeenCalled()
     })
 
+    it('ストリーム途中のエラーはストリームのエラーとして伝播する', async () => {
+      let sent = false
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (!sent) {
+            sent = true
+            controller.enqueue(
+              new TextEncoder().encode(
+                JSON.stringify({ transcript: '途中まで' }) + '\n'
+              )
+            )
+          } else {
+            controller.error(new Error('upstream disconnected'))
+          }
+        },
+      })
+      mockFetch.mockResolvedValue({ ok: true, status: 200, body })
+
+      const originalConsoleError = console.error
+      console.error = jest.fn()
+
+      const stream = await getOpenAIAudioChatResponseStream(testMessages)
+      const reader = stream.getReader()
+      const { value } = await reader.read()
+      expect(value).toBe('途中まで')
+      await expect(reader.read()).rejects.toThrow('upstream disconnected')
+
+      console.error = originalConsoleError
+    })
+
     it('チャンク境界で分割されたNDJSON行を結合して処理する', async () => {
       const encoder = new TextEncoder()
       const line = JSON.stringify({ transcript: '分割された行' }) + '\n'

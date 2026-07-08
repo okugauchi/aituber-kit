@@ -89,6 +89,15 @@ describe('SpeechSegmenter', () => {
       expect(all[1].kind === 'speech' && all[1].emotionTag).toBe('[happy]')
     })
 
+    it('明示タグの文のみemotionTagExplicitがtrueになる', () => {
+      const seg = new SpeechSegmenter()
+      const events = seg.push('[happy]一文目。二文目。[sad]三文目。')
+      const all = speeches(events)
+      expect(
+        all.map((e) => e.kind === 'speech' && e.emotionTagExplicit)
+      ).toEqual([true, false, true])
+    })
+
     it('改行を跨ぐとタグの持ち越しがリセットされる', () => {
       const seg = new SpeechSegmenter()
       const events = [...seg.push('[happy]一文目。\n二文目。'), ...seg.flush()]

@@ -172,6 +172,25 @@ describe('キャンセレーション契約（設計§6）', () => {
     expect(sessionIds[0]).not.toBe(sessionIds[1])
   })
 
+  it('6-3: 自セッションへのstopSessionで以後speakCharacterは呼ばれない', async () => {
+    await runWithStream([
+      '一文目です。',
+      () => {
+        // このセッションのsessionIdは最初のspeakCharacter呼び出しから取得する
+        const ownSessionId = (speakCharacter as jest.Mock).mock.calls[0][0]
+        SpeakQueue.getInstance().checkSessionId(ownSessionId)
+        SpeakQueue.stopSession(ownSessionId)
+      },
+      '二文目です。',
+      '三文目です。',
+    ])
+
+    expect(speakCharacter).toHaveBeenCalledTimes(1)
+    expect((speakCharacter as jest.Mock).mock.calls[0][1].message).toBe(
+      '一文目です。'
+    )
+  })
+
   it('6-4: 他セッションへのstopSessionでは発話を継続する', async () => {
     await runWithStream([
       '一文目です。',

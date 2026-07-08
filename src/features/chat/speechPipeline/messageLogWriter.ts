@@ -98,9 +98,10 @@ export class NormalizedMessageLogWriter {
   }
 
   private appendSpeech(event: SpeechEvent) {
-    const aiText = event.emotionTag
-      ? `${event.emotionTag} ${event.text}`
-      : event.text
+    // 持ち越し（C4）による暗黙タグは表示に含めない。タグが文頭に
+    // 明示的に現れた文のみプレフィックスする（旧speakMessageHandlerと同形式）
+    const showTag = event.emotionTag && event.emotionTagExplicit
+    const aiText = showTag ? `${event.emotionTag} ${event.text}` : event.text
     this.accumulated += aiText + ' '
   }
 

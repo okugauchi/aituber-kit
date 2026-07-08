@@ -113,13 +113,18 @@ export async function getOpenAIAudioChatResponseStream(
               }
             }
             if (done) {
+              pending += decoder.decode()
               processLine(pending)
               break
             }
           }
         } catch (error) {
+          // abort（旧実装のbreak相当）は正常終了扱い。それ以外の途中エラーは
+          // ストリームをエラーで終端し、消費側に失敗として伝播させる
           if (!options.signal?.aborted) {
             logger.error('OpenAI Audio API stream error:', error)
+            controller.error(error)
+            return
           }
         } finally {
           upstreamReader.releaseLock()

@@ -98,6 +98,7 @@ describe('NormalizedMessageLogWriter（speakMessageHandler表示）', () => {
       kind: 'speech',
       text: 'こんにちは。',
       emotionTag: '[happy]',
+      emotionTagExplicit: true,
     })
     writer.handleEvent({ kind: 'speech', text: '元気？', emotionTag: '' })
     writer.finalize()
@@ -106,6 +107,30 @@ describe('NormalizedMessageLogWriter（speakMessageHandler表示）', () => {
     const msg = upsert.mock.calls[0][0] as Message
     expect(msg.content).toBe('[happy] こんにちは。 元気？')
     expect(msg.role).toBe('assistant')
+  })
+
+  it('持ち越しによる暗黙タグは表示にプレフィックスしない（明示タグのみ）', () => {
+    const upsert = jest.fn()
+    const writer = new NormalizedMessageLogWriter(upsert)
+
+    // 実segmenterが「[happy]一文目。二文目。」から生成するイベント列を模す:
+    // 二文目のタグは持ち越し（emotionTagExplicit: false）
+    writer.handleEvent({
+      kind: 'speech',
+      text: '一文目。',
+      emotionTag: '[happy]',
+      emotionTagExplicit: true,
+    })
+    writer.handleEvent({
+      kind: 'speech',
+      text: '二文目。',
+      emotionTag: '[happy]',
+      emotionTagExplicit: false,
+    })
+    writer.finalize()
+
+    const msg = upsert.mock.calls[0][0] as Message
+    expect(msg.content).toBe('[happy] 一文目。 二文目。')
   })
 
   it('モーションタグは表示に含めない（現行踏襲）', () => {
