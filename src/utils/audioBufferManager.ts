@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 export type SendCallback = (buffer: ArrayBuffer) => Promise<void>
 
 export class AudioBufferManager {
@@ -18,7 +20,7 @@ export class AudioBufferManager {
   }
 
   addData(newData: ArrayBuffer): void {
-    console.log('Adding data to buffer:', newData.byteLength)
+    logger.log('Adding data to buffer:', newData.byteLength)
     this.buffer = this.mergeArrayBuffers(this.buffer, newData)
     if (this.buffer.byteLength >= this.BUFFER_THRESHOLD) {
       this.sendBuffer()
@@ -48,7 +50,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 
   const arrayBuffer = bytes.buffer
   if (!validateAudioBuffer(arrayBuffer)) {
-    console.error('Invalid audio buffer')
+    logger.error('Invalid audio buffer')
     return new ArrayBuffer(0)
   }
 
@@ -57,12 +59,12 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 
 export function validateAudioBuffer(buffer: ArrayBuffer): boolean {
   if (buffer.byteLength < 1024 || buffer.byteLength > 1024 * 1024) {
-    console.error(`Invalid buffer size: ${buffer.byteLength} bytes`)
+    logger.error(`Invalid buffer size: ${buffer.byteLength} bytes`)
     return false
   }
 
   if (buffer.byteLength % 2 !== 0) {
-    console.error('Buffer size is not even, which is required for 16-bit PCM')
+    logger.error('Buffer size is not even, which is required for 16-bit PCM')
     return false
   }
 
@@ -71,7 +73,7 @@ export function validateAudioBuffer(buffer: ArrayBuffer): boolean {
     (value) => value >= -32768 && value <= 32767
   )
   if (!isInValidRange) {
-    console.error(
+    logger.error(
       'Audio data contains values outside the valid range for 16-bit PCM'
     )
     return false

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
 import { ReactNode, useEffect, useState } from 'react'
@@ -140,7 +141,7 @@ const QuickStart = () => {
           Array.isArray(data) ? data.filter(isSpeakerOption) : []
         )
       } catch (error) {
-        console.error('Failed to fetch AIVIS speakers:', error)
+        logger.error('Failed to fetch AIVIS speakers:', error)
         setAivisSpeakers([])
       }
     }

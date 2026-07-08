@@ -79,7 +79,7 @@ describe('/api/save-chat-log', () => {
     await handler(req, res)
 
     expect(res._status).toBe(405)
-    expect(res._json).toEqual({ message: 'Method not allowed' })
+    expect(res._json).toEqual({ error: 'Method not allowed' })
   })
 
   it('should return 403 when restricted mode is active', async () => {

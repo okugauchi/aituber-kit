@@ -1,15 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
-import {
   MessageType,
   cleanupClientQueues,
   dequeueMessages,
   enqueueMessages,
 } from '@/features/api/messageGateway'
 import { normalizeImage } from '@/features/api/http'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 export const config = {
   api: {
@@ -20,10 +18,6 @@ export const config = {
 }
 
 const handler = (req: NextApiRequest, res: NextApiResponse) => {
-  if (isRestrictedMode()) {
-    return res.status(403).json(createRestrictedModeErrorResponse('messages'))
-  }
-
   const clientId = req.query.clientId as string
   const type = (req.query.type as MessageType) || 'direct_send'
   const allowedTypes: MessageType[] = [
@@ -76,13 +70,11 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     })
 
     res.status(201).json({ message: 'Successfully sent' })
-  } else if (req.method === 'GET') {
+  } else {
     const newMessages = dequeueMessages(clientId)
 
     res.status(200).json({ messages: newMessages })
-  } else {
-    res.status(405).json({ error: 'Method not allowed' })
   }
 }
 
-export default handler
+export default withAccessPolicy(routePolicies['/api/messages'], handler)

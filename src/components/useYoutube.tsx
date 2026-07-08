@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useCallback, useEffect, useRef } from 'react'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
@@ -67,13 +68,13 @@ const useYoutube = ({ handleSendChat }: Params): UseYoutubeReturn => {
       if (ss.youtubeCommentSource === 'youtube-api') {
         // YouTube APIモード: 従来通り
         if (!ss.youtubeLiveId || !ss.youtubeApiKey) return
-        console.log('Call fetchAndProcessComments !!!')
+        logger.log('Call fetchAndProcessComments !!!')
         await fetchAndProcessComments(handleSendChatRef.current)
       } else {
         // わんコメモード: バッファをドレインして渡す
         const bufferedComments = [...commentBufferRef.current]
         commentBufferRef.current = []
-        console.log(
+        logger.log(
           'Call fetchAndProcessComments (OneComme) !!!',
           'buffered:',
           bufferedComments.length

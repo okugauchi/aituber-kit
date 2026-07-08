@@ -1,19 +1,19 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
-import {
-  isAllowedConfiguredOrListedUrl,
-  isHttpUrl,
-} from '@/lib/api-services/serverUrlGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: ArrayBuffer
   error?: string
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Data>,
+  gate: PolicyGate
 ) {
   const {
     text,
@@ -21,41 +21,11 @@ export default async function handler(
     speed,
     pitch,
     intonationScale,
-    serverUrl,
     tempoDynamics = 1.0,
     prePhonemeLength = 0.1,
     postPhonemeLength = 0.1,
   } = req.body
-  const configuredApiUrl =
-    process.env.AIVIS_SPEECH_SERVER_URL || 'http://localhost:10101'
-  const apiUrl = serverUrl || configuredApiUrl
-
-  let parsedUrl: URL
-  let configuredUrl: URL
-  try {
-    parsedUrl = new URL(apiUrl)
-    configuredUrl = new URL(configuredApiUrl)
-  } catch {
-    return res.status(400).json({ error: 'Invalid server URL' })
-  }
-
-  if (!isHttpUrl(parsedUrl)) {
-    return res.status(400).json({ error: 'Invalid server URL protocol' })
-  }
-
-  const { isProtectedServerResource, isAllowedPublicUrl } =
-    isAllowedConfiguredOrListedUrl(parsedUrl, configuredUrl)
-
-  if (serverUrl && !isProtectedServerResource && !isAllowedPublicUrl) {
-    return res.status(400).json({ error: 'Server URL is not allowed' })
-  }
-
-  if (
-    (!serverUrl || isProtectedServerResource) &&
-    !guardServerSecretAccess(req, res, { featureName: 'tts-aivisspeech' })
-  ) {
-    return
-  }
+  const apiUrl = gate.serverUrl!.raw
 
   try {
     // 1. Audio Query の生成
@@ -95,7 +65,9 @@ export default async function handler(
     res.setHeader('Content-Type', 'audio/wav')
     res.end(Buffer.from(synthesisResponse.data))
   } catch (error) {
-    console.error('Error in AivisSpeech TTS:', error)
+    logger.error('Error in AivisSpeech TTS:', error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/tts-aivisspeech'], handler)

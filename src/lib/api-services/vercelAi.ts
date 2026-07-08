@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Message } from '@/features/messages/messages'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -187,8 +188,8 @@ export async function streamAiText({
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
-    console.error(`Vercel AI Stream Error: ${errorMessage}`)
-    console.error(`Model: ${model}, Temperature: ${temperature}`)
+    logger.error(`Vercel AI Stream Error: ${errorMessage}`)
+    logger.error(`Model: ${model}, Temperature: ${temperature}`)
 
     return new Response(
       JSON.stringify({
@@ -245,8 +246,8 @@ export async function generateAiText({
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
-    console.error(`Vercel AI Generate Error: ${errorMessage}`)
-    console.error(`Model: ${model}, Temperature: ${temperature}`)
+    logger.error(`Vercel AI Generate Error: ${errorMessage}`)
+    logger.error(`Model: ${model}, Temperature: ${temperature}`)
 
     return new Response(
       JSON.stringify({

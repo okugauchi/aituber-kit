@@ -5,6 +5,7 @@
  * Requirements: 4.1, 5.3, 6.1
  */
 
+import { logger } from '@/lib/logger'
 import { useIdleMode } from '@/hooks/useIdleMode'
 import { useTranslation } from 'react-i18next'
 
@@ -14,17 +15,17 @@ function IdleManager(): JSX.Element | null {
   const { isIdleActive, idleState, secondsUntilNextSpeech } = useIdleMode({
     onIdleSpeechStart: (phrase) => {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[IdleManager] Idle speech started:', phrase.text)
+        logger.log('[IdleManager] Idle speech started:', phrase.text)
       }
     },
     onIdleSpeechComplete: () => {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[IdleManager] Idle speech completed')
+        logger.log('[IdleManager] Idle speech completed')
       }
     },
     onIdleSpeechInterrupted: () => {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[IdleManager] Idle speech interrupted')
+        logger.log('[IdleManager] Idle speech interrupted')
       }
     },
   })

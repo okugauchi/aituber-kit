@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { getVoiceLanguageCode } from '@/utils/voiceLanguage'
 import settingsStore from '@/features/stores/settings'
@@ -65,16 +66,14 @@ export function useBrowserSpeechRecognition(
   // ----- 音声未検出時の停止処理を実行する共通関数 (Requirement 5.1) -----
   const handleNoSpeechTimeout = useCallback(
     async (stopListeningFn: () => Promise<void>) => {
-      console.log(
+      logger.log(
         `⏱️ ${initialSpeechTimeout}秒間音声が検出されませんでした。音声認識を停止します。`
       )
       await stopListeningFn()
 
       // 常時マイク入力モードをオフに設定
       if (settingsStore.getState().continuousMicListeningMode) {
-        console.log(
-          '🔇 音声未検出により常時マイク入力モードをOFFに設定します。'
-        )
+        logger.log('🔇 音声未検出により常時マイク入力モードをOFFに設定します。')
         settingsStore.setState({ continuousMicListeningMode: false })
       }
 
@@ -126,7 +125,7 @@ export function useBrowserSpeechRecognition(
     try {
       recognition.stop()
     } catch (error) {
-      console.error('Error stopping recognition:', error)
+      logger.error('Error stopping recognition:', error)
     }
 
     // キーボードトリガーの場合の処理
@@ -168,7 +167,7 @@ export function useBrowserSpeechRecognition(
       return true
     } catch (error) {
       // ユーザーが明示的に拒否した場合や、その他のエラーの場合
-      console.error('Microphone permission error:', error)
+      logger.error('Microphone permission error:', error)
       toastStore.getState().addToast({
         message: t('Toasts.MicrophonePermissionDenied'),
         type: 'error',
@@ -182,7 +181,7 @@ export function useBrowserSpeechRecognition(
   const startListening = useCallback(async () => {
     // 排他制御: 既に開始処理中の場合は何もしない
     if (isStartingRef.current) {
-      console.log('Recognition start already in progress, skipping')
+      logger.log('Recognition start already in progress, skipping')
       return
     }
     isStartingRef.current = true
@@ -218,7 +217,7 @@ export function useBrowserSpeechRecognition(
 
           timeoutId = setTimeout(() => {
             recognition.removeEventListener('end', onEndHandler)
-            console.log('Recognition stop timeout, forcing resolve')
+            logger.log('Recognition stop timeout, forcing resolve')
             resolve()
           }, 500) // 500ms でタイムアウト
 
@@ -243,7 +242,7 @@ export function useBrowserSpeechRecognition(
       try {
         // 音声認識がまだ動作中の場合は、onendを待つ
         if (recognitionActiveRef.current) {
-          console.log('Recognition still active, waiting for onend...')
+          logger.log('Recognition still active, waiting for onend...')
           await new Promise<void>((resolve) => {
             let timeoutId: NodeJS.Timeout
             const onEndHandler = () => {
@@ -253,7 +252,7 @@ export function useBrowserSpeechRecognition(
             }
             timeoutId = setTimeout(() => {
               recognition.removeEventListener('end', onEndHandler)
-              console.log('Recognition active wait timeout, forcing resolve')
+              logger.log('Recognition active wait timeout, forcing resolve')
               resolve()
             }, 500)
             recognition.addEventListener('end', onEndHandler)
@@ -261,25 +260,25 @@ export function useBrowserSpeechRecognition(
         }
 
         recognition.start()
-        console.log('Recognition started successfully')
+        logger.log('Recognition started successfully')
         // リスニング状態を更新
         isListeningRef.current = true
         setIsListening(true)
       } catch (error) {
-        console.error('Error starting recognition:', error)
+        logger.error('Error starting recognition:', error)
 
         // InvalidStateErrorの場合は、既に開始されているとみなす
         if (
           error instanceof DOMException &&
           error.name === 'InvalidStateError'
         ) {
-          console.log('Recognition is already running, skipping retry')
+          logger.log('Recognition is already running, skipping retry')
           // 既に実行中なので、リスニング状態を更新する
           isListeningRef.current = true
           setIsListening(true)
 
           // onstart イベントハンドラと同様の処理を手動で実行
-          console.log('Speech recognition started (manually triggered)')
+          logger.log('Speech recognition started (manually triggered)')
           recognitionStartTimeRef.current = Date.now()
           speechDetectedRef.current = false
 
@@ -299,7 +298,7 @@ export function useBrowserSpeechRecognition(
                   // 停止後に短い遅延
                   setTimeout(() => {
                     recognition.start()
-                    console.log('Recognition started on retry')
+                    logger.log('Recognition started on retry')
                     isListeningRef.current = true
                     setIsListening(true)
                   }, 100)
@@ -307,11 +306,11 @@ export function useBrowserSpeechRecognition(
                   // 停止できなかった場合は直接スタート
                   try {
                     recognition.start()
-                    console.log('Recognition started on retry without stopping')
+                    logger.log('Recognition started on retry without stopping')
                     isListeningRef.current = true
                     setIsListening(true)
                   } catch (startError) {
-                    console.error(
+                    logger.error(
                       'Failed to start recognition on retry:',
                       startError
                     )
@@ -321,7 +320,7 @@ export function useBrowserSpeechRecognition(
                 }
               }
             } catch (retryError) {
-              console.error('Failed to start recognition on retry:', retryError)
+              logger.error('Failed to start recognition on retry:', retryError)
               isListeningRef.current = false
               setIsListening(false)
               return
@@ -378,7 +377,7 @@ export function useBrowserSpeechRecognition(
       window.SpeechRecognition || window.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      console.error('Speech Recognition API is not supported in this browser')
+      logger.error('Speech Recognition API is not supported in this browser')
       toastStore.getState().addToast({
         message: t('Toasts.SpeechRecognitionNotSupported'),
         type: 'error',
@@ -396,7 +395,7 @@ export function useBrowserSpeechRecognition(
 
     // 音声認識開始時
     newRecognition.onstart = () => {
-      console.log('Speech recognition started')
+      logger.log('Speech recognition started')
       recognitionStartTimeRef.current = Date.now()
       speechDetectedRef.current = false
       // 音声認識が実際に動作中であることを記録
@@ -411,7 +410,7 @@ export function useBrowserSpeechRecognition(
 
     // 音声入力検出時
     newRecognition.onspeechstart = () => {
-      console.log('🗣️ 音声入力を検出しました（onspeechstart）')
+      logger.log('🗣️ 音声入力を検出しました（onspeechstart）')
       // ここではタイマーをリセットするだけで、speechDetectedRefは設定しない
       updateSpeechTimestamp()
     }
@@ -433,11 +432,11 @@ export function useBrowserSpeechRecognition(
       lastTranscriptLength = transcript.trim().length
 
       if (isSignificantChange) {
-        console.log('🎤 有意な音声を検出しました（トランスクリプト変更あり）')
+        logger.log('🎤 有意な音声を検出しました（トランスクリプト変更あり）')
         updateSpeechTimestamp()
         speechDetectedRef.current = true
       } else {
-        console.log(
+        logger.log(
           '🔇 バックグラウンドノイズを無視します（トランスクリプト変更なし）'
         )
       }
@@ -448,14 +447,14 @@ export function useBrowserSpeechRecognition(
 
     // 音声入力終了時
     newRecognition.onspeechend = () => {
-      console.log(
+      logger.log(
         '🛑 音声入力が終了しました（onspeechend）。無音検出タイマーが動作中です。'
       )
     }
 
     // 音声認識終了時
     newRecognition.onend = () => {
-      console.log('Recognition ended')
+      logger.log('Recognition ended')
       // 音声認識が停止したことを記録
       recognitionActiveRef.current = false
       clearSilenceDetection()
@@ -463,7 +462,7 @@ export function useBrowserSpeechRecognition(
 
       // isListeningRef.currentがtrueの場合は再開
       if (isListeningRef.current) {
-        console.log('Restarting speech recognition...')
+        logger.log('Restarting speech recognition...')
         // 再起動タイマーをrefに保存して追跡 (競合状態防止)
         restartTimeoutRef.current = setTimeout(() => {
           // setTimeout実行時に再度状態を確認 (競合状態防止)
@@ -477,7 +476,7 @@ export function useBrowserSpeechRecognition(
 
     // 音声認識エラー時
     newRecognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error)
+      logger.error('Speech recognition error:', event.error)
 
       // no-speechエラーの場合
       if (event.error === 'no-speech' && isListeningRef.current) {
@@ -486,7 +485,7 @@ export function useBrowserSpeechRecognition(
           // 認識開始からの経過時間を計算
           const elapsedTime =
             (Date.now() - recognitionStartTimeRef.current) / 1000
-          console.log(
+          logger.log(
             `音声未検出の累積時間: ${elapsedTime.toFixed(1)}秒 / 設定: ${initialSpeechTimeout}秒`
           )
 
@@ -508,10 +507,10 @@ export function useBrowserSpeechRecognition(
           (settingsStore.getState().continuousMicListeningMode ||
             isKeyboardTriggered.current)
         ) {
-          console.log('No speech detected, will restart via onend handler...')
+          logger.log('No speech detected, will restart via onend handler...')
           // onendハンドラが自動的に再起動する
         } else {
-          console.log(
+          logger.log(
             '音声認識の再起動をスキップします（常時マイクモードがオフまたは他の条件を満たさない）'
           )
           isListeningRef.current = false
@@ -545,7 +544,7 @@ export function useBrowserSpeechRecognition(
           newRecognition.abort()
         }
       } catch (error) {
-        console.error('Error cleaning up speech recognition:', error)
+        logger.error('Error cleaning up speech recognition:', error)
       }
       clearSilenceDetection()
       clearInitialSpeechCheckTimer()

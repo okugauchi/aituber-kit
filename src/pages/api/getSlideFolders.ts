@@ -1,10 +1,13 @@
+import { logger } from '@/lib/logger'
 import fs from 'fs'
 import path from 'path'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { isRestrictedMode } from '@/utils/restrictedMode'
 import assetManifest from '@/constants/assetManifest.json'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+function handler(req: NextApiRequest, res: NextApiResponse) {
   if (isRestrictedMode()) {
     return res.status(200).json(assetManifest.slides.folders)
   }
@@ -27,7 +30,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
     res.status(200).json(folders)
   } catch (error) {
-    console.error('Error reading slides directory:', error)
+    logger.error('Error reading slides directory:', error)
     res.status(500).json({ error: 'Unable to read slides directory' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/getSlideFolders'], handler)

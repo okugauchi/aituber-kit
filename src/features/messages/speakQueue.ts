@@ -1,8 +1,7 @@
+import { logger } from '@/lib/logger'
 import { Talk } from './messages'
 import homeStore from '@/features/stores/home'
-import settingsStore from '@/features/stores/settings'
-import { Live2DHandler } from './live2dHandler'
-import { PNGTuberHandler } from '@/features/pngTuber/pngTuberHandler'
+import { getCharacterRenderer } from './characterRenderer'
 
 type SpeakTask = {
   sessionId: string
@@ -21,9 +20,17 @@ export class SpeakQueue {
   private static _instance: SpeakQueue | null = null
   private stopped = false
   private static stopTokenCounter = 0
+  // 直近の停止の対象範囲（'all' = 全体停止 / それ以外 = 対象セッションID）。
+  // speechDispatcher が「他セッション向けの停止に巻き添えされない」判定に使う
+  // 読み取り専用の付帯情報で、キュー自体の制御には使用しない。
+  private static stopScope: 'all' | string = 'all'
 
   public static get currentStopToken() {
     return SpeakQueue.stopTokenCounter
+  }
+
+  public static get currentStopScope(): 'all' | string {
+    return SpeakQueue.stopScope
   }
 
   // 発話完了時のコールバックを登録
@@ -48,18 +55,7 @@ export class SpeakQueue {
   }
 
   private static stopCurrentModelSpeaking() {
-    const hs = homeStore.getState()
-    const ss = settingsStore.getState()
-    if (ss.modelType === 'live2d') {
-      Live2DHandler.stopSpeaking()
-    } else if (ss.modelType === 'pngtuber') {
-      PNGTuberHandler.stopSpeaking()
-    } else {
-      hs.viewer.model?.stopSpeaking()
-      if (hs.viewer.model?.poseManager?.isActive) {
-        hs.viewer.model?.poseManager?.resetToIdle(hs.viewer.model)
-      }
-    }
+    getCharacterRenderer()?.stopSpeaking()
   }
 
   /**
@@ -86,6 +82,7 @@ export class SpeakQueue {
     // 発話キューの処理状態をリセットして次回の再生を可能にする
     instance.isProcessing = false
     SpeakQueue.stopTokenCounter++
+    SpeakQueue.stopScope = 'all'
     instance.clearQueue()
     SpeakQueue.stopCurrentModelSpeaking()
     homeStore.setState({ isSpeaking: false })
@@ -110,10 +107,62 @@ export class SpeakQueue {
     instance.stopped = true
     instance.isProcessing = false
     SpeakQueue.stopTokenCounter++
+    SpeakQueue.stopScope = sessionId
     instance.clearQueue()
 
     SpeakQueue.stopCurrentModelSpeaking()
     homeStore.setState({ isSpeaking: false })
+  }
+
+  /**
+   * キューが完全に空転している場合のみ、発話完了コールバックの実行と
+   * 表情のリセットを行います。停止により発話が打ち切られた応答の
+   * ストリーム終端処理（speechDispatcher が disabled になった場合）から
+   * 呼び出されます。新しい応答が既に発話中（isSpeaking）の場合は何もしません。
+   */
+  public static async finalizeIfIdle(): Promise<void> {
+    const instance = SpeakQueue.getInstance()
+    if (
+      instance.queue.length > 0 ||
+      instance.isProcessing ||
+      homeStore.getState().isSpeaking
+    ) {
+      return
+    }
+
+    const finalizingSessionId = instance.currentSessionId
+    const canResetToIdle = () =>
+      instance.queue.length === 0 &&
+      !homeStore.getState().isSpeaking &&
+      instance.currentSessionId === finalizingSessionId
+    let shouldResumeQueue = false
+    instance.isProcessing = true
+    try {
+      instance.stopped = false
+      SpeakQueue.speakCompletionCallbacks.forEach((callback) => {
+        try {
+          callback()
+        } catch (error) {
+          logger.error(
+            '発話完了コールバックの実行中にエラーが発生しました:',
+            error
+          )
+        }
+      })
+
+      if (!canResetToIdle()) {
+        shouldResumeQueue =
+          instance.queue.length > 0 && homeStore.getState().isSpeaking
+      } else {
+        await getCharacterRenderer()?.resetToIdle()
+      }
+    } finally {
+      instance.isProcessing = false
+    }
+
+    if (shouldResumeQueue) {
+      await instance.processQueue()
+    }
   }
 
   async addTask(task: SpeakTask) {
@@ -138,13 +187,12 @@ export class SpeakQueue {
 
     this.isProcessing = true
     const hs = homeStore.getState()
-    const ss = settingsStore.getState()
 
     // isSpeaking はループ内部で最新値を参照するため、ここでは条件に含めない
     while (this.queue.length > 0) {
       // StopAll() によりトークンが変化していたら直ちに処理を中断
       if (startToken !== SpeakQueue.currentStopToken) {
-        console.log('Stop token changed. Abort current queue processing.')
+        logger.log('Stop token changed. Abort current queue processing.')
         break
       }
 
@@ -163,21 +211,15 @@ export class SpeakQueue {
         }
         try {
           const { audioBuffer, talk, isNeedDecode, onComplete } = task
-          if (ss.modelType === 'live2d') {
-            await Live2DHandler.speak(audioBuffer, talk, isNeedDecode)
-          } else if (ss.modelType === 'pngtuber') {
-            await PNGTuberHandler.speak(audioBuffer, talk, isNeedDecode)
-          } else {
-            await hs.viewer.model?.speak(audioBuffer, talk, isNeedDecode)
-          }
+          await getCharacterRenderer()?.speak(audioBuffer, talk, isNeedDecode)
           onComplete?.()
         } catch (error) {
-          console.error(
+          logger.error(
             'An error occurred while processing the speech synthesis task:',
             error
           )
           if (error instanceof Error) {
-            console.error('Error details:', error.message)
+            logger.error('Error details:', error.message)
           }
         }
       }
@@ -204,18 +246,7 @@ export class SpeakQueue {
     )
 
     if (this.shouldResetToNeutral(initialLength)) {
-      const hs = homeStore.getState()
-      const ss = settingsStore.getState()
-      if (ss.modelType === 'live2d') {
-        await Live2DHandler.resetToIdle()
-      } else if (ss.modelType === 'pngtuber') {
-        await PNGTuberHandler.resetToIdle()
-      } else {
-        await hs.viewer.model?.playEmotion('neutral')
-        if (hs.viewer.model?.poseManager?.isActive) {
-          hs.viewer.model?.poseManager?.resetToIdle(hs.viewer.model)
-        }
-      }
+      await getCharacterRenderer()?.resetToIdle()
     }
   }
 
@@ -225,7 +256,7 @@ export class SpeakQueue {
 
     // 発話完了時にコールバックを呼び出す
     if (isComplete) {
-      console.log('🎤 発話が完了しました。登録されたコールバックを実行します。')
+      logger.log('🎤 発話が完了しました。登録されたコールバックを実行します。')
       // 発話完了時に isSpeaking を必ず false に設定
       homeStore.setState({ isSpeaking: false })
       // 停止フラグもリセットして次回の動作に備える
@@ -235,7 +266,7 @@ export class SpeakQueue {
         try {
           callback()
         } catch (error) {
-          console.error(
+          logger.error(
             '発話完了コールバックの実行中にエラーが発生しました:',
             error
           )

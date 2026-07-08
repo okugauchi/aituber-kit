@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useCallback, useRef, MutableRefObject } from 'react'
 import settingsStore from '@/features/stores/settings'
 import toastStore from '@/features/stores/toast'
@@ -50,7 +51,7 @@ export function useSilenceDetection({
       speechEndedRef.current = false
       // 初期状態では残り時間表示をnullに設定（プログレスバーを非表示に）
       setSilenceTimeoutRemaining(null)
-      console.log(
+      logger.log(
         '🎤 無音検出を開始しました。無音検出タイムアウトの設定値に基づいて自動送信します。'
       )
 
@@ -58,7 +59,7 @@ export function useSilenceDetection({
       silenceCheckInterval.current = setInterval(async () => {
         // すでに音声終了処理が行われていれば何もしない
         if (speechEndedRef.current) {
-          console.log(
+          logger.log(
             '🔇 すでに音声終了処理が完了しているため、無音チェックをスキップします'
           )
           return
@@ -71,7 +72,7 @@ export function useSilenceDetection({
 
         // 常に無音時間をログ表示
         if (silenceDuration <= noSpeechTimeoutMs) {
-          console.log(
+          logger.log(
             `🔊 無音経過時間: ${silenceDuration}ms / 閾値: ${noSpeechTimeoutMs}ms（${(silenceDuration / 1000).toFixed(1)}秒 / ${(noSpeechTimeoutMs / 1000).toFixed(1)}秒）`
           )
         }
@@ -86,7 +87,7 @@ export function useSilenceDetection({
           !speechEndedRef.current &&
           !speechDetectedRef.current
         ) {
-          console.log(
+          logger.log(
             `⏱️ ${silenceDuration}ms の長時間無音を検出しました。音声認識を停止します。`
           )
           // 重複実行を防ぐためにフラグをセット
@@ -101,7 +102,7 @@ export function useSilenceDetection({
 
           // 常時マイク入力モードをOFFに設定
           if (settingsStore.getState().continuousMicListeningMode) {
-            console.log(
+            logger.log(
               '🔇 長時間無音検出により常時マイク入力モードをOFFに設定します。'
             )
             settingsStore.setState({ continuousMicListeningMode: false })
@@ -110,11 +111,11 @@ export function useSilenceDetection({
           // stopListeningFnを非同期で呼び出し
           try {
             await stopListeningFn()
-            console.log(
+            logger.log(
               '🛑 無音検出タイムアウトによる音声認識停止が完了しました'
             )
           } catch (error) {
-            console.error(
+            logger.error(
               '🔴 無音検出タイムアウトによる音声認識停止でエラーが発生しました:',
               error
             )
@@ -134,10 +135,10 @@ export function useSilenceDetection({
           !speechEndedRef.current
         ) {
           const trimmedTranscript = transcriptRef.current.trim()
-          console.log(
+          logger.log(
             `⏱️ ${silenceDuration}ms の無音を検出しました（閾値: ${noSpeechTimeoutMs}ms）。無音検出タイムアウトが0秒の場合は自動送信は無効です。`
           )
-          console.log(`📝 認識テキスト: "${trimmedTranscript}"`)
+          logger.log(`📝 認識テキスト: "${trimmedTranscript}"`)
 
           if (
             trimmedTranscript &&
@@ -153,7 +154,7 @@ export function useSilenceDetection({
               silenceCheckInterval.current = null
             }
 
-            console.log('✅ 無音検出による自動送信を実行します')
+            logger.log('✅ 無音検出による自動送信を実行します')
             // 無音検出で自動送信
             onTextDetected(trimmedTranscript)
             setUserMessage('')
@@ -161,11 +162,11 @@ export function useSilenceDetection({
             // stopListeningFnを非同期で呼び出し
             try {
               await stopListeningFn()
-              console.log(
+              logger.log(
                 '🛑 無音検出による自動送信の後、音声認識停止が完了しました'
               )
             } catch (error) {
-              console.error(
+              logger.error(
                 '🔴 無音検出による自動送信の後、音声認識停止でエラーが発生しました:',
                 error
               )

@@ -141,10 +141,39 @@ export const createExternalLinkageLifecycleEvent = (
     requestId ? { requestId } : {}
   )
 
+// 外部連携WebSocketから届く生のJSONペイロード
+// 送信元（レガシー/v2プロトコル）によって構造が異なるため、
+// 実際に使用するフィールドのみを緩く型付けする
+interface RawExternalLinkagePayload {
+  capabilities?: string[]
+  requestId?: string
+  message?: string
+  text?: string
+  role?: string
+  emotion?: string
+  legacyType?: string
+  image?: string
+}
+
+interface RawExternalLinkageEvent {
+  version?: string
+  id?: string
+  type?: string
+  requestId?: string
+  timestamp?: string
+  payload?: RawExternalLinkagePayload
+  text?: string
+  role?: string
+  emotion?: string
+  image?: string
+}
+
 export const normalizeExternalLinkageControlEvent = (
-  data: any
+  rawData: unknown
 ): ExternalLinkageControlEvent | null => {
-  if (data?.version !== '2') return null
+  if (typeof rawData !== 'object' || rawData === null) return null
+  const data = rawData as RawExternalLinkageEvent
+  if (data.version !== '2') return null
 
   switch (data.type) {
     case 'session.ready':
@@ -191,14 +220,16 @@ export const normalizeExternalLinkageControlEvent = (
 }
 
 export const normalizeExternalLinkageIncomingMessage = (
-  data: any
+  rawData: unknown
 ): ExternalLinkageMessage | null => {
-  if (data?.version !== '2') {
-    if (!data || typeof data !== 'object') return null
+  if (typeof rawData !== 'object' || rawData === null) return null
+  const data = rawData as RawExternalLinkageEvent
+
+  if (data.version !== '2') {
     return {
       text: data.text ?? '',
-      role: data.role,
-      emotion: data.emotion ?? 'neutral',
+      role: data.role ?? '',
+      emotion: (data.emotion as EmotionType) ?? 'neutral',
       type: data.type ?? '',
       ...(data.image ? { image: data.image } : {}),
     }
@@ -210,7 +241,7 @@ export const normalizeExternalLinkageIncomingMessage = (
       return {
         text: payload.text ?? '',
         role: payload.role ?? 'assistant',
-        emotion: payload.emotion ?? 'neutral',
+        emotion: (payload.emotion as EmotionType) ?? 'neutral',
         type: 'start',
         requestId: data.requestId ?? payload.requestId,
         sourceEventType: data.type,
@@ -220,7 +251,7 @@ export const normalizeExternalLinkageIncomingMessage = (
       return {
         text: payload.text ?? '',
         role: payload.role ?? 'assistant',
-        emotion: payload.emotion ?? 'neutral',
+        emotion: (payload.emotion as EmotionType) ?? 'neutral',
         type: payload.legacyType ?? '',
         requestId: data.requestId ?? payload.requestId,
         sourceEventType: data.type,
@@ -230,7 +261,7 @@ export const normalizeExternalLinkageIncomingMessage = (
       return {
         text: payload.text ?? '',
         role: payload.role ?? 'assistant',
-        emotion: payload.emotion ?? 'neutral',
+        emotion: (payload.emotion as EmotionType) ?? 'neutral',
         type: 'end',
         requestId: data.requestId ?? payload.requestId,
         sourceEventType: data.type,
@@ -240,7 +271,7 @@ export const normalizeExternalLinkageIncomingMessage = (
       return {
         text: payload.message ?? payload.text ?? '',
         role: payload.role ?? 'assistant',
-        emotion: payload.emotion ?? 'neutral',
+        emotion: (payload.emotion as EmotionType) ?? 'neutral',
         type: 'end',
         requestId: data.requestId ?? payload.requestId,
         sourceEventType: data.type,

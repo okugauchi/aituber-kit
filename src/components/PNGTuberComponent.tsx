@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
@@ -89,7 +90,7 @@ const PNGTuberComponent = (): JSX.Element => {
       })
       .catch((err) => {
         if (cancelled) return
-        console.error('Failed to load PNGTuber asset:', err)
+        logger.error('Failed to load PNGTuber asset:', err)
         setError('PNGTuberアセットの読み込みに失敗しました')
       })
 
@@ -135,7 +136,7 @@ const PNGTuberComponent = (): JSX.Element => {
       }
     }
     reader.onerror = () => {
-      console.error('Failed to read image file')
+      logger.error('Failed to read image file')
     }
   }, [])
 

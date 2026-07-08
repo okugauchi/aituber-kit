@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -68,7 +69,7 @@ const useExternalLinkage = ({ handleReceiveTextFromWs }: Params) => {
       processingQueueRef.current = processingQueueRef.current
         .then(() => processMessage(processedMessage))
         .catch((error) => {
-          console.error('Failed to process external linkage message:', error)
+          logger.error('Failed to process external linkage message:', error)
         })
     },
     [processMessage]
@@ -94,7 +95,7 @@ const useExternalLinkage = ({ handleReceiveTextFromWs }: Params) => {
         reconnectTimerRef.current = null
         if (!settingsStore.getState().externalLinkageMode) return
         homeStore.setState({ chatProcessing: false })
-        console.log('try reconnecting...')
+        logger.log('try reconnecting...')
         externalLinkageWebSocketStore.getState().reconnect()
       }, delayMs)
     }
@@ -109,7 +110,7 @@ const useExternalLinkage = ({ handleReceiveTextFromWs }: Params) => {
       try {
         jsonData = JSON.parse(event.data)
       } catch (error) {
-        console.error('Failed to parse external linkage message:', error)
+        logger.error('Failed to parse external linkage message:', error)
         return
       }
 

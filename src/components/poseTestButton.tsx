@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
@@ -92,7 +93,7 @@ export default function PoseTestButton() {
       try {
         await applyPose(poseConfig.id, poseConfig)
       } catch (e) {
-        console.error('Failed to apply pose:', e)
+        logger.error('Failed to apply pose:', e)
       }
     },
     [applyPose]
@@ -132,7 +133,7 @@ export default function PoseTestButton() {
         })
       }
     } catch (e) {
-      console.error('Failed to save pose rotation:', e)
+      logger.error('Failed to save pose rotation:', e)
       toastStore.getState().addToast({
         message: '保存に失敗しました',
         type: 'error',

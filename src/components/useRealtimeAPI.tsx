@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import homeStore from '@/features/stores/home'
@@ -13,6 +14,24 @@ import { AudioBufferManager } from '@/utils/audioBufferManager'
 import toastStore from '@/features/stores/toast'
 import { resetSessionId } from '@/utils/sessionId'
 
+// Realtime APIのサーバーイベント（各typeごとに関連プロパティのみ使用するため緩やかな形にする）
+interface RealtimeServerEvent {
+  type?: string
+  delta?: string
+  part?: { transcript?: string }
+  transcript?: string
+  response_id?: string
+  item_id?: string
+  content_index?: number
+  name?: string
+  arguments?: string
+  call_id?: string
+  [key: string]: unknown
+}
+
+// RealtimeAPITools内の呼び出し可能な関数の型
+type RealtimeAPIToolFunction = (...args: unknown[]) => Promise<string>
+
 interface Params {
   handleReceiveTextFromRt: (
     text: string,
@@ -21,6 +40,8 @@ interface Params {
     buffer?: ArrayBuffer
   ) => Promise<void>
 }
+
+const REALTIME_CLIENT_SECRET_TIMEOUT_MS = 10000
 
 const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   const { t } = useTranslation()
@@ -36,6 +57,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       })
     })
   )
+  const processedTranscriptKeysRef = useRef(new Set<string>())
 
   const processMessage = useCallback(
     async (message: TmpMessage) => {
@@ -50,7 +72,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   )
 
   const sendFunctionCallOutput = useCallback(
-    (callId: string, output: Record<string, unknown>) => {
+    (callId: string, output: unknown) => {
       const wsManager = webSocketStore.getState().wsManager
       if (wsManager) {
         const response = {
@@ -70,7 +92,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
             })
           )
         } else {
-          console.error(
+          logger.error(
             'WebSocket is not open. Cannot send function call output.'
           )
         }
@@ -80,7 +102,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   )
 
   const handleFunctionCall = useCallback(
-    async (jsonData: any) => {
+    async (jsonData: RealtimeServerEvent) => {
       if (jsonData.name && jsonData.arguments && jsonData.call_id) {
         const { name: funcName, arguments: argsString, call_id } = jsonData
         let toastId: string | null = null
@@ -90,27 +112,31 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
             (tool) => tool.name === funcName
           )
           if (functionDef) {
-            console.log(`Executing function ${funcName}`)
+            logger.log(`Executing function ${funcName}`)
             toastId = toastStore.getState().addToast({
               message: t('Toasts.FunctionExecuting', { funcName }),
               type: 'info',
               duration: 120000,
               tag: `run-${funcName}`,
             })
-            const result = await (RealtimeAPITools as any)[funcName](
-              ...Object.values(args)
-            )
+            const toolFunction = (
+              RealtimeAPITools as unknown as Record<
+                string,
+                RealtimeAPIToolFunction
+              >
+            )[funcName]
+            const result = await toolFunction(...Object.values(args))
             sendFunctionCallOutput(call_id, result)
             if (toastId) {
               toastStore.getState().removeToast(toastId)
             }
           } else {
-            console.error(
+            logger.error(
               `Error: Function ${funcName} is not defined in RealtimeAPITools`
             )
           }
         } catch (error) {
-          console.error('Error parsing function arguments:', error)
+          logger.error('Error parsing function arguments:', error)
           if (toastId) {
             toastStore.getState().removeToast(toastId)
           }
@@ -127,30 +153,54 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   )
 
   const handleMessageType = useCallback(
-    async (jsonData: any, type: string) => {
+    async (jsonData: RealtimeServerEvent, type: string) => {
       const wsManager = webSocketStore.getState().wsManager
 
-      console.log('Received message type:', type)
+      logger.log('Received message type:', type)
 
       switch (type) {
         case 'error':
-          console.log('Received error data', jsonData)
+          logger.error('Received error data', jsonData)
           break
         case 'conversation.item.created':
-          console.log('Received context data', jsonData)
+        case 'conversation.item.added':
+          logger.log('Received context data', jsonData)
           break
         case 'response.audio.delta':
+        case 'response.output_audio.delta':
           if (jsonData.delta) {
             const arrayBuffer = base64ToArrayBuffer(jsonData.delta)
             if (arrayBuffer.byteLength > 0) {
               accumulatedAudioDataRef.current.addData(arrayBuffer)
             } else {
-              console.error('Received invalid audio buffer')
+              logger.error('Received invalid audio buffer')
             }
+          }
+          break
+        case 'response.output_audio_transcript.done':
+          if (jsonData.transcript) {
+            const transcriptKey =
+              jsonData.response_id && jsonData.item_id
+                ? `${jsonData.response_id}:${jsonData.item_id}:${jsonData.content_index ?? 0}`
+                : jsonData.transcript
+            if (processedTranscriptKeysRef.current.has(transcriptKey)) break
+            processedTranscriptKeysRef.current.add(transcriptKey)
+            await processMessage({
+              text: jsonData.transcript,
+              role: 'assistant',
+              emotion: '',
+              type: type,
+            })
           }
           break
         case 'response.content_part.done':
           if (jsonData.part && jsonData.part.transcript) {
+            const transcriptKey =
+              jsonData.response_id && jsonData.item_id
+                ? `${jsonData.response_id}:${jsonData.item_id}:${jsonData.content_index ?? 0}`
+                : jsonData.part.transcript
+            if (processedTranscriptKeysRef.current.has(transcriptKey)) break
+            processedTranscriptKeysRef.current.add(transcriptKey)
             await processMessage({
               text: jsonData.part.transcript,
               role: 'assistant',
@@ -160,17 +210,26 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
           }
           break
         case 'conversation.item.input_audio_transcription.completed':
-          console.log('Audio data transcription completed', jsonData)
+          logger.log('Audio data transcription completed', jsonData)
           break
         case 'response.function_call_arguments.done':
           await handleFunctionCall(jsonData)
           break
         case 'response.audio.done':
+        case 'response.output_audio.done':
           await accumulatedAudioDataRef.current.flush()
+          break
+        case 'response.done':
+          processedTranscriptKeysRef.current.clear()
           break
       }
     },
-    [accumulatedAudioDataRef, handleFunctionCall, processMessage]
+    [
+      accumulatedAudioDataRef,
+      handleFunctionCall,
+      processMessage,
+      processedTranscriptKeysRef,
+    ]
   )
 
   const sendSessionUpdate = useCallback(() => {
@@ -183,24 +242,35 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       const wsConfig: SessionConfig = {
         type: 'session.update',
         session: {
-          modalities: ['text', 'audio'],
+          type: 'realtime',
+          output_modalities: ['audio'],
           instructions: ss.systemPrompt,
-          voice: ss.realtimeAPIModeVoice,
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          input_audio_transcription: {
-            model: 'whisper-1',
+          audio: {
+            input: {
+              format: {
+                type: 'audio/pcm',
+                rate: 24000,
+              },
+              transcription: {
+                model: 'whisper-1',
+              },
+              turn_detection: null,
+            },
+            output: {
+              format: {
+                type: 'audio/pcm',
+                rate: 24000,
+              },
+              voice: ss.realtimeAPIModeVoice,
+            },
           },
-          turn_detection: null,
-          temperature: 0.8,
-          max_response_output_tokens: 4096,
         },
       }
 
       // realtimeAPITools.jsonからツール情報を取得
       if (RealtimeAPIToolsJson && RealtimeAPIToolsJson.length > 0) {
-        ;(wsConfig.session as any).tools = RealtimeAPIToolsJson
-        ;(wsConfig.session as any).tool_choice = 'auto'
+        wsConfig.session.tools = RealtimeAPIToolsJson
+        wsConfig.session.tool_choice = 'auto'
       }
 
       const wsConfigString = JSON.stringify(wsConfig)
@@ -211,11 +281,11 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   const onMessage = useCallback(
     async (event: MessageEvent) => {
       try {
-        const jsonData = JSON.parse(event.data)
+        const jsonData: RealtimeServerEvent = JSON.parse(event.data)
         const type = jsonData.type || ''
         await handleMessageType(jsonData, type)
       } catch (error) {
-        console.error('Error handling message:', error)
+        logger.error('Error handling message:', error)
       }
     },
     [handleMessageType]
@@ -224,6 +294,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   const onOpen = useCallback(
     (event: Event) => {
       homeStore.setState({ chatLog: [] })
+      processedTranscriptKeysRef.current.clear()
       resetSessionId()
       sendSessionUpdate()
     },
@@ -234,7 +305,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
 
   const onClose = useCallback((event: Event) => {}, [])
 
-  const connectWebsocket: () => WebSocket | null = () => {
+  const connectWebsocket = async (): Promise<WebSocket | null> => {
     const wsManager = webSocketStore.getState().wsManager
     if (wsManager?.isConnected()) return wsManager.websocket
 
@@ -246,11 +317,43 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       const model: RealtimeAPIModeModel =
         (ss.selectAIModel as RealtimeAPIModeModel) ||
         defaultModels.openaiRealtime
+      const controller = new AbortController()
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REALTIME_CLIENT_SECRET_TIMEOUT_MS
+      )
+      let tokenResponse: Response
+      try {
+        tokenResponse = await fetch('/api/ai/realtime-client-secret', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: ss.openaiKey,
+            model,
+          }),
+          signal: controller.signal,
+        })
+      } catch (error) {
+        logger.error('Failed to fetch OpenAI Realtime client secret:', error)
+        return null
+      } finally {
+        clearTimeout(timeoutId)
+      }
+      const tokenData = (await tokenResponse.json().catch(() => ({}))) as {
+        value?: string
+        error?: string
+      }
+      if (!tokenResponse.ok || !tokenData.value) {
+        logger.error(
+          'Failed to create OpenAI Realtime client secret:',
+          tokenData.error || tokenResponse.statusText
+        )
+        return null
+      }
       const url = `wss://api.openai.com/v1/realtime?model=${model}`
       ws = new WebSocket(url, [
         'realtime',
-        `openai-insecure-api-key.${ss.openaiKey}`,
-        'openai-beta.realtime-v1',
+        `openai-insecure-api-key.${tokenData.value}`,
       ])
     } else if (ss.selectAIService === 'azure') {
       const url = `${ss.azureEndpoint}&api-key=${ss.azureKey}`
@@ -266,6 +369,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
     const ss = settingsStore.getState()
     if (!ss.realtimeAPIMode || !ss.selectAIService) return
 
+    let reconnectInterval: ReturnType<typeof setInterval> | null = null
     const handlers = {
       onOpen: onOpen,
       onMessage: onMessage,
@@ -273,29 +377,34 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       onClose: onClose,
     }
 
-    webSocketStore.getState().initializeWebSocket(t, handlers, connectWebsocket)
+    const connectTimer = setTimeout(() => {
+      webSocketStore
+        .getState()
+        .initializeWebSocket(t, handlers, connectWebsocket)
 
-    const wsManager = webSocketStore.getState().wsManager
-
-    const reconnectInterval = setInterval(() => {
-      const ss = settingsStore.getState()
-      if (
-        ss.realtimeAPIMode &&
-        wsManager?.websocket &&
-        wsManager.websocket.readyState !== WebSocket.OPEN &&
-        wsManager.websocket.readyState !== WebSocket.CONNECTING
-      ) {
-        homeStore.setState({ chatProcessing: false })
-        console.log('try reconnecting...')
-        wsManager.disconnect()
-        webSocketStore
-          .getState()
-          .initializeWebSocket(t, handlers, connectWebsocket)
-      }
-    }, 2000)
+      reconnectInterval = setInterval(() => {
+        const ss = settingsStore.getState()
+        const wsManager = webSocketStore.getState().wsManager
+        if (
+          ss.realtimeAPIMode &&
+          wsManager &&
+          (!wsManager.websocket ||
+            (wsManager.websocket.readyState !== WebSocket.OPEN &&
+              wsManager.websocket.readyState !== WebSocket.CONNECTING))
+        ) {
+          homeStore.setState({ chatProcessing: false })
+          logger.log('try reconnecting...')
+          wsManager.disconnect()
+          webSocketStore
+            .getState()
+            .initializeWebSocket(t, handlers, connectWebsocket)
+        }
+      }, 2000)
+    }, 100)
 
     return () => {
-      clearInterval(reconnectInterval)
+      clearTimeout(connectTimer)
+      if (reconnectInterval) clearInterval(reconnectInterval)
       webSocketStore.getState().disconnect()
     }
   }, [realtimeAPIMode, processMessage, t, onOpen, onMessage, onError, onClose])

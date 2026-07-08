@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { create } from 'zustand'
 import { createJSONStorage, persist, StateStorage } from 'zustand/middleware'
 
@@ -7,8 +8,18 @@ import { messageSelectors } from '../messages/messageSelectors'
 import { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
 import { generateMessageId } from '@/utils/messageUtils'
 import { addEmbeddingsToMessages } from '@/features/memory/memoryStoreSync'
+import type { SanitizedMessage } from '../messages/messageSelectors'
 import { PresenceState, PresenceError } from '@/features/presence/presenceTypes'
 import { isRestrictedMode } from '@/utils/restrictedMode'
+import { PNGTuberEngine } from '@/features/pngTuber/pngTuberEngine'
+
+// Live2DComponent が Object.assign で位置制御関数を合成した Live2D モデル
+type Live2DViewer = InstanceType<typeof Live2DModel> & {
+  fixPosition?: () => void
+  unfixPosition?: () => void
+  resetPosition?: () => void
+  saveModelPosition?: () => void
+}
 
 export interface PersistedState {
   userOnboarded: boolean
@@ -18,8 +29,8 @@ export interface PersistedState {
 
 export interface TransientState {
   viewer: Viewer
-  live2dViewer: any
-  pngTuberViewer: any
+  live2dViewer: Live2DViewer | null
+  pngTuberViewer: PNGTuberEngine | null
   slideMessages: string[]
   chatProcessing: boolean
   chatProcessingCount: number
@@ -169,7 +180,7 @@ export const getTargetLogFileName = (): string | null => {
 
 // ログ保存状態をリセットする共通関数
 const resetSaveState = () => {
-  console.log('Chat log was cleared, resetting save state.')
+  logger.log('Chat log was cleared, resetting save state.')
   lastSavedLogLength = 0
   shouldCreateNewFile = true
   if (saveDebounceTimer) {
@@ -223,7 +234,7 @@ const homeStore = create<HomeState>()(
             }
           } else {
             if (!message.role || message.content === undefined) {
-              console.error(
+              logger.error(
                 'Cannot add message without role or content',
                 message
               )
@@ -272,7 +283,7 @@ const homeStore = create<HomeState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           lastSavedLogLength = state.chatLog.length
-          console.log('Rehydrated chat log length:', lastSavedLogLength)
+          logger.log('Rehydrated chat log length:', lastSavedLogLength)
         }
       },
     }
@@ -311,22 +322,23 @@ homeStore.subscribe((state, prevState) => {
         )
 
         // メモリ機能が有効な場合、Embeddingを付与してから保存
-        let messagesWithEmbedding: Message[]
+        let messagesWithEmbedding: SanitizedMessage[]
         try {
-          messagesWithEmbedding =
-            await addEmbeddingsToMessages(processedMessages)
+          messagesWithEmbedding = await addEmbeddingsToMessages(
+            processedMessages as Message[]
+          )
         } catch (error) {
-          console.warn(
+          logger.warn(
             'Failed to add embeddings, saving without embeddings:',
             error
           )
           messagesWithEmbedding = processedMessages
         }
 
-        console.log(`Saving ${messagesWithEmbedding.length} new messages...`)
+        logger.log(`Saving ${messagesWithEmbedding.length} new messages...`)
 
         if (typeof fetch !== 'function') {
-          console.warn('fetch is unavailable. Skipping chat log save.')
+          logger.warn('fetch is unavailable. Skipping chat log save.')
           return
         }
 
@@ -345,19 +357,19 @@ homeStore.subscribe((state, prevState) => {
               lastSavedLogLength = state.chatLog.length
               // 新規ファイルが作成された場合はフラグをリセット
               shouldCreateNewFile = false
-              console.log(
+              logger.log(
                 'Messages saved successfully. New saved length:',
                 lastSavedLogLength
               )
             } else {
-              console.error('Failed to save chat log:', response.statusText)
+              logger.error('Failed to save chat log:', response.statusText)
             }
           })
           .catch((error) => {
-            console.error('チャットログの保存中にエラーが発生しました:', error)
+            logger.error('チャットログの保存中にエラーが発生しました:', error)
           })
       } else {
-        console.log('No new messages to save.')
+        logger.log('No new messages to save.')
       }
     }, SAVE_DEBOUNCE_DELAY)
   } else if (

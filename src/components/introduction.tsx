@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import i18n from 'i18next'
 import { useEffect, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
@@ -23,7 +24,7 @@ export const Introduction = () => {
   }, [showIntroduction])
 
   const updateLanguage = () => {
-    console.log('i18n.language', i18n.language)
+    logger.log('i18n.language', i18n.language)
 
     let languageCode = i18n.language
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Talk } from './messages'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
@@ -119,8 +120,8 @@ export class Live2DHandler {
         expression,
         resetExpression: true,
         onFinish: finish,
-        onError: (e: any) => {
-          console.error('speak error:', e)
+        onError: (e: Error) => {
+          logger.error('speak error:', e)
           finish()
         },
       })
@@ -178,7 +179,7 @@ export class Live2DHandler {
       const viewer = hs.live2dViewer
 
       // Viewerが存在しない、または破棄済みの場合はインターバルを停止
-      if (!viewer || (viewer as any).destroyed) {
+      if (!viewer || viewer.destroyed) {
         this.stopIdleMotion()
         return
       }
@@ -186,7 +187,7 @@ export class Live2DHandler {
       try {
         viewer.motion(idleMotion)
       } catch (error) {
-        console.error('Idle motion failed:', error)
+        logger.error('Idle motion failed:', error)
         this.stopIdleMotion()
       }
     }, 5000)

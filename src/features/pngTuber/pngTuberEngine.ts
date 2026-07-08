@@ -3,6 +3,7 @@
  * MotionPNGTuber_Player/lipsync.js のTypeScript移植版
  */
 
+import { logger } from '@/lib/logger'
 import {
   MouthState,
   MouthTrackData,
@@ -13,6 +14,7 @@ import {
   AffineMatrix,
   IPNGTuberEngine,
 } from './pngTuberTypes'
+import * as pngTuberMath from './pngTuberMath'
 
 export class PNGTuberEngine implements IPNGTuberEngine {
   // DOM要素
@@ -168,11 +170,11 @@ export class PNGTuberEngine implements IPNGTuberEngine {
       // 初期状態をセット
       this.setMouthState('closed', true)
 
-      console.log(
+      logger.log(
         `PNGTuber asset loaded: ${this.trackData?.frames.length} frames, ${this.trackData?.fps}fps`
       )
     } catch (error) {
-      console.error('Failed to load PNGTuber asset:', error)
+      logger.error('Failed to load PNGTuber asset:', error)
       throw error
     }
   }
@@ -262,11 +264,11 @@ export class PNGTuberEngine implements IPNGTuberEngine {
 
     // AudioContextがsuspended状態の場合はresumeする
     if (this.audioContext.state === 'suspended') {
-      console.log('[PNGTuber] AudioContext is suspended, resuming...')
+      logger.log('[PNGTuber] AudioContext is suspended, resuming...')
       await this.audioContext.resume()
     }
 
-    console.log('[PNGTuber] Playing audio, duration:', audioBuffer.duration)
+    logger.log('[PNGTuber] Playing audio, duration:', audioBuffer.duration)
 
     // 前の再生を停止
     this.stopAudio()
@@ -297,7 +299,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
 
     // 再生終了時の処理
     this.currentSource.onended = () => {
-      console.log('[PNGTuber] Audio playback ended')
+      logger.log('[PNGTuber] Audio playback ended')
       this.resetMouth()
       if (this.onAudioFinishCallback) {
         this.onAudioFinishCallback()
@@ -307,7 +309,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
 
     // 再生開始
     this.currentSource.start()
-    console.log(
+    logger.log(
       '[PNGTuber] Audio started, context state:',
       this.audioContext.state
     )
@@ -447,20 +449,14 @@ export class PNGTuberEngine implements IPNGTuberEngine {
    * 感度から閾値を計算
    */
   private getVolumeThresholds(): VolumeThresholds {
-    const sensitivity = this.sensitivity / 100
-    const closed = 0.008 + (1 - sensitivity) * 0.018
-    const half = 0.02 + (1 - sensitivity) * 0.06
-    return { closed, half }
+    return pngTuberMath.getVolumeThresholds(this.sensitivity)
   }
 
   /**
    * HQ Audio用の閾値を計算
    */
   private getVolumeThresholdsHQ(): VolumeThresholds {
-    const sensitivity = this.sensitivity / 100
-    const closed = 0.07 + (1 - sensitivity) * 0.08
-    const half = 0.22 + (1 - sensitivity) * 0.12
-    return { closed, half }
+    return pngTuberMath.getVolumeThresholdsHQ(this.sensitivity)
   }
 
   /**
@@ -471,13 +467,12 @@ export class PNGTuberEngine implements IPNGTuberEngine {
     highRatio: number,
     thresholds: VolumeThresholds
   ): MouthState {
-    if (volume < thresholds.closed) return 'closed'
-    if (volume < thresholds.half)
-      return this.mouthSpriteUrls.half ? 'half' : 'open'
-
-    if (highRatio > 0.62 && this.mouthSpriteUrls.e) return 'e'
-    if (highRatio < 0.38 && this.mouthSpriteUrls.u) return 'u'
-    return 'open'
+    return pngTuberMath.selectMouthState(
+      volume,
+      highRatio,
+      thresholds,
+      this.mouthSpriteUrls
+    )
   }
 
   /**
@@ -489,56 +484,13 @@ export class PNGTuberEngine implements IPNGTuberEngine {
     highRatio: number,
     thresholds: VolumeThresholds
   ): MouthState {
-    const hasHalf = !!this.mouthSpriteUrls.half
-    const hasE = !!this.mouthSpriteUrls.e
-    const hasU = !!this.mouthSpriteUrls.u
-
-    // ヒステリシス用の閾値
-    const closeTh = Math.max(0.02, thresholds.closed - 0.03)
-    const halfDownTh = Math.max(closeTh + 0.02, thresholds.half - 0.02)
-
-    // 現在の状態をベースに判定
-    let state: MouthState = this.mouthState
-    if (state === 'e' || state === 'u') {
-      state = 'open'
-    }
-
-    // 状態遷移の判定
-    if (state === 'closed') {
-      if (level >= thresholds.half) {
-        state = 'open'
-      } else if (level >= thresholds.closed && hasHalf) {
-        state = 'half'
-      } else if (level >= thresholds.closed) {
-        state = 'open'
-      } else {
-        state = 'closed'
-      }
-    } else if (state === 'half') {
-      if (level < closeTh) {
-        state = 'closed'
-      } else if (level >= thresholds.half) {
-        state = 'open'
-      } else {
-        state = 'half'
-      }
-    } else {
-      // state === 'open'
-      if (level < closeTh) {
-        state = 'closed'
-      } else if (level < halfDownTh && hasHalf) {
-        state = 'half'
-      } else {
-        state = 'open'
-      }
-    }
-
-    // 開いた状態の場合、周波数で母音を判定
-    if (state === 'open') {
-      if (highRatio > 0.62 && hasE) return 'e'
-      if (highRatio < 0.38 && hasU) return 'u'
-    }
-    return state
+    return pngTuberMath.selectMouthStateHQ(
+      level,
+      highRatio,
+      thresholds,
+      this.mouthState,
+      this.mouthSpriteUrls
+    )
   }
 
   /**
@@ -600,15 +552,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
    * 16進数カラーコードをRGBに変換
    */
   private hexToRGB(hex: string): [number, number, number] {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-    if (result) {
-      return [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16),
-      ]
-    }
-    return [0, 255, 0] // デフォルトはグリーン
+    return pngTuberMath.hexToRGB(hex)
   }
 
   /**
@@ -616,7 +560,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
    */
   start(): void {
     if (!this.video || !this.trackData) {
-      console.warn('Cannot start: video or trackData not loaded')
+      logger.warn('Cannot start: video or trackData not loaded')
       return
     }
 
@@ -636,7 +580,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
     // 動画を再生
     this.video.currentTime = 0
     this.video.play().catch((err) => {
-      console.warn('Video play failed:', err)
+      logger.warn('Video play failed:', err)
     })
 
     // レンダリングループを開始
@@ -905,36 +849,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
     ],
     data: MouthTrackData
   ): [number, number][] {
-    const calib = data.calibration || { offset: [0, 0], scale: 1, rotation: 0 }
-    const applyCalib = data.calibrationApplied === true
-    if (!applyCalib) {
-      return quad.map((pt) => [pt[0], pt[1]] as [number, number])
-    }
-
-    const offsetX = calib.offset[0] || 0
-    const offsetY = calib.offset[1] || 0
-    const scale = calib.scale || 1
-    const rotation = ((calib.rotation || 0) * Math.PI) / 180
-
-    let cx = 0
-    let cy = 0
-    for (const [x, y] of quad) {
-      cx += x
-      cy += y
-    }
-    cx /= 4
-    cy /= 4
-
-    const cos = Math.cos(rotation)
-    const sin = Math.sin(rotation)
-
-    return quad.map(([x, y]) => {
-      const dx = (x - cx) * scale
-      const dy = (y - cy) * scale
-      const rx = dx * cos - dy * sin + cx + offsetX
-      const ry = dx * sin + dy * cos + cy + offsetY
-      return [rx, ry] as [number, number]
-    })
+    return pngTuberMath.applyCalibrationToQuad(quad, data)
   }
 
   /**
@@ -1010,37 +925,7 @@ export class PNGTuberEngine implements IPNGTuberEngine {
     d1: [number, number],
     d2: [number, number]
   ): AffineMatrix | null {
-    const [sx0, sy0] = s0
-    const [sx1, sy1] = s1
-    const [sx2, sy2] = s2
-
-    const [dx0, dy0] = d0
-    const [dx1, dy1] = d1
-    const [dx2, dy2] = d2
-
-    const denom = sx0 * (sy1 - sy2) + sx1 * (sy2 - sy0) + sx2 * (sy0 - sy1)
-    if (denom === 0) return null
-
-    const a =
-      (dx0 * (sy1 - sy2) + dx1 * (sy2 - sy0) + dx2 * (sy0 - sy1)) / denom
-    const b =
-      (dy0 * (sy1 - sy2) + dy1 * (sy2 - sy0) + dy2 * (sy0 - sy1)) / denom
-    const c =
-      (dx0 * (sx2 - sx1) + dx1 * (sx0 - sx2) + dx2 * (sx1 - sx0)) / denom
-    const d =
-      (dy0 * (sx2 - sx1) + dy1 * (sx0 - sx2) + dy2 * (sx1 - sx0)) / denom
-    const e =
-      (dx0 * (sx1 * sy2 - sx2 * sy1) +
-        dx1 * (sx2 * sy0 - sx0 * sy2) +
-        dx2 * (sx0 * sy1 - sx1 * sy0)) /
-      denom
-    const f =
-      (dy0 * (sx1 * sy2 - sx2 * sy1) +
-        dy1 * (sx2 * sy0 - sx0 * sy2) +
-        dy2 * (sx0 * sy1 - sx1 * sy0)) /
-      denom
-
-    return { a, b, c, d, e, f }
+    return pngTuberMath.computeAffine(s0, s1, s2, d0, d1, d2)
   }
 
   /**

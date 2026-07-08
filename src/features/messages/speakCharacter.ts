@@ -1,4 +1,4 @@
-import homeStore from '@/features/stores/home'
+import { logger } from '@/lib/logger'
 import settingsStore from '@/features/stores/settings'
 import { AIVoice } from '@/features/constants/settings'
 import { wait } from '@/utils/wait'
@@ -17,8 +17,7 @@ import { synthesizeVoiceAzureOpenAIApi } from './synthesizeVoiceAzureOpenAI'
 import toastStore from '@/features/stores/toast'
 import i18next from 'i18next'
 import { SpeakQueue } from './speakQueue'
-import { Live2DHandler } from './live2dHandler'
-import { PNGTuberHandler } from '@/features/pngTuber/pngTuberHandler'
+import { getCharacterRenderer } from './characterRenderer'
 import {
   asyncConvertEnglishToJapaneseReading,
   containsEnglish,
@@ -320,7 +319,7 @@ const createSpeakCharacter = () => {
             await asyncConvertEnglishToJapaneseReading(processedMessage)
           talk.message = convertedText
         } catch (error) {
-          console.error('Error converting English to Japanese:', error)
+          logger.error('Error converting English to Japanese:', error)
         }
       }
 
@@ -367,7 +366,7 @@ const createSpeakCharacter = () => {
         flushPendingResults()
       })
       .catch((error) => {
-        console.error('Error in processAndSynthesizePromise chain:', error)
+        logger.error('Error in processAndSynthesizePromise chain:', error)
         if (currentSessionId !== sessionId) {
           guardedOnComplete()
           return
@@ -406,7 +405,7 @@ export function handleTTSError(error: unknown, serviceName: string): void {
     tag: 'tts-error',
   })
 
-  console.error(errorMessage)
+  logger.error(errorMessage)
 }
 
 export const speakCharacter = createSpeakCharacter()
@@ -452,17 +451,10 @@ export const testVoice = async (voiceType: AIVoice, customText?: string) => {
     settingsStore.setState({ selectVoice: currentVoice })
 
     if (buffer) {
-      if (ss.modelType === 'vrm') {
-        const hs = homeStore.getState()
-        await hs.viewer.model?.speak(buffer, talk)
-      } else if (ss.modelType === 'live2d') {
-        Live2DHandler.speak(buffer, talk)
-      } else if (ss.modelType === 'pngtuber') {
-        await PNGTuberHandler.speak(buffer, talk)
-      }
+      await getCharacterRenderer()?.speak(buffer, talk)
     }
   } catch (error) {
-    console.error(`Error testing ${voiceType} voice:`, error)
+    logger.error(`Error testing ${voiceType} voice:`, error)
     handleTTSError(error, voiceType)
   }
 }

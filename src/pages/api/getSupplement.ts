@@ -1,8 +1,11 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
 import { isRestrictedMode } from '@/utils/restrictedMode'
 import assetManifest from '@/constants/assetManifest.json'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type ResponseData = {
   content?: string
@@ -10,14 +13,11 @@ type ResponseData = {
   error?: string
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
   if (isRestrictedMode()) {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ message: 'Method Not Allowed' })
-    }
     const { slideName } = req.query
     if (typeof slideName !== 'string' || !slideName) {
       return res.status(400).json({
@@ -42,10 +42,6 @@ export default async function handler(
         | undefined) ?? {}
     const content = supplements[sanitizedSlideName] ?? ''
     return res.status(200).json({ content })
-  }
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method Not Allowed' })
   }
 
   const { slideName } = req.query
@@ -81,12 +77,13 @@ export default async function handler(
   try {
     const content = await fs.readFile(filePath, 'utf-8')
     res.status(200).json({ content })
-  } catch (error: any) {
+  } catch (error) {
     // ファイルが存在しない場合は空の内容を返す (エラーではなく正常系として扱う)
-    if (error.code === 'ENOENT') {
+    const err = error as NodeJS.ErrnoException
+    if (err.code === 'ENOENT') {
       res.status(200).json({ content: '' })
     } else {
-      console.error(`Error reading file: ${filePath}`, error)
+      logger.error(`Error reading file: ${filePath}`, error)
       res.status(500).json({
         message: 'Internal Server Error',
         error: error instanceof Error ? error.message : String(error),
@@ -94,3 +91,5 @@ export default async function handler(
     }
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/getSupplement'], handler)

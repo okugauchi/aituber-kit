@@ -4,6 +4,7 @@ import { loadVRMAnimation } from '@/lib/VRMAnimation/loadVRMAnimation'
 import { buildUrl } from '@/utils/buildUrl'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import settingsStore from '@/features/stores/settings'
+import { reportViewerError } from '@/components/common/ErrorBoundary'
 
 /**
  * three.jsを使った3Dビューワー
@@ -91,7 +92,8 @@ export class Viewer {
         })
       })
       .catch((error) => {
-        console.error('Failed to load VRM:', error)
+        // 非同期のロード失敗はErrorBoundaryに届かないため、ここから直接通知する
+        reportViewerError('vrm-viewer', 'Failed to load VRM:', error)
       })
       .finally(() => {
         if (requestId === this._loadVrmRequestId) {

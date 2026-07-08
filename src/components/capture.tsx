@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import homeStore from '@/features/stores/home'
 import menuStore from '@/features/stores/menu'
@@ -102,7 +103,7 @@ const Capture = () => {
       setPermissionGranted(true)
       setShowPermissionModal(false)
     } catch (error) {
-      console.error('Error capturing display:', error)
+      logger.error('Error capturing display:', error)
       setShowPermissionModal(true)
       cleanupStream()
     }
@@ -130,7 +131,7 @@ const Capture = () => {
       })
       await setupStream(stream)
     } catch (error) {
-      console.error('Error capturing display:', error)
+      logger.error('Error capturing display:', error)
       cleanupStream()
     }
   }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { FC, useEffect } from 'react'
 import useYoutube from './useYoutube'
 import { handleSendChatFn } from '@/features/chat/handlers'
@@ -9,7 +10,7 @@ export const YoutubeManager: FC = () => {
 
   useEffect(() => {
     if (oneCommeStatus.error) {
-      console.warn('OneComme connection error:', oneCommeStatus.error)
+      logger.warn('OneComme connection error:', oneCommeStatus.error)
     }
   }, [oneCommeStatus.error])
 

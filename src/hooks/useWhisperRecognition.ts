@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import settingsStore from '@/features/stores/settings'
@@ -71,7 +72,7 @@ export function useWhisperRecognition(
         const whisperModel = settingsStore.getState().whisperTranscriptionModel
         formData.append('model', whisperModel)
 
-        console.log(
+        logger.log(
           `Sending audio to Whisper API - size: ${audioBlob.size} bytes, type: ${mimeType}, filename: ${fileName}, model: ${whisperModel}`
         )
 
@@ -91,7 +92,7 @@ export function useWhisperRecognition(
         const result = await response.json()
         return result.text || ''
       } catch (error) {
-        console.error('Whisper transcription error:', error)
+        logger.error('Whisper transcription error:', error)
         toastStore.getState().addToast({
           message: t('Toasts.WhisperError'),
           type: 'error',
@@ -117,7 +118,7 @@ export function useWhisperRecognition(
     // 音声データが存在する場合のみ処理
     if (audioBlob) {
       try {
-        console.log(
+        logger.log(
           `Processing audio blob for Whisper - size: ${audioBlob.size} bytes, type: ${audioBlob.type}`
         )
 
@@ -125,7 +126,7 @@ export function useWhisperRecognition(
         const transcript = await processWhisperRecognition(audioBlob)
 
         if (transcript.trim()) {
-          console.log('Whisper transcription result:', transcript)
+          logger.log('Whisper transcription result:', transcript)
 
           // 文字起こし結果をセット
           transcriptRef.current = transcript
@@ -133,7 +134,7 @@ export function useWhisperRecognition(
           // LLMに送信
           onChatProcessStart(transcript)
         } else {
-          console.log('Whisper returned empty transcription')
+          logger.log('Whisper returned empty transcription')
           toastStore.getState().addToast({
             message: t('Toasts.NoSpeechDetected'),
             type: 'info',
@@ -141,7 +142,7 @@ export function useWhisperRecognition(
           })
         }
       } catch (error) {
-        console.error('Error processing Whisper audio:', error)
+        logger.error('Error processing Whisper audio:', error)
         toastStore.getState().addToast({
           message: t('Toasts.WhisperError'),
           type: 'error',
@@ -149,7 +150,7 @@ export function useWhisperRecognition(
         })
       }
     } else {
-      console.warn('No audio data recorded')
+      logger.warn('No audio data recorded')
       toastStore.getState().addToast({
         message: t('Toasts.NoSpeechDetected'),
         type: 'info',

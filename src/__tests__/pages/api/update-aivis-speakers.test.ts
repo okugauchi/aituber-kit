@@ -67,7 +67,7 @@ describe('/api/update-aivis-speakers', () => {
     await handler(req as any, res as any)
 
     expect(res._getStatusCode()).toBe(405)
-    expect(res._getJSONData()).toEqual({ error: 'Method Not Allowed' })
+    expect(res._getJSONData()).toEqual({ error: 'Method not allowed' })
     expect(global.fetch).not.toHaveBeenCalled()
     expect(mockWriteFile).not.toHaveBeenCalled()
   })
@@ -110,5 +110,34 @@ describe('/api/update-aivis-speakers', () => {
 
     expect(res._getStatusCode()).toBe(500)
     expect(mockWriteFile).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-allowlisted custom serverUrl', async () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
+    const { req, res } = createMocks({
+      method: 'POST',
+      query: { serverUrl: 'http://custom:8080' },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).toBe(400)
+    expect(res._getJSONData()).toEqual({ error: 'Server URL is not allowed' })
+    expect(global.fetch).not.toHaveBeenCalled()
+    expect(mockWriteFile).not.toHaveBeenCalled()
+  })
+
+  it('uses allowlisted custom serverUrl when provided', async () => {
+    process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
+    process.env.AITUBERKIT_ALLOWED_TTS_SERVER_ORIGINS = 'http://custom:8080'
+    const { req, res } = createMocks({
+      method: 'POST',
+      query: { serverUrl: 'http://custom:8080' },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).toBe(200)
+    expect(global.fetch).toHaveBeenCalledWith('http://custom:8080/speakers')
   })
 })

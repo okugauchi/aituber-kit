@@ -1,10 +1,20 @@
+import { logger } from '@/lib/logger'
 import toastStore from '@/features/stores/toast'
 import settingsStore from '@/features/stores/settings'
 
-type TranslationFunction = (key: string, options?: any) => string
+type TranslationFunction = (
+  key: string,
+  options?: Record<string, unknown>
+) => string
+
+export type WebSocketConnector = () =>
+  | WebSocket
+  | null
+  | Promise<WebSocket | null>
 
 export class WebSocketManager {
   private ws: WebSocket | null = null
+  private connectGeneration = 0
   private t: TranslationFunction
   private isTextBlockStarted: boolean = false
   private handlers: {
@@ -13,7 +23,7 @@ export class WebSocketManager {
     onError: (event: Event) => void
     onClose: (event: Event) => void
   }
-  private connectWebsocket: () => WebSocket | null
+  private connectWebsocket: WebSocketConnector
 
   constructor(
     t: TranslationFunction,
@@ -23,7 +33,7 @@ export class WebSocketManager {
       onError: (event: Event) => void
       onClose: (event: Event) => void
     },
-    connectWebsocket: () => WebSocket | null
+    connectWebsocket: WebSocketConnector
   ) {
     this.t = t
     this.handlers = handlers
@@ -31,7 +41,7 @@ export class WebSocketManager {
   }
 
   private handleOpen = (event: Event) => {
-    console.log('WebSocket connection opened:', event)
+    logger.log('WebSocket connection opened:', event)
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionSuccess'),
@@ -43,12 +53,12 @@ export class WebSocketManager {
   }
 
   private handleMessage = async (event: MessageEvent) => {
-    console.log('WebSocket received message:', event)
+    logger.log('WebSocket received message:', event)
     await this.handlers.onMessage(event)
   }
 
   private handleError = (event: Event) => {
-    console.error('WebSocket error:', event)
+    logger.error('WebSocket error:', event)
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionError'),
@@ -60,7 +70,8 @@ export class WebSocketManager {
   }
 
   private handleClose = (event: Event) => {
-    console.log('WebSocket connection closed:', event)
+    logger.log('WebSocket connection closed:', event)
+    this.ws = null
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionClosed'),
@@ -71,7 +82,8 @@ export class WebSocketManager {
     this.handlers.onClose(event)
   }
 
-  public connect() {
+  public async connect() {
+    const generation = ++this.connectGeneration
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionAttempt'),
@@ -80,7 +92,22 @@ export class WebSocketManager {
       tag: 'websocket-connection-info',
     })
 
-    this.ws = this.connectWebsocket()
+    try {
+      const socketOrPromise = this.connectWebsocket()
+      const ws =
+        socketOrPromise instanceof Promise
+          ? await socketOrPromise
+          : socketOrPromise
+      if (generation !== this.connectGeneration) {
+        ws?.close()
+        return
+      }
+      this.ws = ws
+    } catch (error) {
+      logger.error('WebSocket connection setup failed:', error)
+      this.handleError(new Event('error'))
+      return
+    }
 
     if (!this.ws) return
 
@@ -98,8 +125,11 @@ export class WebSocketManager {
   }
 
   public disconnect() {
+    this.connectGeneration++
     if (this.ws) {
-      this.ws.close()
+      const ws = this.ws
+      this.ws = null
+      ws.close()
     }
   }
 

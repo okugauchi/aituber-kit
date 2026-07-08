@@ -1,25 +1,11 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('update-pose-rotation'))
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { jsonPath, angleDeg } = req.body
   if (typeof jsonPath !== 'string' || typeof angleDeg !== 'number') {
     return res.status(400).json({ error: 'Invalid parameters' })
@@ -43,7 +29,12 @@ export default async function handler(
     await fs.writeFile(filePath, JSON.stringify(json, null, 2))
     return res.status(200).json({ message: 'Pose rotation updated' })
   } catch (e) {
-    console.error('Failed to update pose rotation:', e)
+    logger.error('Failed to update pose rotation:', e)
     return res.status(500).json({ error: 'Failed to update file' })
   }
 }
+
+export default withAccessPolicy(
+  routePolicies['/api/update-pose-rotation'],
+  handler
+)

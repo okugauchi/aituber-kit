@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect'
 import { useTranslation } from 'react-i18next'
@@ -54,17 +55,14 @@ export function useRealtimeVoiceAPI(
     const ss = settingsStore.getState()
 
     if (wsManager?.websocket?.readyState !== WebSocket.OPEN) {
-      console.error('WebSocket is not open')
+      logger.error('WebSocket is not open')
       return
     }
 
     let sendContent: { type: string; text?: string; audio?: string }[] = []
 
     if (ss.realtimeAPIModeContentType === 'input_text' || text.trim()) {
-      console.log(
-        'Sending text through WebSocket from silence detection:',
-        text
-      )
+      logger.log('Sending text through WebSocket from silence detection:', text)
       sendContent = [{ type: 'input_text', text: text.trim() }]
     }
 
@@ -122,9 +120,9 @@ export function useRealtimeVoiceAPI(
 
   // ----- リアルタイムAPI用の音声データ送信 -----
   const sendAudioBuffer = useCallback(() => {
-    console.log('sendAudioBuffer')
+    logger.log('sendAudioBuffer')
     if (!audioBufferRef.current || audioBufferRef.current.length === 0) {
-      console.error('音声バッファが空です')
+      logger.error('音声バッファが空です')
       return
     }
 
@@ -139,12 +137,12 @@ export function useRealtimeVoiceAPI(
     let sendContent: { type: string; text?: string; audio?: string }[] = []
 
     if (ss.realtimeAPIModeContentType === 'input_audio') {
-      console.log('Sending buffer. Length:', audioBufferRef.current.length)
+      logger.log('Sending buffer. Length:', audioBufferRef.current.length)
       sendContent = [{ type: 'input_audio', audio: base64Chunk }]
     } else {
       const currentText = transcriptRef.current.trim()
       if (currentText) {
-        console.log('Sending text. userMessage:', currentText)
+        logger.log('Sending text. userMessage:', currentText)
         sendContent = [{ type: 'input_text', text: currentText }]
       }
     }
@@ -172,7 +170,7 @@ export function useRealtimeVoiceAPI(
 
   // ----- 音声認識停止処理 -----
   const stopListening = useCallback(async () => {
-    console.log('🛑 useRealtimeVoiceAPI: stopListening 呼び出し開始')
+    logger.log('🛑 useRealtimeVoiceAPI: stopListening 呼び出し開始')
 
     // リスニング状態を先に更新して、新しいデータ収集を防止
     isListeningRef.current = false
@@ -185,18 +183,18 @@ export function useRealtimeVoiceAPI(
     // 音声認識を停止 - まずrecognitionから
     if (recognition) {
       try {
-        console.log('🎙️ 音声認識を停止します')
+        logger.log('🎙️ 音声認識を停止します')
         recognition.stop()
-        console.log('🎙️ 音声認識停止成功')
+        logger.log('🎙️ 音声認識停止成功')
       } catch (error) {
-        console.error('🔴 音声認識停止エラー:', error)
+        logger.error('🔴 音声認識停止エラー:', error)
       }
     }
 
     // 録音を停止して音声データを取得
-    console.log('🎤 MediaRecorderを停止します')
+    logger.log('🎤 MediaRecorderを停止します')
     const audioBlob = await stopRecording()
-    console.log(
+    logger.log(
       '🎤 MediaRecorder停止完了',
       audioBlob ? `サイズ: ${audioBlob.size}` : 'データなし'
     )
@@ -204,7 +202,7 @@ export function useRealtimeVoiceAPI(
     // 音声データが存在する場合のみ処理
     if (audioBlob) {
       try {
-        console.log('🔊 音声データを処理します')
+        logger.log('🔊 音声データを処理します')
         const arrayBuffer = await audioBlob.arrayBuffer()
         const audioBuffer = await decodeAudioData(arrayBuffer)
         if (audioBuffer) {
@@ -214,13 +212,13 @@ export function useRealtimeVoiceAPI(
           // 音声データ送信
           sendAudioBuffer()
         } else {
-          console.log('⚠️ 音声データのデコードに失敗しました')
+          logger.log('⚠️ 音声データのデコードに失敗しました')
         }
       } catch (error) {
-        console.error('🔴 音声データ処理エラー:', error)
+        logger.error('🔴 音声データ処理エラー:', error)
       }
     } else {
-      console.log('⚠️ 有効な音声データが取得できませんでした')
+      logger.log('⚠️ 有効な音声データが取得できませんでした')
     }
 
     // キーボードトリガーの場合の処理
@@ -230,14 +228,14 @@ export function useRealtimeVoiceAPI(
       // 押してから1秒以上 かつ 文字が存在する場合のみ送信
       // 無音検出による自動送信が既に行われていない場合のみ送信する
       if (pressDuration >= 1000 && trimmedTranscriptRef && !isSpeechEnded()) {
-        console.log('⌨️ キーボードトリガーによる送信:', trimmedTranscriptRef)
+        logger.log('⌨️ キーボードトリガーによる送信:', trimmedTranscriptRef)
         onChatProcessStart(trimmedTranscriptRef)
         setUserMessage('')
       }
       isKeyboardTriggered.current = false
     }
 
-    console.log('🏁 useRealtimeVoiceAPI: stopListening 処理完了')
+    logger.log('🏁 useRealtimeVoiceAPI: stopListening 処理完了')
   }, [
     clearSilenceDetection,
     clearInitialSpeechCheckTimer,
@@ -268,7 +266,7 @@ export function useRealtimeVoiceAPI(
         // 停止完了を待つための短い遅延
         await new Promise((resolve) => setTimeout(resolve, 100))
       } catch (err) {
-        console.log('Recognition was not running, proceeding to start', err)
+        logger.log('Recognition was not running, proceeding to start', err)
       }
     }
 
@@ -278,16 +276,16 @@ export function useRealtimeVoiceAPI(
 
     try {
       recognition.start()
-      console.log('Recognition started successfully')
+      logger.log('Recognition started successfully')
       // リスニング状態を更新
       isListeningRef.current = true
       setIsListening(true)
     } catch (error) {
-      console.error('Error starting recognition:', error)
+      logger.error('Error starting recognition:', error)
 
       // InvalidStateErrorの場合は、既に開始されているとみなす
       if (error instanceof DOMException && error.name === 'InvalidStateError') {
-        console.log('Recognition is already running, skipping retry')
+        logger.log('Recognition is already running, skipping retry')
         // 既に実行中なので、リスニング状態を更新する
         isListeningRef.current = true
         setIsListening(true)
@@ -297,12 +295,12 @@ export function useRealtimeVoiceAPI(
           try {
             if (recognition) {
               recognition.start()
-              console.log('Recognition started on retry')
+              logger.log('Recognition started on retry')
               isListeningRef.current = true
               setIsListening(true)
             }
           } catch (retryError) {
-            console.error('Failed to start recognition on retry:', retryError)
+            logger.error('Failed to start recognition on retry:', retryError)
             isListeningRef.current = false
             setIsListening(false)
             return
@@ -314,7 +312,7 @@ export function useRealtimeVoiceAPI(
     // 録音を開始
     const success = await startRecording({ mimeType: 'audio/webm' })
     if (!success) {
-      console.error('Failed to start recording')
+      logger.error('Failed to start recording')
       toastStore.getState().addToast({
         message: t('Toasts.SpeechRecognitionError'),
         type: 'error',
@@ -363,7 +361,7 @@ export function useRealtimeVoiceAPI(
 
     if (!SpeechRecognition) {
       // 統一されたエラーハンドリングパターン (Requirement 8)
-      console.error('Speech Recognition API is not supported in this browser')
+      logger.error('Speech Recognition API is not supported in this browser')
       toastStore.getState().addToast({
         message: t('Toasts.SpeechRecognitionNotSupported'),
         type: 'error',
@@ -381,7 +379,7 @@ export function useRealtimeVoiceAPI(
 
     // 音声認識開始時
     newRecognition.onstart = () => {
-      console.log('Speech recognition started')
+      logger.log('Speech recognition started')
 
       // 無音検出開始（refを使用してstale closure防止）
       startSilenceDetection(() => stopListeningRef.current())
@@ -403,7 +401,7 @@ export function useRealtimeVoiceAPI(
 
     // 音声認識終了時
     newRecognition.onend = () => {
-      console.log('Recognition ended')
+      logger.log('Recognition ended')
       clearSilenceDetection()
     }
 
@@ -416,7 +414,7 @@ export function useRealtimeVoiceAPI(
           newRecognition.abort()
         }
       } catch (error) {
-        console.error('Error cleaning up speech recognition:', error)
+        logger.error('Error cleaning up speech recognition:', error)
       }
       clearSilenceDetection()
     }

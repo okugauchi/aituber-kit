@@ -1,5 +1,6 @@
+import { logger } from '@/lib/logger'
 import { createStep } from '@mastra/core/workflows'
-import { generateText } from 'ai'
+import { generateText, type LanguageModel } from 'ai'
 import { workflowInputSchema, evaluateStateOutputSchema } from '../schemas'
 import { getLastMessages, continuationCheckSystemPrompt } from '../prompts'
 
@@ -46,7 +47,7 @@ export const evaluateStateStep = createStep({
         try {
           const { languageModel, temperature, maxTokens } =
             requestContext.all as {
-              languageModel: any
+              languageModel: LanguageModel
               temperature?: number
               maxTokens?: number
             }
@@ -75,14 +76,14 @@ export const evaluateStateStep = createStep({
             const responseJson = JSON.parse(result.text)
             shouldContinue = responseJson.answer?.toString() === 'true'
           } catch {
-            console.error(
+            logger.error(
               'JSON.parseエラーが発生しました。response:',
               result.text
             )
             shouldContinue = false
           }
         } catch (error) {
-          console.error('AI呼び出しエラー:', error)
+          logger.error('AI呼び出しエラー:', error)
           shouldContinue = false
         }
       }

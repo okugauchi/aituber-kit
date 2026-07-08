@@ -1,15 +1,15 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: Uint8Array
   error?: string
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const { message, speakerX, speakerY, style, apiKey } = req.body
 
   try {
@@ -34,7 +34,9 @@ export default async function handler(
     const audio = response.data.audio
     res.status(200).json({ audio })
   } catch (error) {
-    console.error('Error in Koeiromap TTS:', error)
+    logger.error('Error in Koeiromap TTS:', error)
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/tts-koeiromap'], handler)

@@ -1,8 +1,21 @@
+import { logger } from '@/lib/logger'
 import settingsStore from '@/features/stores/settings'
 import { Message } from '../messages/messages'
 import i18next from 'i18next'
 import toastStore from '@/features/stores/toast'
 import type { AIChatResponseStreamOptions } from './aiChatFactory'
+
+// DifyのSSEレスポンス（'data:'行）のイベントペイロード
+// event種別ごとにフィールドは異なるが、実際に参照するもののみ定義
+interface DifyStreamEvent {
+  event: string
+  answer?: string
+  conversation_id?: string
+}
+
+interface DifyApiError extends Error {
+  cause?: { errorCode?: string }
+}
 
 function handleApiError(errorCode: string): string {
   const languageCode = settingsStore.getState().selectLanguage
@@ -72,7 +85,7 @@ export async function getDifyChatResponseStream(
               if (line.startsWith('data:')) {
                 const jsonStr = line.slice(5) // 'data:' プレフィックスを除去
                 try {
-                  const data = JSON.parse(jsonStr)
+                  const data = JSON.parse(jsonStr) as DifyStreamEvent
                   if (
                     data.event === 'agent_message' ||
                     data.event === 'message'
@@ -83,7 +96,7 @@ export async function getDifyChatResponseStream(
                     })
                   }
                 } catch (error) {
-                  console.error('Error parsing JSON:', error)
+                  logger.error('Error parsing JSON:', error)
                 }
               }
             })
@@ -93,7 +106,7 @@ export async function getDifyChatResponseStream(
             return
           }
 
-          console.error(`Error fetching Dify API response:`, error)
+          logger.error(`Error fetching Dify API response:`, error)
 
           toastStore.getState().addToast({
             message: i18next.t('Errors.AIAPIError'),
@@ -108,13 +121,14 @@ export async function getDifyChatResponseStream(
         }
       },
     })
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
     }
 
+    const difyError = error as DifyApiError
     const errorMessage = handleApiError(
-      error.cause ? error.cause.errorCode : 'AIAPIError'
+      difyError.cause?.errorCode ?? 'AIAPIError'
     )
     toastStore.getState().addToast({
       message: errorMessage,

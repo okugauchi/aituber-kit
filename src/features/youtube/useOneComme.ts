@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import {
   useEffect,
   useRef,
@@ -159,7 +160,7 @@ export const useOneComme = ({
           err instanceof Error ? err.message : 'わんコメへの接続に失敗しました'
         setError(message)
         setIsLoading(false)
-        console.error('OneSDK initialization error:', err)
+        logger.error('OneSDK initialization error:', err)
       }
     }
 

@@ -1,6 +1,8 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: ArrayBuffer
@@ -62,10 +64,23 @@ function isValidApiKey(apiKey: string): boolean {
   return apiKey.startsWith('aivis_') && apiKey.length >= 20
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+interface RequestBody {
+  text: string
+  modelUuid: string
+  styleId?: number
+  styleName?: string
+  useStyleName?: boolean
+  apiKey?: string
+  speed?: number
+  pitch?: number
+  emotionalIntensity?: number
+  tempoDynamics?: number
+  prePhonemeLength?: number
+  postPhonemeLength?: number
+  outputFormat?: string
+}
+
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const {
     text,
     modelUuid,
@@ -80,19 +95,11 @@ export default async function handler(
     prePhonemeLength = 0.1,
     postPhonemeLength = 0.1,
     outputFormat = 'mp3',
-  } = req.body
+  } = req.body as RequestBody
 
   const aivisCloudApiKey = apiKey || process.env.AIVIS_CLOUD_API_KEY
-  const usesServerSecret = !apiKey && Boolean(process.env.AIVIS_CLOUD_API_KEY)
   if (!aivisCloudApiKey) {
     return res.status(400).json({ error: 'API key is required' })
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'tts-aivis-cloud-api' })
-  ) {
-    return
   }
 
   if (!isValidApiKey(aivisCloudApiKey)) {
@@ -152,7 +159,7 @@ export default async function handler(
       requestBody.style_id = styleId
     }
 
-    const response = await axios.post(
+    const response = await axios.post<ArrayBuffer>(
       'https://api.aivis-project.com/v1/tts/synthesize',
       requestBody,
       {
@@ -192,10 +199,10 @@ export default async function handler(
     }
 
     res.end(Buffer.from(response.data))
-  } catch (error: any) {
-    console.error('Error in Aivis Cloud API TTS:', error)
+  } catch (error) {
+    logger.error('Error in Aivis Cloud API TTS:', error)
 
-    if (error.response) {
+    if (axios.isAxiosError<{ detail?: string }>(error) && error.response) {
       const status = error.response.status
       const message = error.response.data?.detail || 'API Error'
 
@@ -218,3 +225,8 @@ export default async function handler(
     res.status(500).json({ error: 'Internal Server Error' })
   }
 }
+
+export default withAccessPolicy(
+  routePolicies['/api/tts-aivis-cloud-api'],
+  handler
+)

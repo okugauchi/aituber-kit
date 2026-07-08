@@ -1,47 +1,35 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: Buffer
   error?: string
+  errorCode?: string
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
-  const body = req.body
+interface RequestBody {
+  message: string
+  voiceId?: string
+  apiKey?: string
+  language?: string
+}
+
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
+  const body = req.body as RequestBody
   const message = body.message
   const voiceId = body.voiceId || process.env.CARTESIA_VOICE_ID
   const apiKey = body.apiKey || process.env.CARTESIA_API_KEY
-  const usesServerSecret =
-    (!body.apiKey && Boolean(process.env.CARTESIA_API_KEY)) ||
-    (!body.voiceId && Boolean(process.env.CARTESIA_VOICE_ID))
   const language = body.language
 
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
+    res.status(400).json({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' })
+    return
   }
   if (!voiceId) {
-    return new Response(
-      JSON.stringify({ error: 'Empty Voice ID', errorCode: 'EMPTY_PROPERTY' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'cartesia' })
-  ) {
+    res
+      .status(400)
+      .json({ error: 'Empty Voice ID', errorCode: 'EMPTY_PROPERTY' })
     return
   }
 
@@ -83,7 +71,11 @@ export default async function handler(
       'Content-Length': buffer.length,
     })
     res.end(buffer)
-  } catch (error: any) {
-    res.status(500).json({ error: error.message })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: error instanceof Error ? error.message : String(error) })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/cartesia'], handler)

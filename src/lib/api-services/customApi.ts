@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { Message } from '@/features/messages/messages'
 import { NextResponse } from 'next/server'
 
@@ -18,21 +19,29 @@ function extractMimeTypeFromDataUrl(dataUrl: string): string | null {
   return mimeType
 }
 
+type MessageContentItem =
+  | { type: 'text'; text: string }
+  | { type: 'image'; image: string; mimeType?: string }
+
+type ProcessedMessage = Omit<Message, 'content'> & {
+  content?: Message['content'] | MessageContentItem[]
+}
+
 /**
  * メッセージ内の画像オブジェクトにmimeTypeを追加する
  * @param messages 処理するメッセージ配列
  * @returns mimeTypeが追加されたメッセージ配列
  */
-function processMessagesWithMimeType(messages: Message[]): any[] {
+function processMessagesWithMimeType(messages: Message[]): ProcessedMessage[] {
   return messages.map((message) => {
     if (
       message.content &&
       Array.isArray(message.content) &&
-      message.content.some((content: any) => content.type === 'image')
+      message.content.some((content) => content.type === 'image')
     ) {
       return {
         ...message,
-        content: message.content.map((content: any) => {
+        content: message.content.map((content): MessageContentItem => {
           if (content.type === 'image' && content.image) {
             const mimeType = extractMimeTypeFromDataUrl(content.image)
             return mimeType
@@ -79,7 +88,7 @@ function normalizeParsedHeaders(headers: unknown): Record<string, string> {
   for (const [rawKey, rawValue] of Object.entries(headers)) {
     const headerName = normalizeHeaderName(rawKey)
     if (!VALID_HEADER_NAME.test(headerName)) {
-      console.warn('Skipping invalid Custom API header name')
+      logger.warn('Skipping invalid Custom API header name')
       continue
     }
 
@@ -174,7 +183,7 @@ export async function handleCustomApi(
   stream = true
 
   let parsedHeaders: Record<string, string> = {}
-  let parsedBody: Record<string, any> = {}
+  let parsedBody: Record<string, unknown> = {}
 
   try {
     parsedHeaders = normalizeParsedHeaders(JSON.parse(customApiHeaders))
@@ -227,7 +236,7 @@ export async function handleCustomApi(
     process.env.ANTHROPIC_API_KEY &&
     getHeader(apiHeaders, 'x-api-key') !== process.env.ANTHROPIC_API_KEY
   ) {
-    console.warn('Retrying Custom API request with Anthropic x-api-key header')
+    logger.warn('Retrying Custom API request with Anthropic x-api-key header')
     apiResponse = await fetch(customApiUrl, {
       ...requestInit,
       headers: buildAnthropicHeaders(apiHeaders, process.env.ANTHROPIC_API_KEY),
@@ -235,14 +244,14 @@ export async function handleCustomApi(
   }
 
   if (!apiResponse.ok) {
-    console.error(
+    logger.error(
       `Custom API Error: Status ${apiResponse.status}, URL: ${customApiUrl}`
     )
 
     try {
       // エラーレスポンスの内容も可能であればログに出力
       const errorResponseText = await apiResponse.text()
-      console.error(`Error Response: ${errorResponseText}`)
+      logger.error(`Error Response: ${errorResponseText}`)
 
       // レスポンスを再作成するため、新しいResponseオブジェクトを作成
       return new Response(
@@ -256,7 +265,7 @@ export async function handleCustomApi(
         }
       )
     } catch (e) {
-      console.error('Failed to read error response body:', e)
+      logger.error('Failed to read error response body:', e)
       return new Response(
         JSON.stringify({
           error: `Custom API Error: ${apiResponse.status}`,

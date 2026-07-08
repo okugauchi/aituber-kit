@@ -101,7 +101,7 @@ src/
 | `openAIAudioChat.ts`              | openai（audioMode時）                                                                                                                     |
 | `difyChat.ts`                     | dify                                                                                                                                      |
 
-**サーバー側**: `/api/ai/vercel.ts`（Edge Runtime、`createAIRegistry`で動的プロバイダー登録）
+**サーバー側**: `/api/ai/vercel.ts`（Node.jsランタイム、`createAIRegistry`で動的プロバイダー登録）
 
 **モデル管理** (`/src/features/constants/aiModels.ts`):
 

@@ -1,7 +1,22 @@
+import { logger } from '@/lib/logger'
 import settingsStore from '@/features/stores/settings'
 import { processAIResponse } from '../chat/handlers'
 import homeStore from '@/features/stores/home'
 import { messageSelectors } from '../messages/messageSelectors'
+import { Message } from '../messages/messages'
+import { WorkflowOutput } from '@/lib/mastra/schemas'
+
+type YouTubeLiveChatMessageItem = {
+  id?: string
+  authorDetails: {
+    displayName: string
+    profileImageUrl: string
+  }
+  snippet: {
+    textMessageDetails?: { messageText: string }
+    superChatDetails?: { userComment: string }
+  }
+}
 
 // getLiveChatId のキャッシュ（配信中にChat IDは変わらないため）
 let liveChatIdCache: { liveId: string; chatId: string } | null = null
@@ -38,7 +53,7 @@ export const getLiveChatId = async (
     }
   )
   if (!response.ok) {
-    console.error(
+    logger.error(
       `YouTube API error (videos): ${response.status} ${response.statusText}`
     )
     return ''
@@ -66,7 +81,7 @@ const retrieveLiveComments = async (
   youtubeNextPageToken: string,
   setYoutubeNextPageToken: (token: string) => void
 ): Promise<YouTubeComments> => {
-  console.log('retrieveLiveComments')
+  logger.log('retrieveLiveComments')
   let url =
     'https://youtube.googleapis.com/youtube/v3/liveChat/messages?liveChatId=' +
     activeLiveChatId +
@@ -82,7 +97,7 @@ const retrieveLiveComments = async (
     },
   })
   if (!response.ok) {
-    console.error(
+    logger.error(
       `YouTube API error (liveChat): ${response.status} ${response.statusText}`
     )
     return []
@@ -94,14 +109,14 @@ const retrieveLiveComments = async (
   }
   setYoutubeNextPageToken(json.nextPageToken)
 
-  const comments = items
-    .filter((item: any) => {
+  const comments = (items as YouTubeLiveChatMessageItem[])
+    .filter((item) => {
       const id = item.id
       if (id && processedCommentIds.has(id)) return false
       if (id) processedCommentIds.add(id)
       return true
     })
-    .map((item: any) => ({
+    .map((item) => ({
       userName: item.authorDetails.displayName,
       userIconUrl: item.authorDetails.profileImageUrl,
       userComment:
@@ -110,7 +125,7 @@ const retrieveLiveComments = async (
         '',
     }))
     .filter(
-      (comment: any) =>
+      (comment) =>
         comment.userComment !== '' && !comment.userComment.startsWith('#')
     )
 
@@ -141,12 +156,12 @@ const getApiKey = (ss: ReturnType<typeof settingsStore.getState>): string => {
  */
 const callContinuationApi = async (params: {
   ss: ReturnType<typeof settingsStore.getState>
-  chatLog: any[]
+  chatLog: Message[]
   youtubeComments: YouTubeComments
   noCommentCount: number
   continuationCount: number
   sleepMode: boolean
-}): Promise<any | null> => {
+}): Promise<WorkflowOutput | null> => {
   const {
     ss,
     chatLog,
@@ -186,10 +201,10 @@ const callContinuationApi = async (params: {
   if (!response.ok) {
     try {
       const errorData = await response.json()
-      console.error('Continuation API error:', errorData.error)
+      logger.error('Continuation API error:', errorData.error)
     } catch {
       const text = await response.text()
-      console.error('Continuation API error (non-JSON response):', text)
+      logger.error('Continuation API error (non-JSON response):', text)
     }
     return null
   }
@@ -243,7 +258,7 @@ export const fetchAndProcessComments = async (
               checkResult.stateUpdates.continuationCount,
             youtubeSleepMode: checkResult.stateUpdates.sleepMode,
           })
-          processAIResponse(checkResult.messages)
+          processAIResponse(checkResult.messages ?? [])
           return
         }
       }
@@ -286,17 +301,17 @@ export const fetchAndProcessComments = async (
       // アクションに応じた処理
       switch (result.action) {
         case 'send_comment':
-          console.log(
+          logger.log(
             'selectedYoutubeComment:',
             result.comment,
             'userName:',
             result.userName
           )
-          await handleSendChat(result.comment, result.userName)
+          await handleSendChat(result.comment ?? '', result.userName)
           break
         case 'process_messages':
         case 'sleep':
-          processAIResponse(result.messages)
+          processAIResponse(result.messages ?? [])
           break
         case 'do_nothing':
           break
@@ -327,7 +342,7 @@ export const fetchAndProcessComments = async (
         youtubeComments[Math.floor(Math.random() * youtubeComments.length)]
       const selectedComment = randomComment.userComment
       const selectedUserName = randomComment.userName
-      console.log(
+      logger.log(
         'selectedYoutubeComment:',
         selectedComment,
         'userName:',
@@ -337,10 +352,10 @@ export const fetchAndProcessComments = async (
       await handleSendChat(selectedComment, selectedUserName)
     } else {
       const noCommentCount = ss.youtubeNoCommentCount + 1
-      console.log('YoutubeNoCommentCount:', noCommentCount)
+      logger.log('YoutubeNoCommentCount:', noCommentCount)
       settingsStore.setState({ youtubeNoCommentCount: noCommentCount })
     }
   } catch (error) {
-    console.error('Error fetching comments:', error)
+    logger.error('Error fetching comments:', error)
   }
 }

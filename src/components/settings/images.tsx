@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -50,7 +51,7 @@ const Images = () => {
         )
       }
     } catch (error) {
-      console.error('Failed to fetch uploaded images:', error)
+      logger.error('Failed to fetch uploaded images:', error)
     }
   }, [setUploadedImages])
 
@@ -97,7 +98,7 @@ const Images = () => {
         try {
           fileToUpload = await compressImageFile(file)
         } catch (compressionError) {
-          console.warn(
+          logger.warn(
             'Image compression failed, uploading original:',
             compressionError
           )
@@ -133,7 +134,7 @@ const Images = () => {
         })
       }
     } catch (error) {
-      console.error('Upload failed:', error)
+      logger.error('Upload failed:', error)
       addToast({
         message: t('UploadFailed'),
         type: 'error',
@@ -201,7 +202,7 @@ const Images = () => {
         })
       }
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
       addToast({
         message: t('DeleteFailed'),
         type: 'error',

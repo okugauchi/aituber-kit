@@ -5,6 +5,7 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 2.2, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 5.4, 5.5
  */
 
+import { logger } from '@/lib/logger'
 import {
   MemoryRecord,
   SearchOptions,
@@ -82,7 +83,7 @@ export class MemoryService {
     if (this.initialized) return
 
     if (!isIndexedDBSupported()) {
-      console.warn('MemoryService: IndexedDB is not supported in this browser')
+      logger.warn('MemoryService: IndexedDB is not supported in this browser')
       return
     }
 
@@ -90,7 +91,7 @@ export class MemoryService {
       await this.store.open()
       this.initialized = true
     } catch (error) {
-      console.error('MemoryService: Failed to initialize', error)
+      logger.error('MemoryService: Failed to initialize', error)
     }
   }
 
@@ -113,7 +114,7 @@ export class MemoryService {
    */
   async saveMemory(message: Message): Promise<void> {
     if (!this.initialized) {
-      console.warn('MemoryService: Not initialized, skipping save')
+      logger.warn('MemoryService: Not initialized, skipping save')
       return
     }
 
@@ -124,7 +125,7 @@ export class MemoryService {
       embedding = await this.getEmbedding(message.content)
     } catch (error) {
       // エラーをログに記録し、会話は継続（Requirement 1.4）
-      console.warn(
+      logger.warn(
         'MemoryService: Failed to get embedding, saving without embedding',
         error
       )
@@ -143,7 +144,7 @@ export class MemoryService {
     try {
       await this.store.put(record)
     } catch (error) {
-      console.error('MemoryService: Failed to save memory record', error)
+      logger.error('MemoryService: Failed to save memory record', error)
     }
   }
 
@@ -167,7 +168,7 @@ export class MemoryService {
 
     // クエリのEmbeddingを取得
     const queryEmbedding = await this.getEmbedding(query).catch((error) => {
-      console.warn('MemoryService: Failed to get query embedding', error)
+      logger.warn('MemoryService: Failed to get query embedding', error)
       return null
     })
 
@@ -186,7 +187,7 @@ export class MemoryService {
           results.push({ ...memory, similarity })
         }
       } catch (error) {
-        console.warn('MemoryService: Similarity calculation failed', error)
+        logger.warn('MemoryService: Similarity calculation failed', error)
       }
     }
 
@@ -213,14 +214,14 @@ export class MemoryService {
    */
   async restoreMemory(record: MemoryRecord): Promise<void> {
     if (!this.initialized) {
-      console.warn('MemoryService: Not initialized, skipping restore')
+      logger.warn('MemoryService: Not initialized, skipping restore')
       return
     }
 
     try {
       await this.store.put(record)
     } catch (error) {
-      console.error('MemoryService: Failed to restore memory record', error)
+      logger.error('MemoryService: Failed to restore memory record', error)
     }
   }
 
@@ -232,7 +233,7 @@ export class MemoryService {
    */
   async restoreMemories(records: MemoryRecord[]): Promise<number> {
     if (!this.initialized) {
-      console.warn('MemoryService: Not initialized, skipping restore')
+      logger.warn('MemoryService: Not initialized, skipping restore')
       return 0
     }
 
@@ -243,7 +244,7 @@ export class MemoryService {
         await this.store.put(record)
         restoredCount++
       } catch (error) {
-        console.error('MemoryService: Failed to restore memory record', error)
+        logger.error('MemoryService: Failed to restore memory record', error)
       }
     }
 
@@ -290,7 +291,7 @@ export class MemoryService {
 
       if (!response.ok) {
         const errorData = (await response.json()) as EmbeddingError
-        console.warn('MemoryService: Embedding API error', errorData)
+        logger.warn('MemoryService: Embedding API error', errorData)
         return null
       }
 
@@ -298,14 +299,14 @@ export class MemoryService {
 
       // Embedding次元数の検証
       if (data.embedding.length !== EMBEDDING_DIMENSION) {
-        console.warn(
+        logger.warn(
           `MemoryService: Unexpected embedding dimension: ${data.embedding.length}`
         )
       }
 
       return data.embedding
     } catch (error) {
-      console.warn('MemoryService: Embedding API request failed', error)
+      logger.warn('MemoryService: Embedding API request failed', error)
       return null
     }
   }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import toastStore from '@/features/stores/toast'
 
 export type ExternalLinkageWebSocketStatus =
@@ -7,7 +8,10 @@ export type ExternalLinkageWebSocketStatus =
   | 'closed'
   | 'error'
 
-type TranslationFunction = (key: string, options?: any) => string
+type TranslationFunction = (
+  key: string,
+  options?: Record<string, unknown>
+) => string
 
 export interface ExternalLinkageWebSocketHandlers {
   onOpen: (event: Event) => void
@@ -51,7 +55,7 @@ export class ExternalLinkageWebSocketManager {
   }
 
   private handleOpen = (event: Event) => {
-    console.log('External linkage WebSocket connection opened:', event)
+    logger.log('External linkage WebSocket connection opened:', event)
     this.removeToast()
     this.updateStatus('open', {
       connectedAt: new Date().toISOString(),
@@ -67,11 +71,11 @@ export class ExternalLinkageWebSocketManager {
   }
 
   private handleMessage = async (event: MessageEvent) => {
-    console.log('External linkage WebSocket received message:', event)
+    logger.log('External linkage WebSocket received message:', event)
     try {
       await this.handlers.onMessage(event)
     } catch (error) {
-      console.error('External linkage WebSocket message handler error:', error)
+      logger.error('External linkage WebSocket message handler error:', error)
       this.updateStatus('error', {
         lastError: this.t('Toasts.WebSocketConnectionError'),
       })
@@ -80,7 +84,7 @@ export class ExternalLinkageWebSocketManager {
   }
 
   private handleError = (event: Event) => {
-    console.error('External linkage WebSocket error:', event)
+    logger.error('External linkage WebSocket error:', event)
     this.removeToast()
     this.updateStatus('error', {
       lastError: this.t('Toasts.WebSocketConnectionError'),
@@ -95,7 +99,7 @@ export class ExternalLinkageWebSocketManager {
   }
 
   private handleClose = (event: Event) => {
-    console.log('External linkage WebSocket connection closed:', event)
+    logger.log('External linkage WebSocket connection closed:', event)
     this.removeToast()
     this.updateStatus('closed', { connectedAt: null })
     toastStore.getState().addToast({
@@ -121,7 +125,7 @@ export class ExternalLinkageWebSocketManager {
     try {
       this.ws = this.connectWebsocket()
     } catch (error) {
-      console.error('External linkage WebSocket connection failed:', error)
+      logger.error('External linkage WebSocket connection failed:', error)
       this.removeToast()
       this.updateStatus('closed', {
         connectedAt: null,

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import {
   VercelAIService,
@@ -7,16 +8,15 @@ import {
 import { createAIRegistry, getLanguageModel } from '@/lib/api-services/vercelAi'
 import { mastra } from '@/lib/mastra'
 import { RequestContext } from '@mastra/core/request-context'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  gate: PolicyGate
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
-  }
-
   const {
     aiService,
     model,
@@ -59,10 +59,7 @@ export default async function handler(
     }
   }
 
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'youtube/continuation' })
-  ) {
+  if (!gate.guardServerSecret(usesServerSecret)) {
     return
   }
 
@@ -86,10 +83,7 @@ export default async function handler(
     aiService === 'azure' &&
     !azureEndpoint &&
     Boolean(process.env.AZURE_ENDPOINT)
-  if (
-    usesServerAzureEndpoint &&
-    !guardServerSecretAccess(req, res, { featureName: 'youtube/continuation' })
-  ) {
+  if (!gate.guardServerSecret(usesServerAzureEndpoint)) {
     return
   }
 
@@ -159,7 +153,7 @@ export default async function handler(
     if (result.status === 'success') {
       return res.status(200).json(result.result)
     } else {
-      console.error('Workflow failed:', result)
+      logger.error('Workflow failed:', result)
       return res.status(500).json({
         error:
           result.status === 'failed'
@@ -170,7 +164,12 @@ export default async function handler(
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
-    console.error('Error in youtube continuation API:', errorMessage)
+    logger.error('Error in youtube continuation API:', errorMessage)
     return res.status(500).json({ error: errorMessage })
   }
 }
+
+export default withAccessPolicy(
+  routePolicies['/api/youtube/continuation'],
+  handler
+)

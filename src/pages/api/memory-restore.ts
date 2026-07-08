@@ -5,14 +5,13 @@
  * Requirements: 5.7, 5.8
  */
 
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
 import { Message } from '@/features/messages/messages'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 interface MemoryRestoreRequest {
   filename: string
@@ -24,20 +23,7 @@ interface MemoryRestoreResponse {
   embeddingCount: number
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('memory-restore'))
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { filename } = req.body as MemoryRestoreRequest
 
@@ -79,7 +65,9 @@ export default async function handler(
 
     res.status(200).json(response)
   } catch (error) {
-    console.error('Error restoring memory:', error)
+    logger.error('Error restoring memory:', error)
     res.status(500).json({ message: 'Error restoring memory' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/memory-restore'], handler)

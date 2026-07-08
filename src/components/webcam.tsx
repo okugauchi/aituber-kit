@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 
 import homeStore from '@/features/stores/home'
@@ -21,7 +22,7 @@ export const Webcam = () => {
         setSelectedDevice(latestDevices[0].deviceId)
       }
     } catch (error) {
-      console.error('Error refreshing devices:', error)
+      logger.error('Error refreshing devices:', error)
     }
   }, [selectedDevice])
 
@@ -50,7 +51,7 @@ export const Webcam = () => {
         videoRef.current.srcObject = stream
       }
     } catch (e) {
-      console.error('Error initializing camera:', e)
+      logger.error('Error initializing camera:', e)
     }
   }, [selectedDevice])
 
@@ -63,13 +64,13 @@ export const Webcam = () => {
     const currentIndex = devices.findIndex((d) => d.deviceId === selectedDevice)
     const nextIndex = (currentIndex + 1) % devices.length
     const newDevice = devices[nextIndex].deviceId
-    console.log('Current device:', selectedDevice)
-    console.log('New device:', newDevice)
+    logger.log('Current device:', selectedDevice)
+    logger.log('New device:', newDevice)
     setSelectedDevice(newDevice)
   }, [devices, selectedDevice])
 
   useEffect(() => {
-    console.log('Selected device changed:', selectedDevice)
+    logger.log('Selected device changed:', selectedDevice)
     initializeCamera()
   }, [selectedDevice, initializeCamera])
 

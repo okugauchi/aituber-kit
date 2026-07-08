@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useEffect, useState, useCallback } from 'react'
 import slideStore from '@/features/stores/slide'
 import homeStore from '@/features/stores/home'
@@ -10,11 +11,7 @@ interface SlidesProps {
   markdown: string
 }
 
-export const goToSlide = (index: number) => {
-  slideStore.setState({
-    currentSlide: index,
-  })
-}
+export { goToSlide } from '@/features/stores/slide'
 
 const Slides: React.FC<SlidesProps> = ({ markdown }) => {
   const [marpitContainer, setMarpitContainer] = useState<Element | null>(null)
@@ -114,7 +111,7 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
       }
 
       const currentLines = getCurrentLines()
-      console.log(currentLines)
+      logger.log(currentLines)
       speakMessageHandler(currentLines)
     },
     [selectedSlideDocs]

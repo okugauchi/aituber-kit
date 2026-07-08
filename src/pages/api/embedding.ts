@@ -5,9 +5,11 @@
  * Requirements: 1.1, 1.3, 1.4, 1.5
  */
 
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 /** Embeddingモデル名 */
 const EMBEDDING_MODEL = 'text-embedding-3-small'
@@ -28,19 +30,16 @@ interface EmbeddingError {
   code: 'INVALID_INPUT' | 'API_KEY_MISSING' | 'RATE_LIMITED' | 'API_ERROR'
 }
 
-export default async function handler(
+interface RequestBody {
+  text: string
+  apiKey?: string
+}
+
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<EmbeddingResponse | EmbeddingError>
 ) {
-  // POSTメソッド以外は拒否
-  if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method not allowed',
-      code: 'INVALID_INPUT',
-    })
-  }
-
-  const { text, apiKey } = req.body
+  const { text, apiKey } = req.body as RequestBody
 
   // textパラメータの検証
   if (!text || typeof text !== 'string') {
@@ -53,9 +52,6 @@ export default async function handler(
   // APIキーの取得（リクエスト > 環境変数の優先順位）
   const openaiKey =
     apiKey || process.env.OPENAI_EMBEDDING_KEY || process.env.OPENAI_API_KEY
-  const usesServerSecret =
-    !apiKey &&
-    Boolean(process.env.OPENAI_EMBEDDING_KEY || process.env.OPENAI_API_KEY)
 
   // APIキーの存在確認
   if (!openaiKey) {
@@ -63,13 +59,6 @@ export default async function handler(
       error: 'OpenAI API key is not configured',
       code: 'API_KEY_MISSING',
     })
-  }
-
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'embedding' })
-  ) {
-    return
   }
 
   try {
@@ -90,12 +79,12 @@ export default async function handler(
         total_tokens: response.usage.total_tokens,
       },
     })
-  } catch (error: any) {
+  } catch (error) {
     // エラーログを出力
-    console.error('Embedding API error:', error)
+    logger.error('Embedding API error:', error)
 
     // レート制限エラー
-    if (error.status === 429) {
+    if (error instanceof OpenAI.APIError && error.status === 429) {
       return res.status(429).json({
         error: 'Rate limit exceeded. Please try again later.',
         code: 'RATE_LIMITED',
@@ -109,3 +98,5 @@ export default async function handler(
     })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/embedding'], handler)

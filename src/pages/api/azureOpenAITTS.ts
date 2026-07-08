@@ -1,40 +1,45 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { AzureOpenAI } from 'openai'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import { isHttpUrl } from '@/lib/api-services/serverUrlGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// deploymentName はURLパス由来のため文字種を制限する（S13）
+const DEPLOYMENT_NAME_PATTERN = /^[A-Za-z0-9._-]+$/
 
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { message, voice, speed, apiKey, endpoint } = req.body
 
   const azureTTSKey = apiKey || process.env.AZURE_TTS_KEY
   const azureTTSEndpoint = endpoint || process.env.AZURE_TTS_ENDPOINT
-  const usesServerSecret =
-    (!apiKey && Boolean(process.env.AZURE_TTS_KEY)) ||
-    (!endpoint && Boolean(process.env.AZURE_TTS_ENDPOINT))
 
   if (!message || !voice || !speed || !azureTTSKey || !azureTTSEndpoint) {
     return res.status(400).json({ error: 'Missing required parameters' })
   }
 
-  if (
-    usesServerSecret &&
-    !guardServerSecretAccess(req, res, { featureName: 'azureOpenAITTS' })
-  ) {
-    return
+  // endpoint はユーザー/環境変数由来のURLなので検証してからパースする（S13）
+  let url: URL
+  try {
+    url = new URL(azureTTSEndpoint)
+  } catch {
+    return res.status(400).json({ error: 'Invalid Azure TTS endpoint URL' })
+  }
+
+  if (!isHttpUrl(url)) {
+    return res.status(400).json({ error: 'Invalid Azure TTS endpoint URL' })
+  }
+
+  const pathParts = url.pathname.split('/')
+  const deploymentName = pathParts.find((part) => part === 'deployments')
+    ? pathParts[pathParts.indexOf('deployments') + 1]
+    : 'tts'
+
+  if (!deploymentName || !DEPLOYMENT_NAME_PATTERN.test(deploymentName)) {
+    return res.status(400).json({ error: 'Invalid Azure TTS deployment name' })
   }
 
   try {
-    const url = new URL(azureTTSEndpoint)
-    const pathParts = url.pathname.split('/')
-    let deploymentName = pathParts.find((part) => part === 'deployments')
-      ? pathParts[pathParts.indexOf('deployments') + 1]
-      : 'tts'
     const apiVersion =
       url.searchParams.get('api-version') || '2024-02-15-preview'
 
@@ -57,7 +62,9 @@ export default async function handler(
     res.setHeader('Content-Type', 'audio/mpeg')
     res.send(buffer)
   } catch (error) {
-    console.error('Azure OpenAI TTS error:', error)
+    logger.error('Azure OpenAI TTS error:', error)
     res.status(500).json({ error: 'Failed to generate speech' })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/azureOpenAITTS'], handler)

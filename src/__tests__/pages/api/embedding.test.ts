@@ -10,14 +10,24 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 // OpenAI モジュールのモック
 const mockCreate = jest.fn()
+class MockAPIError extends Error {
+  status?: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
 jest.mock('openai', () => {
   return {
     __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      embeddings: {
-        create: mockCreate,
-      },
-    })),
+    default: Object.assign(
+      jest.fn().mockImplementation(() => ({
+        embeddings: {
+          create: mockCreate,
+        },
+      })),
+      { APIError: MockAPIError }
+    ),
   }
 })
 
@@ -120,6 +130,9 @@ describe('/api/embedding', () => {
     it('textパラメータがない場合は400エラーを返す', async () => {
       // Arrange
       process.env.OPENAI_API_KEY = 'test-api-key'
+      // 統一アクセスポリシーではガード評価がパラメータ検証より先に走るため、
+      // env キー使用時はガードを通過させた上で 400 を検証する
+      process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
         method: 'POST',
         body: {},
@@ -184,8 +197,7 @@ describe('/api/embedding', () => {
       // Arrange
       process.env.OPENAI_API_KEY = 'test-api-key'
       process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
-      const rateLimitError = new Error('Rate limit exceeded')
-      ;(rateLimitError as any).status = 429
+      const rateLimitError = new MockAPIError(429, 'Rate limit exceeded')
       mockCreate.mockRejectedValue(rateLimitError)
 
       const { req, res } = createMocks<NextApiRequest, NextApiResponse>({

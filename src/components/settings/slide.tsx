@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
@@ -31,7 +32,7 @@ const Slide = () => {
     fetch('/api/getSlideFolders')
       .then((response) => response.json())
       .then((data) => setSlideFolders(data))
-      .catch((error) => console.error('Error fetching slide folders:', error))
+      .catch((error) => logger.error('Error fetching slide folders:', error))
   }, [updateKey])
 
   const handleFolderUpdate = () => {

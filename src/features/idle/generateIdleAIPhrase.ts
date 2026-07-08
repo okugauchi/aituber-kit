@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { getAIChatResponseStream } from '@/features/chat/aiChatFactory'
 import { THINKING_MARKER } from '@/features/chat/vercelAIChat'
 import { Message, EmotionType, EMOTIONS } from '@/features/messages/messages'
@@ -52,7 +53,7 @@ export async function generateIdleAIPhrase(
 
     return parseEmotionAndText(fullText)
   } catch (error) {
-    console.error('アイドルAI発話生成エラー:', error)
+    logger.error('アイドルAI発話生成エラー:', error)
     return null
   }
 }

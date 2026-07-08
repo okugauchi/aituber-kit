@@ -656,7 +656,7 @@ export const defaultModels: Record<
       models.find((model) => model.isDefault)?.name || '',
     ])
   ),
-  openaiAudio: 'gpt-4o-mini-audio-preview',
+  openaiAudio: 'gpt-audio-mini',
   openaiRealtime: 'gpt-realtime',
 } as Record<AIService | 'openaiAudio' | 'openaiRealtime', string>
 
@@ -720,11 +720,12 @@ export const openAIRealtimeModels = [
  * OpenAIのオーディオAPIモードで使用するモデル一覧
  */
 export const openAIAudioModels = [
-  'gpt-4o-audio-preview',
-  'gpt-4o-audio-preview-2024-12-17',
-  'gpt-4o-audio-preview-2025-06-03',
-  'gpt-4o-mini-audio-preview',
-  'gpt-4o-mini-audio-preview-2024-12-17',
+  'gpt-audio-1.5',
+  'gpt-audio',
+  'gpt-audio-2025-08-28',
+  'gpt-audio-mini',
+  'gpt-audio-mini-2025-12-15',
+  'gpt-audio-mini-2025-10-06',
 ] as const
 
 /**

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import formidable from 'formidable'
 import fs from 'fs'
@@ -7,16 +8,18 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { generateObject } from 'ai'
+import { generateObject, GenerateObjectResult } from 'ai'
 import { z } from 'zod'
 
 import { AIService } from '@/features/constants/settings'
 import { isMultiModalModel } from '@/features/constants/aiModels'
-import {
-  isRestrictedMode,
-  createRestrictedModeErrorResponse,
-} from '@/utils/restrictedMode'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
+// NOTE: createOpenAI/createAnthropic/createGoogleGenerativeAI はそれぞれ
+// 呼び出しシグネチャの異なるプロバイダーファクトリを返すため、共通の
+// providerInstance(model) 呼び出し形だけを許容する最小限の any を維持する
+// （ロジック変更なしに正確な統一型を作るには各SDKの型を再設計する必要がある）
 type AIServiceConfig = Record<AIService, () => any>
 
 export const config = {
@@ -132,6 +135,9 @@ async function convertPdfToImages(pdfBuffer: Buffer): Promise<string[]> {
     const context = canvas.getContext('2d')
 
     // ページをレンダリング
+    // NOTE: node-canvas の CanvasRenderingContext2D と pdfjs-dist が期待する
+    // DOM lib の CanvasRenderingContext2D は構造的に非互換のため、
+    // ロジックを変更せずに安全にブリッジする目的で any を維持する
     const renderContext = {
       canvasContext: context as any,
       viewport: viewport,
@@ -187,7 +193,7 @@ export async function createSlideLine(
 
   const instance = aiServiceInstance()
 
-  let response: any
+  let response: GenerateObjectResult<unknown> | undefined
   try {
     if (aiService == 'anthropic') {
       response = await generateObject({
@@ -239,7 +245,7 @@ export async function createSlideLine(
       })
     }
   } catch (error) {
-    console.error('AI service request error:', error)
+    logger.error('AI service request error:', error)
     throw new Error(`Failed to request AI service: ${error}`)
   }
 
@@ -251,16 +257,6 @@ export async function createSlideLine(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  if (isRestrictedMode()) {
-    return res
-      .status(403)
-      .json(createRestrictedModeErrorResponse('convert-slide'))
-  }
-
   const form = formidable({ multiples: true })
 
   form.parse(req, async (err, fields, files) => {
@@ -306,7 +302,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let markdownContent = '---\nmarp: true' // Markdownの初期コンテンツ
     let previousResult: string | null = null
 
-    console.log('start convert')
+    logger.log('start convert')
 
     const language = getLanguage(selectLanguage)
 
@@ -324,11 +320,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           )
           slideLine.page = i // ページ番号を追加
           scriptList.push(slideLine)
-          console.log(`=== slideLine ${i} ===`)
-          console.log(slideLine.line)
+          logger.log(`=== slideLine ${i} ===`)
+          logger.log(slideLine.line)
           previousResult = slideLine.line
         } catch (error) {
-          console.error(`Error processing slide ${i}:`, error)
+          logger.error(`Error processing slide ${i}:`, error)
           res.status(500).json({ error: `Error processing slide ${i}` })
           return
         }
@@ -343,14 +339,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       markdownContent += `\n---\n![bg](${imgBase64})\n`
     }
 
-    console.log('end convert')
+    logger.log('end convert')
 
     // MarkdownファイルとJSONファイルを保存
     try {
       fs.writeFileSync(markdownPath, markdownContent)
       fs.writeFileSync(jsonPath, JSON.stringify(scriptList, null, 2))
     } catch (error) {
-      console.error('Error occurred while saving files:', error)
+      logger.error('Error occurred while saving files:', error)
       res.status(500).json({ error: `Failed to save files: ${error}` })
       return
     }
@@ -401,4 +397,4 @@ function getLanguage(selectLanguage: string | undefined) {
   }
 }
 
-export default handler
+export default withAccessPolicy(routePolicies['/api/convertSlide'], handler)

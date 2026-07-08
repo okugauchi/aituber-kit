@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
@@ -43,7 +44,7 @@ const Based = () => {
         setBackgroundFiles(files.filter((file: string) => file !== 'bg-c.png'))
       )
       .catch((error) => {
-        console.error('Error fetching background list:', error)
+        logger.error('Error fetching background list:', error)
         setError(t('BackgroundListFetchError'))
       })
       .finally(() => {
@@ -92,7 +93,7 @@ const Based = () => {
       const files = await listResponse.json()
       setBackgroundFiles(files.filter((file: string) => file !== 'bg-c.png'))
     } catch (error) {
-      console.error('Error uploading background:', error)
+      logger.error('Error uploading background:', error)
       setUploadError(t('BackgroundUploadError'))
     } finally {
       setIsUploading(false)

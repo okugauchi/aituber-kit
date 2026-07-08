@@ -107,6 +107,8 @@ export function usePresenceDetection({
   const logDebug = useCallback(
     (message: string, ...args: unknown[]) => {
       if (presenceDebugMode) {
+        // 設定画面のpresenceDebugModeによる明示的なオプトインのため、
+        // logger.logのビルド時ゲート（本番で抑制）を通さずconsoleへ直接出力する
         console.log(`[PresenceDetection] ${message}`, ...args)
       }
     },

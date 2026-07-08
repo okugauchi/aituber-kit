@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import toastStore from '@/features/stores/toast'
 import { useTranslation } from 'react-i18next'
@@ -33,7 +34,7 @@ export function useAudioProcessing() {
   useEffect(() => {
     return () => {
       if (audioContextRef.current) {
-        audioContextRef.current.close().catch(console.error)
+        audioContextRef.current.close().catch(logger.error)
         audioContextRef.current = null
       }
     }
@@ -58,7 +59,7 @@ export function useAudioProcessing() {
       return true
     } catch (error) {
       // 統一されたエラーハンドリングパターン (Requirement 8)
-      console.error('Microphone permission error:', error)
+      logger.error('Microphone permission error:', error)
       toastStore.getState().addToast({
         message: t('Toasts.MicrophonePermissionDenied'),
         type: 'error',
@@ -116,7 +117,7 @@ export function useAudioProcessing() {
           }
         }
 
-        console.log(`Using MIME type: ${selectedMimeType} for recording`)
+        logger.log(`Using MIME type: ${selectedMimeType} for recording`)
 
         // デフォルトのオプションをマージ
         const recorderOptions = {
@@ -131,7 +132,7 @@ export function useAudioProcessing() {
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             audioChunksRef.current.push(event.data)
-            console.log(
+            logger.log(
               'Recording: added chunk, size:',
               event.data.size,
               'type:',
@@ -145,7 +146,7 @@ export function useAudioProcessing() {
         return true
       } catch (error) {
         // 統一されたエラーハンドリングパターン (Requirement 8)
-        console.error('Error starting recording:', error)
+        logger.error('Error starting recording:', error)
         toastStore.getState().addToast({
           message: t('Toasts.SpeechRecognitionError'),
           type: 'error',
@@ -162,11 +163,11 @@ export function useAudioProcessing() {
    */
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-      console.log('🔴 MediaRecorder停止: すでに非アクティブ状態です')
+      logger.log('🔴 MediaRecorder停止: すでに非アクティブ状態です')
       return null
     }
 
-    console.log('🎤 MediaRecorder停止開始: 現在の状態:', mediaRecorder.state)
+    logger.log('🎤 MediaRecorder停止開始: 現在の状態:', mediaRecorder.state)
 
     // 重要: 先にトラックを停止すると、残りのデータが失われる可能性がある
     // そのため、まずMediaRecorderを停止し、すべてのデータを収集してから
@@ -175,7 +176,7 @@ export function useAudioProcessing() {
     return new Promise<Blob | null>((resolve) => {
       // 現在のチャンクを保持
       const currentChunks = [...audioChunksRef.current]
-      console.log(`🎤 停止前のチャンク数: ${currentChunks.length}`)
+      logger.log(`🎤 停止前のチャンク数: ${currentChunks.length}`)
 
       // ondataavailableイベントは停止後にも発火する可能性がある
       const oldDataAvailableHandler = mediaRecorder.ondataavailable
@@ -186,7 +187,7 @@ export function useAudioProcessing() {
 
         if (event.data.size > 0) {
           currentChunks.push(event.data)
-          console.log(
+          logger.log(
             `🎤 停止処理中に新しいチャンクを追加: サイズ=${event.data.size}, 合計=${currentChunks.length}`
           )
         }
@@ -194,7 +195,7 @@ export function useAudioProcessing() {
 
       // onstopハンドラを設定
       mediaRecorder.onstop = () => {
-        console.log(
+        logger.log(
           `🎤 MediaRecorder停止完了イベント発生: チャンク数=${currentChunks.length}`
         )
 
@@ -208,31 +209,31 @@ export function useAudioProcessing() {
 
           // 音声チャンクをマージしてBlobに変換
           audioBlob = new Blob(currentChunks, { type: blobType })
-          console.log(
+          logger.log(
             `🎤 音声Blobを作成: サイズ=${audioBlob.size}バイト, タイプ=${blobType}`
           )
         } else {
-          console.log('🔴 録音データなし: チャンクは収集されませんでした')
+          logger.log('🔴 録音データなし: チャンクは収集されませんでした')
         }
 
         // mediaRecorderのストリームを停止
         try {
           if (mediaRecorder.stream) {
-            console.log('🎤 オーディオストリームのトラックを停止します')
+            logger.log('🎤 オーディオストリームのトラックを停止します')
             mediaRecorder.stream.getTracks().forEach((track) => {
               track.stop()
-              console.log(
+              logger.log(
                 `🎤 オーディオトラック停止: ID=${track.id}, 種類=${track.kind}`
               )
             })
           }
         } catch (trackError) {
-          console.error('🔴 トラック停止エラー:', trackError)
+          logger.error('🔴 トラック停止エラー:', trackError)
         }
 
         // グローバルなオーディオチャンク配列をクリア
         audioChunksRef.current = []
-        console.log('🎤 グローバルオーディオチャンク配列をクリア')
+        logger.log('🎤 グローバルオーディオチャンク配列をクリア')
 
         // 結果を返す
         resolve(audioBlob)
@@ -241,9 +242,9 @@ export function useAudioProcessing() {
       // stopメソッドを呼び出す
       try {
         mediaRecorder.stop()
-        console.log('🎤 MediaRecorder.stop()メソッド呼び出し成功')
+        logger.log('🎤 MediaRecorder.stop()メソッド呼び出し成功')
       } catch (error) {
-        console.error('🔴 MediaRecorder.stop()エラー:', error)
+        logger.error('🔴 MediaRecorder.stop()エラー:', error)
 
         // エラーが発生した場合でも、ストリームを停止し、現在のチャンクでBlobを作成
         try {
@@ -251,7 +252,7 @@ export function useAudioProcessing() {
             mediaRecorder.stream.getTracks().forEach((track) => track.stop())
           }
         } catch (trackError) {
-          console.error('🔴 エラー発生後のトラック停止エラー:', trackError)
+          logger.error('🔴 エラー発生後のトラック停止エラー:', trackError)
         }
 
         // 現在のチャンクでBlobを作成
@@ -280,7 +281,7 @@ export function useAudioProcessing() {
       try {
         return await audioContext.decodeAudioData(arrayBuffer)
       } catch (error) {
-        console.error('Failed to decode audio data:', error)
+        logger.error('Failed to decode audio data:', error)
         return null
       }
     },

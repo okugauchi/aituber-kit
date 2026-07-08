@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 export type MessageType = 'direct_send' | 'ai_generate' | 'user_input'
 
 export type ApiCommandType = 'stop'
@@ -137,7 +139,7 @@ export const emitApiEvent = (
     try {
       listener(event)
     } catch (error) {
-      console.error('API event listener failed:', error)
+      logger.error('API event listener failed:', error)
     }
   })
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import * as THREE from 'three'
 import {
   VRM,
@@ -96,7 +97,7 @@ export class Model {
       if (poseConfig) {
         void this.poseManager
           .applyPose(this, talk.motion, poseConfig)
-          .catch((e) => console.error('Failed to apply pose:', e))
+          .catch((e) => logger.error('Failed to apply pose:', e))
       }
     } else if (this.poseManager.isActive) {
       // モーション指定なしの発話ではアクティブなポーズをリセット

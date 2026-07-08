@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import React, { useEffect, useState, useCallback, KeyboardEvent } from 'react' // KeyboardEvent をインポート
 import { useRouter } from 'next/router'
 import slideStore from '@/features/stores/slide'
@@ -110,15 +111,16 @@ const SlideEditorPage: React.FC = () => {
         customStyleElement.textContent = customStyle
         customStyleElement.setAttribute('data-custom-css', 'true')
         document.head.appendChild(customStyleElement)
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.log('Fetch aborted: convertMarkdown')
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          logger.log('Fetch aborted: convertMarkdown')
           return
         }
-        console.error('Error converting markdown:', error)
+        logger.error('Error converting markdown:', error)
         setIsError(true)
         setErrorMessage(
-          error.message || 'スライドデータの読み込み中にエラーが発生しました。'
+          (error instanceof Error && error.message) ||
+            'スライドデータの読み込み中にエラーが発生しました。'
         )
       }
     }
@@ -161,7 +163,7 @@ const SlideEditorPage: React.FC = () => {
         })
         if (!response.ok) {
           if (response.status === 404) {
-            console.warn(
+            logger.warn(
               `scripts.json not found for slide "${slideName}". Proceeding with empty scripts.`
             )
             setScripts([])
@@ -184,22 +186,22 @@ const SlideEditorPage: React.FC = () => {
           setScripts(fetchedScripts)
           setInitialScripts(fetchedScripts)
         } else {
-          console.error(
+          logger.error(
             'Fetched scripts data is not in the expected format:',
             data
           )
           setScripts([])
           setInitialScripts([])
         }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.log('Fetch aborted: fetchScripts')
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          logger.log('Fetch aborted: fetchScripts')
           return
         }
-        console.error('Error fetching scripts:', error)
+        logger.error('Error fetching scripts:', error)
         setIsError(true)
         setErrorMessage(
-          error.message ||
+          (error instanceof Error && error.message) ||
             'スクリプトデータの読み込み中にエラーが発生しました。'
         )
         setScripts([])
@@ -237,22 +239,23 @@ const SlideEditorPage: React.FC = () => {
           fetchedContent = data.content || ''
         } else {
           // 404 の場合は空文字列として扱う
-          console.warn(
+          logger.warn(
             `supplement.txt not found for slide "${slideName}". Proceeding with empty content.`
           )
         }
 
         setSupplementContent(fetchedContent)
         setInitialSupplementContent(fetchedContent)
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.log('Fetch aborted: fetchSupplement')
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          logger.log('Fetch aborted: fetchSupplement')
           return
         }
-        console.error('Error fetching supplement content:', error)
+        logger.error('Error fetching supplement content:', error)
         setIsError(true)
         setErrorMessage(
-          error.message || '補足情報の読み込み中にエラーが発生しました。'
+          (error instanceof Error && error.message) ||
+            '補足情報の読み込み中にエラーが発生しました。'
         )
         setSupplementContent('')
         setInitialSupplementContent('')
@@ -345,7 +348,7 @@ const SlideEditorPage: React.FC = () => {
   // 保存処理 (useCallbackでメモ化)
   const handleSave = useCallback(async () => {
     if (!slideName) return
-    console.log(
+    logger.log(
       'Saving data for slide:',
       slideName,
       'Scripts:',
@@ -370,7 +373,7 @@ const SlideEditorPage: React.FC = () => {
       }
 
       await response.json()
-      console.log('Save successful')
+      logger.log('Save successful')
       addToast({
         message: 'Scripts and supplementary information have been saved.',
         type: 'success',
@@ -380,7 +383,7 @@ const SlideEditorPage: React.FC = () => {
       setInitialScripts(scripts)
       setInitialSupplementContent(supplementContent)
     } catch (error) {
-      console.error('Error saving script:', error)
+      logger.error('Error saving script:', error)
       addToast({
         message: 'Failed to save scripts and supplementary information.',
         type: 'error',

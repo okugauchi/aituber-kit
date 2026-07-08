@@ -1,9 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
 import {
   isAllowedConfiguredOrListedUrl,
   isHttpUrl,
 } from '@/lib/api-services/serverUrlGuard'
+import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
+import { routePolicies } from '@/lib/accessPolicy/routePolicies'
 
 type Data = {
   audio?: Buffer
@@ -24,11 +26,23 @@ const getLanguageCode = (selectLanguage: string): string => {
   }
 }
 
-export default async function handler(
+interface RequestBody {
+  message: string
+  stylebertvits2ModelId: string
+  stylebertvits2ServerUrl?: string
+  stylebertvits2ApiKey?: string
+  stylebertvits2Style: string
+  stylebertvits2SdpRatio: string
+  stylebertvits2Length: string
+  selectLanguage: string
+}
+
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Data>,
+  gate: PolicyGate
 ) {
-  const body = req.body // JSON.parse を削除
+  const body = req.body as RequestBody // JSON.parse を削除
   const message = body.message
   const stylebertvits2ModelId = body.stylebertvits2ModelId
   const usesClientProvidedUrl = Boolean(body.stylebertvits2ServerUrl)
@@ -83,10 +97,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Server URL is not allowed' })
   }
 
-  if (
-    (usesServerSecret || isProtectedServerResource) &&
-    !guardServerSecretAccess(req, res, { featureName: 'stylebertvits2' })
-  ) {
+  if (!gate.guardServerSecret(usesServerSecret || isProtectedServerResource)) {
     return
   }
 
@@ -159,7 +170,7 @@ export default async function handler(
         )
       }
 
-      const voiceData = await voice.json()
+      const voiceData: { output: { voice: string } } = await voice.json()
       const base64Audio = voiceData.output.voice
       const buffer = Buffer.from(base64Audio, 'base64')
 
@@ -169,7 +180,11 @@ export default async function handler(
       })
       res.end(buffer)
     }
-  } catch (error: any) {
-    res.status(500).json({ error: error.message })
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: error instanceof Error ? error.message : String(error) })
   }
 }
+
+export default withAccessPolicy(routePolicies['/api/stylebertvits2'], handler)

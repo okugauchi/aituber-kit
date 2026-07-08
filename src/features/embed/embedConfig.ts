@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { SettingsState, PresetQuestion } from '@/features/stores/settings'
 
 export type EmbedModelType = 'vrm' | 'live2d' | 'pngtuber'
@@ -58,7 +59,7 @@ const parseEmbedConfigMap = (): EmbedConfigMap => {
     }
     return parsed as EmbedConfigMap
   } catch (error) {
-    console.warn('Failed to parse NEXT_PUBLIC_AITUBERKIT_EMBEDS:', error)
+    logger.warn('Failed to parse NEXT_PUBLIC_AITUBERKIT_EMBEDS:', error)
     return {}
   }
 }

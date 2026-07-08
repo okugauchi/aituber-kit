@@ -10,53 +10,14 @@ import { generateNewTopicStep } from '@/lib/mastra/steps/generateNewTopic'
 import { buildSleepStep } from '@/lib/mastra/steps/buildSleep'
 import { buildContinueNoCommentStep } from '@/lib/mastra/steps/buildContinueNoComment'
 import { buildDoNothingStep } from '@/lib/mastra/steps/buildDoNothing'
+import {
+  baseExecuteParams,
+  buildEvaluateOutput,
+} from '../../../helpers/mastraTestUtils'
 
 const mockGenerateText = generateText as jest.MockedFunction<
   typeof generateText
 >
-
-const buildEvaluateOutput = (overrides: any = {}) => ({
-  shouldContinue: false,
-  hasComments: false,
-  newNoCommentCount: 1,
-  chatLog: [
-    { role: 'user', content: 'hello' },
-    { role: 'assistant', content: 'hi there' },
-  ],
-  systemPrompt: 'You are helpful.',
-  youtubeComments: [],
-  continuationCount: 0,
-  sleepMode: false,
-  ...overrides,
-})
-
-const mockRequestContext = {
-  all: {
-    languageModel: 'mock-model',
-    temperature: 1.0,
-    maxTokens: 4096,
-  },
-}
-
-const baseExecuteParams = {
-  requestContext: mockRequestContext,
-  mastra: {} as any,
-  runId: 'test-run',
-  workflowId: 'test',
-  resourceId: undefined,
-  state: undefined,
-  setState: jest.fn(),
-  retryCount: 0,
-  tracingContext: {} as any,
-  getInitData: jest.fn(),
-  getStepResult: jest.fn(),
-  suspend: jest.fn() as any,
-  bail: jest.fn() as any,
-  abort: jest.fn(),
-  engine: {} as any,
-  abortSignal: new AbortController().signal,
-  writer: {} as any,
-}
 
 describe('branch steps', () => {
   beforeEach(() => {
@@ -95,6 +56,19 @@ describe('branch steps', () => {
       } as any)
 
       expect(result.messages![0].content).toContain('テスト用キャラクター設定')
+    })
+
+    it('uses custom promptContinuation when provided', async () => {
+      const input = buildEvaluateOutput({
+        promptContinuation: 'カスタム継続ガイドライン',
+      })
+
+      const result = await buildContinuationStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      expect(result.messages![0].content).toContain('カスタム継続ガイドライン')
     })
   })
 
@@ -147,6 +121,70 @@ describe('branch steps', () => {
       expect(result.comment).toBe('いい天気だね')
       expect(result.userName).toBe('user1')
     })
+
+    it('normalizes quoted AI responses before matching', async () => {
+      mockGenerateText.mockResolvedValue({
+        text: '「明日は雨？」',
+      } as any)
+
+      const input = buildEvaluateOutput({
+        youtubeComments: [
+          { userName: 'user1', userIconUrl: '', userComment: 'いい天気だね' },
+          { userName: 'user2', userIconUrl: '', userComment: '明日は雨？' },
+        ],
+      })
+
+      const result = await selectBestCommentStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      expect(result.comment).toBe('明日は雨？')
+      expect(result.userName).toBe('user2')
+    })
+
+    it('matches partially when AI response contains extra text', async () => {
+      mockGenerateText.mockResolvedValue({
+        text: '選択したコメント: 明日は雨？',
+      } as any)
+
+      const input = buildEvaluateOutput({
+        youtubeComments: [
+          { userName: 'user1', userIconUrl: '', userComment: 'いい天気だね' },
+          { userName: 'user2', userIconUrl: '', userComment: '明日は雨？' },
+        ],
+      })
+
+      const result = await selectBestCommentStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      expect(result.comment).toBe('明日は雨？')
+      expect(result.userName).toBe('user2')
+    })
+
+    it('passes custom promptSelectComment to the AI call', async () => {
+      mockGenerateText.mockResolvedValue({
+        text: 'いい天気だね',
+      } as any)
+
+      const input = buildEvaluateOutput({
+        youtubeComments: [
+          { userName: 'user1', userIconUrl: '', userComment: 'いい天気だね' },
+        ],
+        promptSelectComment: 'カスタム選択プロンプト',
+      })
+
+      await selectBestCommentStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      const callArgs = mockGenerateText.mock.calls[0][0] as any
+      expect(callArgs.messages[0].role).toBe('system')
+      expect(callArgs.messages[0].content).toContain('カスタム選択プロンプト')
+    })
   })
 
   describe('generateNewTopicStep', () => {
@@ -172,6 +210,45 @@ describe('branch steps', () => {
       expect(result.stateUpdates.noCommentCount).toBe(3)
       expect(result.stateUpdates.continuationCount).toBe(0)
     })
+
+    it('passes custom promptNewTopic to the AI call', async () => {
+      mockGenerateText.mockResolvedValue({
+        text: '最近見た映画',
+      } as any)
+
+      const input = buildEvaluateOutput({
+        newNoCommentCount: 3,
+        promptNewTopic: 'カスタムトピック生成プロンプト',
+      })
+
+      await generateNewTopicStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      const callArgs = mockGenerateText.mock.calls[0][0] as any
+      expect(callArgs.messages[0].role).toBe('system')
+      expect(callArgs.messages[0].content).toContain(
+        'カスタムトピック生成プロンプト'
+      )
+    })
+
+    it('instructs the character to switch to the generated topic', async () => {
+      mockGenerateText.mockResolvedValue({
+        text: '最近見た映画',
+      } as any)
+
+      const input = buildEvaluateOutput({ newNoCommentCount: 3 })
+
+      const result = await generateNewTopicStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      expect(result.messages![0].content).toContain(
+        '話題を「最近見た映画」に切り替える'
+      )
+    })
   })
 
   describe('buildSleepStep', () => {
@@ -195,6 +272,22 @@ describe('branch steps', () => {
       expect(result.stateUpdates.sleepMode).toBe(true)
       expect(result.stateUpdates.noCommentCount).toBe(6)
     })
+
+    it('uses custom promptSleep when provided', async () => {
+      const input = buildEvaluateOutput({
+        newNoCommentCount: 6,
+        promptSleep: 'カスタムスリープガイドライン',
+      })
+
+      const result = await buildSleepStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      expect(result.messages![0].content).toContain(
+        'カスタムスリープガイドライン'
+      )
+    })
   })
 
   describe('buildContinueNoCommentStep', () => {
@@ -215,6 +308,20 @@ describe('branch steps', () => {
       expect(result.stateUpdates.sleepMode).toBe(false)
       expect(result.stateUpdates.continuationCount).toBe(0)
       expect(result.stateUpdates.noCommentCount).toBe(1)
+    })
+
+    it('uses custom promptContinuation when provided', async () => {
+      const input = buildEvaluateOutput({
+        newNoCommentCount: 1,
+        promptContinuation: 'カスタム継続ガイドライン',
+      })
+
+      const result = await buildContinueNoCommentStep.execute({
+        inputData: input,
+        ...baseExecuteParams,
+      } as any)
+
+      expect(result.messages![0].content).toContain('カスタム継続ガイドライン')
     })
   })
 

@@ -5,6 +5,7 @@
  * Requirements: 6.1, 6.3, 6.4, 6.5
  */
 
+import { logger } from '@/lib/logger'
 import { Message } from '@/features/messages/messages'
 import { getMemoryService } from './memoryService'
 import { MemoryContextBuilder } from './memoryContextBuilder'
@@ -39,7 +40,7 @@ export async function saveMessageToMemory(message: Message): Promise<void> {
       content,
     })
   } catch (error) {
-    console.warn('MemoryStoreSync: Failed to save message to memory', error)
+    logger.warn('MemoryStoreSync: Failed to save message to memory', error)
   }
 }
 
@@ -98,7 +99,7 @@ export async function searchMemoryContextWithTimeout(
       maxTokens: ss.memoryMaxContextTokens,
     })
   } catch (error) {
-    console.warn('MemoryStoreSync: Failed to search memory context', error)
+    logger.warn('MemoryStoreSync: Failed to search memory context', error)
     return ''
   }
 }
@@ -111,16 +112,16 @@ export async function searchMemoryContextWithTimeout(
 export async function initializeMemoryService(): Promise<void> {
   const { memoryEnabled } = settingsStore.getState()
   if (!memoryEnabled) {
-    console.log('MemoryStoreSync: Memory feature is disabled')
+    logger.log('MemoryStoreSync: Memory feature is disabled')
     return
   }
 
   try {
     const memoryService = getMemoryService()
     await memoryService.initialize()
-    console.log('MemoryStoreSync: Memory service initialized successfully')
+    logger.log('MemoryStoreSync: Memory service initialized successfully')
   } catch (error) {
-    console.warn('MemoryStoreSync: Failed to initialize memory service', error)
+    logger.warn('MemoryStoreSync: Failed to initialize memory service', error)
   }
 }
 
@@ -176,7 +177,7 @@ export async function addEmbeddingToMessage(
       return { ...message, embedding }
     }
   } catch (error) {
-    console.warn('Failed to fetch embedding for message:', error)
+    logger.warn('Failed to fetch embedding for message:', error)
   }
 
   return message
@@ -216,14 +217,14 @@ export async function getMemoryFiles(): Promise<MemoryFileInfo[]> {
     const response = await fetch('/api/memory-files')
 
     if (!response.ok) {
-      console.error('Failed to fetch memory files:', response.statusText)
+      logger.error('Failed to fetch memory files:', response.statusText)
       return []
     }
 
     const data = (await response.json()) as { files: MemoryFileInfo[] }
     return data.files
   } catch (error) {
-    console.error('Error fetching memory files:', error)
+    logger.error('Error fetching memory files:', error)
     return []
   }
 }
@@ -253,7 +254,7 @@ export async function restoreMemoryFromFile(filename: string): Promise<{
     })
 
     if (!response.ok) {
-      console.error('Failed to restore memory:', response.statusText)
+      logger.error('Failed to restore memory:', response.statusText)
       return RESTORE_FAILURE
     }
 
@@ -287,7 +288,7 @@ export async function restoreMemoryFromFile(filename: string): Promise<{
       actualRestoredCount++
     }
 
-    console.log(
+    logger.log(
       `MemoryStoreSync: Restored ${actualRestoredCount} memories from ${filename}`
     )
 
@@ -297,7 +298,7 @@ export async function restoreMemoryFromFile(filename: string): Promise<{
       embeddingCount: data.embeddingCount,
     }
   } catch (error) {
-    console.error('Error restoring memory from file:', error)
+    logger.error('Error restoring memory from file:', error)
     return RESTORE_FAILURE
   }
 }

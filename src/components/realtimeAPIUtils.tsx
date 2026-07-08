@@ -18,22 +18,45 @@ export interface Params {
   ) => Promise<void>
 }
 
+// Realtime APIのfunction callingツール定義（realtimeAPITools.jsonの形式）
+export interface RealtimeAPIToolDefinition {
+  type: string
+  name: string
+  description: string
+  parameters: {
+    type: string
+    properties: Record<string, { type: string; description: string }>
+    required: string[]
+  }
+}
+
 // セッション設定用の型定義
 export interface SessionConfig {
   type: string
   session: {
-    modalities: string[]
+    type: 'realtime'
+    output_modalities: string[]
     instructions: string
-    voice: string
-    input_audio_format: string
-    output_audio_format: string
-    input_audio_transcription: {
-      model: string
+    audio: {
+      input: {
+        format: {
+          type: 'audio/pcm'
+          rate: number
+        }
+        transcription: {
+          model: string
+        }
+        turn_detection: null
+      }
+      output: {
+        format: {
+          type: 'audio/pcm'
+          rate: number
+        }
+        voice: string
+      }
     }
-    turn_detection: null
-    temperature: number
-    max_response_output_tokens: number
-    tools?: any[]
+    tools?: RealtimeAPIToolDefinition[]
     tool_choice?: string
   }
 }

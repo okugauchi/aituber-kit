@@ -1,0 +1,83 @@
+import { synthesizeVoiceElevenlabsApi } from '@/features/messages/synthesizeVoiceElevenlabs'
+import type { Talk } from '@/features/messages/messages'
+
+const mockFetch = jest.fn()
+global.fetch = mockFetch
+
+describe('synthesizeVoiceElevenlabsApi', () => {
+  const mockTalk: Talk = {
+    emotion: 'neutral',
+    message: 'Hello world',
+  }
+
+  beforeEach(() => {
+    mockFetch.mockReset()
+  })
+
+  it('should send correct request to /api/elevenLabs', async () => {
+    const mockBuffer = new ArrayBuffer(8)
+    mockFetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(mockBuffer),
+    })
+
+    await synthesizeVoiceElevenlabsApi(mockTalk, 'key', 'voice-id', 'ja')
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/elevenLabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Hello world',
+        voiceId: 'voice-id',
+        apiKey: 'key',
+        language: 'ja',
+      }),
+    })
+  })
+
+  it('should return ArrayBuffer on success', async () => {
+    const mockBuffer = new ArrayBuffer(16)
+    mockFetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(mockBuffer),
+    })
+
+    const result = await synthesizeVoiceElevenlabsApi(
+      mockTalk,
+      'key',
+      'voice-id',
+      'ja'
+    )
+
+    expect(result).toBe(mockBuffer)
+  })
+
+  it('should throw with status code on non-ok response', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+    })
+
+    await expect(
+      synthesizeVoiceElevenlabsApi(mockTalk, 'key', 'voice-id', 'ja')
+    ).rejects.toThrow(
+      'ElevenLabsでエラーが発生しました: ElevenLabs APIからの応答が異常です。ステータスコード: 429'
+    )
+  })
+
+  it('should throw wrapped error on fetch failure', async () => {
+    mockFetch.mockRejectedValue(new Error('Network error'))
+
+    await expect(
+      synthesizeVoiceElevenlabsApi(mockTalk, 'key', 'voice-id', 'ja')
+    ).rejects.toThrow('ElevenLabsでエラーが発生しました: Network error')
+  })
+
+  it('should throw generic error for non-Error exceptions', async () => {
+    mockFetch.mockRejectedValue('string error')
+
+    await expect(
+      synthesizeVoiceElevenlabsApi(mockTalk, 'key', 'voice-id', 'ja')
+    ).rejects.toThrow('ElevenLabsで不明なエラーが発生しました')
+  })
+})

@@ -1,6 +1,12 @@
 import { Message } from './messages'
 import settingsStore from '@/features/stores/settings'
 
+// ストレージ保存用に音声・画像データをマスクしたメッセージ
+// audioは元のオブジェクト形式ではなくプレースホルダー文字列に置き換わる
+export type SanitizedMessage = Omit<Message, 'audio'> & {
+  audio?: string | Message['audio']
+}
+
 export const messageSelectors = {
   // テキストまたは画像を含むメッセージのみを取得
   getTextAndImageMessages: (messages: Message[]): Message[] => {
@@ -164,7 +170,7 @@ export const messageSelectors = {
   },
 
   // APIで保存する際のメッセージ処理
-  sanitizeMessageForStorage: (message: Message): any => {
+  sanitizeMessageForStorage: (message: Message): SanitizedMessage => {
     if (message.audio !== undefined) {
       return {
         ...message,
@@ -175,15 +181,15 @@ export const messageSelectors = {
     if (message.content && Array.isArray(message.content)) {
       return {
         ...message,
-        content: message.content.map((content: any) => {
+        content: message.content.map((content) => {
           if (content.type === 'image') {
             return {
-              type: 'image',
+              type: 'image' as const,
               image: '[image data omitted]',
             }
           }
           return content
-        }),
+        }) as Message['content'],
       }
     }
     return message

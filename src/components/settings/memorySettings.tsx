@@ -4,6 +4,7 @@
  * 記憶設定UIコンポーネント（会話履歴・長期記憶）
  */
 
+import { logger } from '@/lib/logger'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
@@ -100,7 +101,7 @@ const MemorySettings = () => {
       const count = await memoryService.getMemoryCount()
       setMemoryCount(count)
     } catch (error) {
-      console.warn('Failed to fetch memory count:', error)
+      logger.warn('Failed to fetch memory count:', error)
     }
   }, [])
 
@@ -121,7 +122,7 @@ const MemorySettings = () => {
       await memoryService.clearAllMemories()
       setMemoryCount(0)
     } catch (error) {
-      console.error('Failed to clear memories:', error)
+      logger.error('Failed to clear memories:', error)
     } finally {
       setIsClearing(false)
     }
@@ -168,7 +169,7 @@ const MemorySettings = () => {
         }))
       )
     } catch (error) {
-      console.error('Failed to search memories:', error)
+      logger.error('Failed to search memories:', error)
       setSearchResults([])
     } finally {
       setIsSearching(false)
@@ -308,7 +309,7 @@ const MemorySettings = () => {
       setRestoreMessage(t('MemoryRestoreSuccess'))
       setSelectedFile(null)
     } catch (error) {
-      console.error('Failed to restore memories:', error)
+      logger.error('Failed to restore memories:', error)
       setRestoreMessage(t('MemoryRestoreError'))
     } finally {
       setIsRestoring(false)
@@ -673,7 +674,7 @@ const MemorySettings = () => {
                   setMemoryCount(0)
                 }
               } catch (error) {
-                console.warn('Failed to clear IndexedDB memories:', error)
+                logger.warn('Failed to clear IndexedDB memories:', error)
               }
             }}
           >
