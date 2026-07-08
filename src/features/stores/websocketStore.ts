@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import type { TFunction } from 'i18next'
-import { WebSocketManager } from '@/utils/WebSocketManager'
+import {
+  WebSocketManager,
+  type WebSocketConnector,
+} from '@/utils/WebSocketManager'
 import { TmpMessage } from '@/components/realtimeAPIUtils'
 
 interface WebSocketState {
@@ -13,7 +16,7 @@ interface WebSocketState {
       onError?: (event: Event) => void
       onClose?: (event: Event) => void
     },
-    connectWebsocket: () => WebSocket | null
+    connectWebsocket: WebSocketConnector
   ) => void
   disconnect: () => void
   reconnect: () => boolean

@@ -114,6 +114,18 @@ describe('WebSocketManager', () => {
       expect(nullConnect).toHaveBeenCalledTimes(1)
       expect(manager.websocket).toBeNull()
     })
+
+    it('should support async websocket connectors', async () => {
+      const asyncConnect = jest.fn().mockResolvedValue(mockWs)
+      const manager = new WebSocketManager(mockT, handlers, asyncConnect)
+      await manager.connect()
+
+      expect(asyncConnect).toHaveBeenCalledTimes(1)
+      expect(mockWs.listeners['open']).toHaveLength(1)
+      expect(mockWs.listeners['message']).toHaveLength(1)
+      expect(mockWs.listeners['error']).toHaveLength(1)
+      expect(mockWs.listeners['close']).toHaveLength(1)
+    })
   })
 
   describe('event handlers', () => {

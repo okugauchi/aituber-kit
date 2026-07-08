@@ -720,9 +720,11 @@ export const openAIRealtimeModels = [
  * OpenAIのオーディオAPIモードで使用するモデル一覧
  */
 export const openAIAudioModels = [
+  'gpt-audio-1.5',
   'gpt-audio',
   'gpt-audio-2025-08-28',
   'gpt-audio-mini',
+  'gpt-audio-mini-2025-12-15',
   'gpt-audio-mini-2025-10-06',
 ] as const
 

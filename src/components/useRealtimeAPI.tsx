@@ -253,7 +253,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
 
   const onClose = useCallback((event: Event) => {}, [])
 
-  const connectWebsocket: () => WebSocket | null = () => {
+  const connectWebsocket = async (): Promise<WebSocket | null> => {
     const wsManager = webSocketStore.getState().wsManager
     if (wsManager?.isConnected()) return wsManager.websocket
 
@@ -265,10 +265,29 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       const model: RealtimeAPIModeModel =
         (ss.selectAIModel as RealtimeAPIModeModel) ||
         defaultModels.openaiRealtime
+      const tokenResponse = await fetch('/api/ai/realtime-client-secret', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: ss.openaiKey,
+          model,
+        }),
+      })
+      const tokenData = (await tokenResponse.json().catch(() => ({}))) as {
+        value?: string
+        error?: string
+      }
+      if (!tokenResponse.ok || !tokenData.value) {
+        logger.error(
+          'Failed to create OpenAI Realtime client secret:',
+          tokenData.error || tokenResponse.statusText
+        )
+        return null
+      }
       const url = `wss://api.openai.com/v1/realtime?model=${model}`
       ws = new WebSocket(url, [
         'realtime',
-        `openai-insecure-api-key.${ss.openaiKey}`,
+        `openai-insecure-api-key.${tokenData.value}`,
         'openai-beta.realtime-v1',
       ])
     } else if (ss.selectAIService === 'azure') {

@@ -7,6 +7,11 @@ type TranslationFunction = (
   options?: Record<string, unknown>
 ) => string
 
+export type WebSocketConnector = () =>
+  | WebSocket
+  | null
+  | Promise<WebSocket | null>
+
 export class WebSocketManager {
   private ws: WebSocket | null = null
   private t: TranslationFunction
@@ -17,7 +22,7 @@ export class WebSocketManager {
     onError: (event: Event) => void
     onClose: (event: Event) => void
   }
-  private connectWebsocket: () => WebSocket | null
+  private connectWebsocket: WebSocketConnector
 
   constructor(
     t: TranslationFunction,
@@ -27,7 +32,7 @@ export class WebSocketManager {
       onError: (event: Event) => void
       onClose: (event: Event) => void
     },
-    connectWebsocket: () => WebSocket | null
+    connectWebsocket: WebSocketConnector
   ) {
     this.t = t
     this.handlers = handlers
@@ -75,7 +80,7 @@ export class WebSocketManager {
     this.handlers.onClose(event)
   }
 
-  public connect() {
+  public async connect() {
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionAttempt'),
@@ -84,7 +89,17 @@ export class WebSocketManager {
       tag: 'websocket-connection-info',
     })
 
-    this.ws = this.connectWebsocket()
+    try {
+      const socketOrPromise = this.connectWebsocket()
+      this.ws =
+        socketOrPromise instanceof Promise
+          ? await socketOrPromise
+          : socketOrPromise
+    } catch (error) {
+      logger.error('WebSocket connection setup failed:', error)
+      this.handleError(new Event('error'))
+      return
+    }
 
     if (!this.ws) return
 
