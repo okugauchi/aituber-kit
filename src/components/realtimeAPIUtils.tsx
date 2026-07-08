@@ -34,17 +34,28 @@ export interface RealtimeAPIToolDefinition {
 export interface SessionConfig {
   type: string
   session: {
-    modalities: string[]
+    type: 'realtime'
+    output_modalities: string[]
     instructions: string
-    voice: string
-    input_audio_format: string
-    output_audio_format: string
-    input_audio_transcription: {
-      model: string
+    audio: {
+      input: {
+        format: {
+          type: 'audio/pcm'
+          rate: number
+        }
+        transcription: {
+          model: string
+        }
+        turn_detection: null
+      }
+      output: {
+        format: {
+          type: 'audio/pcm'
+          rate: number
+        }
+        voice: string
+      }
     }
-    turn_detection: null
-    temperature: number
-    max_response_output_tokens: number
     tools?: RealtimeAPIToolDefinition[]
     tool_choice?: string
   }

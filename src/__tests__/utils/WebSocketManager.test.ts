@@ -126,6 +126,27 @@ describe('WebSocketManager', () => {
       expect(mockWs.listeners['error']).toHaveLength(1)
       expect(mockWs.listeners['close']).toHaveLength(1)
     })
+
+    it('should ignore async websocket results after disconnect', async () => {
+      let resolveConnect: (ws: MockWebSocket) => void = () => {}
+      const asyncConnect = jest.fn(
+        () =>
+          new Promise<WebSocket | null>((resolve) => {
+            resolveConnect = resolve as (ws: MockWebSocket) => void
+          })
+      )
+      const manager = new WebSocketManager(mockT, handlers, asyncConnect)
+      const connectPromise = manager.connect()
+
+      manager.disconnect()
+      const closeSpy = jest.spyOn(mockWs, 'close')
+      resolveConnect(mockWs)
+      await connectPromise
+
+      expect(closeSpy).toHaveBeenCalled()
+      expect(mockWs.listeners['open'] ?? []).toHaveLength(0)
+      expect(manager.websocket).toBeNull()
+    })
   })
 
   describe('event handlers', () => {
@@ -214,6 +235,7 @@ describe('WebSocketManager', () => {
       manager.disconnect()
 
       expect(closeSpy).toHaveBeenCalled()
+      expect(manager.websocket).toBeNull()
     })
   })
 

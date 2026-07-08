@@ -25,6 +25,7 @@ interface WebSocketState {
 const webSocketStore = create<WebSocketState>((set, get) => ({
   wsManager: null,
   initializeWebSocket: (t, handlers = {}, connectWebsocket) => {
+    get().wsManager?.disconnect()
     const defaultHandlers = {
       onOpen: (event: Event) => {},
       onMessage: async (event: MessageEvent) => {},
@@ -34,8 +35,8 @@ const webSocketStore = create<WebSocketState>((set, get) => ({
       connectWebsocket,
     }
     const manager = new WebSocketManager(t, defaultHandlers, connectWebsocket)
-    manager.connect()
     set({ wsManager: manager })
+    manager.connect()
   },
   disconnect: () => {
     const { wsManager } = get()

@@ -14,6 +14,7 @@ export type WebSocketConnector = () =>
 
 export class WebSocketManager {
   private ws: WebSocket | null = null
+  private connectGeneration = 0
   private t: TranslationFunction
   private isTextBlockStarted: boolean = false
   private handlers: {
@@ -70,6 +71,7 @@ export class WebSocketManager {
 
   private handleClose = (event: Event) => {
     logger.log('WebSocket connection closed:', event)
+    this.ws = null
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionClosed'),
@@ -81,6 +83,7 @@ export class WebSocketManager {
   }
 
   public async connect() {
+    const generation = ++this.connectGeneration
     this.removeToast()
     toastStore.getState().addToast({
       message: this.t('Toasts.WebSocketConnectionAttempt'),
@@ -91,10 +94,15 @@ export class WebSocketManager {
 
     try {
       const socketOrPromise = this.connectWebsocket()
-      this.ws =
+      const ws =
         socketOrPromise instanceof Promise
           ? await socketOrPromise
           : socketOrPromise
+      if (generation !== this.connectGeneration) {
+        ws?.close()
+        return
+      }
+      this.ws = ws
     } catch (error) {
       logger.error('WebSocket connection setup failed:', error)
       this.handleError(new Event('error'))
@@ -117,8 +125,11 @@ export class WebSocketManager {
   }
 
   public disconnect() {
+    this.connectGeneration++
     if (this.ws) {
-      this.ws.close()
+      const ws = this.ws
+      this.ws = null
+      ws.close()
     }
   }
 

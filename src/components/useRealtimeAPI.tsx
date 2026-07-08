@@ -19,6 +19,10 @@ interface RealtimeServerEvent {
   type?: string
   delta?: string
   part?: { transcript?: string }
+  transcript?: string
+  response_id?: string
+  item_id?: string
+  content_index?: number
   name?: string
   arguments?: string
   call_id?: string
@@ -51,6 +55,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       })
     })
   )
+  const processedTranscriptKeysRef = useRef(new Set<string>())
 
   const processMessage = useCallback(
     async (message: TmpMessage) => {
@@ -156,9 +161,11 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
           logger.error('Received error data', jsonData)
           break
         case 'conversation.item.created':
+        case 'conversation.item.added':
           logger.log('Received context data', jsonData)
           break
         case 'response.audio.delta':
+        case 'response.output_audio.delta':
           if (jsonData.delta) {
             const arrayBuffer = base64ToArrayBuffer(jsonData.delta)
             if (arrayBuffer.byteLength > 0) {
@@ -168,8 +175,30 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
             }
           }
           break
+        case 'response.output_audio_transcript.done':
+          if (jsonData.transcript) {
+            const transcriptKey =
+              jsonData.response_id && jsonData.item_id
+                ? `${jsonData.response_id}:${jsonData.item_id}:${jsonData.content_index ?? 0}`
+                : jsonData.transcript
+            if (processedTranscriptKeysRef.current.has(transcriptKey)) break
+            processedTranscriptKeysRef.current.add(transcriptKey)
+            await processMessage({
+              text: jsonData.transcript,
+              role: 'assistant',
+              emotion: '',
+              type: type,
+            })
+          }
+          break
         case 'response.content_part.done':
           if (jsonData.part && jsonData.part.transcript) {
+            const transcriptKey =
+              jsonData.response_id && jsonData.item_id
+                ? `${jsonData.response_id}:${jsonData.item_id}:${jsonData.content_index ?? 0}`
+                : jsonData.part.transcript
+            if (processedTranscriptKeysRef.current.has(transcriptKey)) break
+            processedTranscriptKeysRef.current.add(transcriptKey)
             await processMessage({
               text: jsonData.part.transcript,
               role: 'assistant',
@@ -185,11 +214,20 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
           await handleFunctionCall(jsonData)
           break
         case 'response.audio.done':
+        case 'response.output_audio.done':
           await accumulatedAudioDataRef.current.flush()
+          break
+        case 'response.done':
+          processedTranscriptKeysRef.current.clear()
           break
       }
     },
-    [accumulatedAudioDataRef, handleFunctionCall, processMessage]
+    [
+      accumulatedAudioDataRef,
+      handleFunctionCall,
+      processMessage,
+      processedTranscriptKeysRef,
+    ]
   )
 
   const sendSessionUpdate = useCallback(() => {
@@ -202,17 +240,28 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       const wsConfig: SessionConfig = {
         type: 'session.update',
         session: {
-          modalities: ['text', 'audio'],
+          type: 'realtime',
+          output_modalities: ['audio'],
           instructions: ss.systemPrompt,
-          voice: ss.realtimeAPIModeVoice,
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          input_audio_transcription: {
-            model: 'whisper-1',
+          audio: {
+            input: {
+              format: {
+                type: 'audio/pcm',
+                rate: 24000,
+              },
+              transcription: {
+                model: 'whisper-1',
+              },
+              turn_detection: null,
+            },
+            output: {
+              format: {
+                type: 'audio/pcm',
+                rate: 24000,
+              },
+              voice: ss.realtimeAPIModeVoice,
+            },
           },
-          turn_detection: null,
-          temperature: 0.8,
-          max_response_output_tokens: 4096,
         },
       }
 
@@ -243,6 +292,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   const onOpen = useCallback(
     (event: Event) => {
       homeStore.setState({ chatLog: [] })
+      processedTranscriptKeysRef.current.clear()
       resetSessionId()
       sendSessionUpdate()
     },
@@ -288,7 +338,6 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       ws = new WebSocket(url, [
         'realtime',
         `openai-insecure-api-key.${tokenData.value}`,
-        'openai-beta.realtime-v1',
       ])
     } else if (ss.selectAIService === 'azure') {
       const url = `${ss.azureEndpoint}&api-key=${ss.azureKey}`
@@ -304,6 +353,7 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
     const ss = settingsStore.getState()
     if (!ss.realtimeAPIMode || !ss.selectAIService) return
 
+    let reconnectInterval: ReturnType<typeof setInterval> | null = null
     const handlers = {
       onOpen: onOpen,
       onMessage: onMessage,
@@ -311,29 +361,33 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       onClose: onClose,
     }
 
-    webSocketStore.getState().initializeWebSocket(t, handlers, connectWebsocket)
+    const connectTimer = setTimeout(() => {
+      webSocketStore
+        .getState()
+        .initializeWebSocket(t, handlers, connectWebsocket)
 
-    const wsManager = webSocketStore.getState().wsManager
-
-    const reconnectInterval = setInterval(() => {
-      const ss = settingsStore.getState()
-      if (
-        ss.realtimeAPIMode &&
-        wsManager?.websocket &&
-        wsManager.websocket.readyState !== WebSocket.OPEN &&
-        wsManager.websocket.readyState !== WebSocket.CONNECTING
-      ) {
-        homeStore.setState({ chatProcessing: false })
-        logger.log('try reconnecting...')
-        wsManager.disconnect()
-        webSocketStore
-          .getState()
-          .initializeWebSocket(t, handlers, connectWebsocket)
-      }
-    }, 2000)
+      reconnectInterval = setInterval(() => {
+        const ss = settingsStore.getState()
+        const wsManager = webSocketStore.getState().wsManager
+        if (
+          ss.realtimeAPIMode &&
+          wsManager?.websocket &&
+          wsManager.websocket.readyState !== WebSocket.OPEN &&
+          wsManager.websocket.readyState !== WebSocket.CONNECTING
+        ) {
+          homeStore.setState({ chatProcessing: false })
+          logger.log('try reconnecting...')
+          wsManager.disconnect()
+          webSocketStore
+            .getState()
+            .initializeWebSocket(t, handlers, connectWebsocket)
+        }
+      }, 2000)
+    }, 100)
 
     return () => {
-      clearInterval(reconnectInterval)
+      clearTimeout(connectTimer)
+      if (reconnectInterval) clearInterval(reconnectInterval)
       webSocketStore.getState().disconnect()
     }
   }, [realtimeAPIMode, processMessage, t, onOpen, onMessage, onError, onClose])

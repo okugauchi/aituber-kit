@@ -57,7 +57,11 @@ export const handleReceiveTextFromRtFn = () => {
         } catch (e) {
           logger.error('Error in speakCharacter:', e)
         }
-      } else if (type === 'response.content_part.done' && text !== undefined) {
+      } else if (
+        (type === 'response.content_part.done' ||
+          type === 'response.output_audio_transcript.done') &&
+        text !== undefined
+      ) {
         homeStore.getState().upsertMessage({
           role: role,
           content: text,
@@ -67,7 +71,10 @@ export const handleReceiveTextFromRtFn = () => {
     homeStore.setState({ chatProcessing: false })
 
     // レスポンスが完了したらセッションIDをリセット
-    if (type === 'response.content_part.done') {
+    if (
+      type === 'response.content_part.done' ||
+      type === 'response.output_audio_transcript.done'
+    ) {
       currentSessionId = null
     }
   }
