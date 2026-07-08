@@ -116,10 +116,8 @@ describe('aiModels', () => {
   })
 
   describe('getSpecificDefaultModel', () => {
-    it('should return gpt-4o-mini-audio-preview for openaiAudio', () => {
-      expect(getSpecificDefaultModel('openaiAudio')).toBe(
-        'gpt-4o-mini-audio-preview'
-      )
+    it('should return gpt-audio-mini for openaiAudio', () => {
+      expect(getSpecificDefaultModel('openaiAudio')).toBe('gpt-audio-mini')
     })
 
     it('should return gpt-realtime for openaiRealtime', () => {
@@ -310,8 +308,8 @@ describe('aiModels', () => {
     it('getOpenAIAudioModels should return correct models', () => {
       const models = getOpenAIAudioModels()
       expect(models).toEqual([...openAIAudioModels])
-      expect(models).toContain('gpt-4o-audio-preview')
-      expect(models).toContain('gpt-4o-mini-audio-preview')
+      expect(models).toContain('gpt-audio')
+      expect(models).toContain('gpt-audio-mini')
     })
 
     it('getOpenAIWhisperModels should return correct models', () => {

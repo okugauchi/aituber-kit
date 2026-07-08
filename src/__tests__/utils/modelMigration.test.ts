@@ -8,6 +8,11 @@ describe('migrateOpenAIModelName', () => {
     ['gpt-4.1-nano-2025-04-14', 'gpt-4.1-nano'],
     ['gpt-4.1-mini-2025-04-14', 'gpt-4.1-mini'],
     ['gpt-4.1-2025-04-14', 'gpt-4.1'],
+    ['gpt-4o-audio-preview', 'gpt-audio'],
+    ['gpt-4o-audio-preview-2024-12-17', 'gpt-audio'],
+    ['gpt-4o-audio-preview-2025-06-03', 'gpt-audio'],
+    ['gpt-4o-mini-audio-preview', 'gpt-audio-mini'],
+    ['gpt-4o-mini-audio-preview-2024-12-17', 'gpt-audio-mini'],
   ]
 
   it.each(legacyMappings)('should migrate "%s" to "%s"', (legacy, current) => {

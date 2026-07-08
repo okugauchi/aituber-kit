@@ -96,13 +96,28 @@ describe('settingsStore versioned migration', () => {
     expect(state).not.toHaveProperty('gameCommentaryVideoBufferWidth')
   })
 
+  it('migrates version 4 data through the final audio model rename step only', () => {
+    setPersisted(
+      {
+        selectAIService: 'openai',
+        selectAIModel: 'gpt-4o-mini-audio-preview',
+      },
+      4
+    )
+
+    const settingsStore = loadStore()
+    const state = settingsStore.getState()
+
+    expect(state.selectAIModel).toBe('gpt-audio-mini')
+  })
+
   it('does not run migration steps for already-current data', () => {
     setPersisted(
       {
         selectAIModel: 'gpt-4o',
         gameCommentaryEnabled: false,
       },
-      4
+      5
     )
 
     const settingsStore = loadStore()

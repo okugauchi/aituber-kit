@@ -957,6 +957,16 @@ const settingsMigrationSteps: Record<number, SettingsMigrationStep> = {
 
     return migrated
   },
+  5: (state) => {
+    const migrated = { ...state }
+    if (
+      migrated.selectAIService === 'openai' &&
+      typeof migrated.selectAIModel === 'string'
+    ) {
+      migrated.selectAIModel = migrateOpenAIModelName(migrated.selectAIModel)
+    }
+    return migrated
+  },
 }
 
 const CURRENT_SETTINGS_VERSION = Object.keys(settingsMigrationSteps).length
