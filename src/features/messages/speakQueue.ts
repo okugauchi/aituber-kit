@@ -130,6 +130,11 @@ export class SpeakQueue {
       return
     }
 
+    const finalizingSessionId = instance.currentSessionId
+    const canResetToIdle = () =>
+      instance.queue.length === 0 &&
+      !homeStore.getState().isSpeaking &&
+      instance.currentSessionId === finalizingSessionId
     let shouldResumeQueue = false
     instance.isProcessing = true
     try {
@@ -145,7 +150,7 @@ export class SpeakQueue {
         }
       })
 
-      if (instance.queue.length > 0 || homeStore.getState().isSpeaking) {
+      if (!canResetToIdle()) {
         shouldResumeQueue =
           instance.queue.length > 0 && homeStore.getState().isSpeaking
       } else {

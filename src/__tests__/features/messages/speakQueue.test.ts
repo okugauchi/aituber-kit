@@ -444,6 +444,35 @@ describe('SpeakQueue', () => {
       expect(mockModelPlayEmotion).not.toHaveBeenCalled()
     })
 
+    it('should skip idle reset if a callback changes the active session', async () => {
+      const homeState = {
+        isSpeaking: false,
+        chatProcessing: false,
+        viewer: {
+          model: {
+            speak: mockModelSpeak,
+            stopSpeaking: mockModelStopSpeaking,
+            playEmotion: mockModelPlayEmotion,
+          },
+        },
+      }
+      mockHomeGetState.mockImplementation(() => homeState)
+      mockHomeSetState.mockImplementation((patch) => {
+        Object.assign(homeState, patch)
+      })
+      const queue = SpeakQueue.getInstance()
+      queue.checkSessionId('old-session')
+      homeState.isSpeaking = false
+      SpeakQueue.onSpeakCompletion(() => {
+        queue.checkSessionId('new-session')
+        homeState.isSpeaking = false
+      })
+
+      await SpeakQueue.finalizeIfIdle()
+
+      expect(mockModelPlayEmotion).not.toHaveBeenCalled()
+    })
+
     it('should remove callback with removeSpeakCompletionCallback', async () => {
       const callback = jest.fn()
       SpeakQueue.onSpeakCompletion(callback)
