@@ -9,7 +9,7 @@ import {
   readPersistedSetting,
 } from './helpers/app'
 
-const OPENAI_AUDIO_MODE_MODEL = 'gpt-4o-mini-audio-preview'
+const OPENAI_AUDIO_MODE_MODEL = 'gpt-audio-mini'
 
 async function blockExternalRequests(page: Page) {
   await page.route('**/*', (route) => {
