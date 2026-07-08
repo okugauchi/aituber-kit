@@ -1,4 +1,4 @@
-import { FC, useMemo } from 'react'
+import { FC, useRef } from 'react'
 import useExternalLinkage from './useExternalLinkage'
 import useRealtimeAPI from './useRealtimeAPI'
 import {
@@ -8,8 +8,8 @@ import {
 
 export const WebSocketManager: FC = () => {
   // ハンドラー関数を初期化
-  const handleReceiveTextFromWs = useMemo(() => handleReceiveTextFromWsFn(), [])
-  const handleReceiveTextFromRt = useMemo(() => handleReceiveTextFromRtFn(), [])
+  const handleReceiveTextFromWs = useRef(handleReceiveTextFromWsFn()).current
+  const handleReceiveTextFromRt = useRef(handleReceiveTextFromRtFn()).current
 
   // WebSocket関連の機能をここで初期化
   useExternalLinkage({ handleReceiveTextFromWs })

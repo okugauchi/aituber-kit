@@ -41,6 +41,8 @@ interface Params {
   ) => Promise<void>
 }
 
+const REALTIME_CLIENT_SECRET_TIMEOUT_MS = 10000
+
 const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
   const { t } = useTranslation()
   const realtimeAPIMode = settingsStore((s) => s.realtimeAPIMode)
@@ -315,14 +317,28 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
       const model: RealtimeAPIModeModel =
         (ss.selectAIModel as RealtimeAPIModeModel) ||
         defaultModels.openaiRealtime
-      const tokenResponse = await fetch('/api/ai/realtime-client-secret', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiKey: ss.openaiKey,
-          model,
-        }),
-      })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REALTIME_CLIENT_SECRET_TIMEOUT_MS
+      )
+      let tokenResponse: Response
+      try {
+        tokenResponse = await fetch('/api/ai/realtime-client-secret', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: ss.openaiKey,
+            model,
+          }),
+          signal: controller.signal,
+        })
+      } catch (error) {
+        logger.error('Failed to fetch OpenAI Realtime client secret:', error)
+        return null
+      } finally {
+        clearTimeout(timeoutId)
+      }
       const tokenData = (await tokenResponse.json().catch(() => ({}))) as {
         value?: string
         error?: string
@@ -371,9 +387,10 @@ const useRealtimeAPI = ({ handleReceiveTextFromRt }: Params) => {
         const wsManager = webSocketStore.getState().wsManager
         if (
           ss.realtimeAPIMode &&
-          wsManager?.websocket &&
-          wsManager.websocket.readyState !== WebSocket.OPEN &&
-          wsManager.websocket.readyState !== WebSocket.CONNECTING
+          wsManager &&
+          (!wsManager.websocket ||
+            (wsManager.websocket.readyState !== WebSocket.OPEN &&
+              wsManager.websocket.readyState !== WebSocket.CONNECTING))
         ) {
           homeStore.setState({ chatProcessing: false })
           logger.log('try reconnecting...')
