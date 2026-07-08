@@ -20,9 +20,17 @@ export class SpeakQueue {
   private static _instance: SpeakQueue | null = null
   private stopped = false
   private static stopTokenCounter = 0
+  // 直近の停止の対象範囲（'all' = 全体停止 / それ以外 = 対象セッションID）。
+  // speechDispatcher が「他セッション向けの停止に巻き添えされない」判定に使う
+  // 読み取り専用の付帯情報で、キュー自体の制御には使用しない。
+  private static stopScope: 'all' | string = 'all'
 
   public static get currentStopToken() {
     return SpeakQueue.stopTokenCounter
+  }
+
+  public static get currentStopScope(): 'all' | string {
+    return SpeakQueue.stopScope
   }
 
   // 発話完了時のコールバックを登録
@@ -74,6 +82,7 @@ export class SpeakQueue {
     // 発話キューの処理状態をリセットして次回の再生を可能にする
     instance.isProcessing = false
     SpeakQueue.stopTokenCounter++
+    SpeakQueue.stopScope = 'all'
     instance.clearQueue()
     SpeakQueue.stopCurrentModelSpeaking()
     homeStore.setState({ isSpeaking: false })
@@ -98,10 +107,40 @@ export class SpeakQueue {
     instance.stopped = true
     instance.isProcessing = false
     SpeakQueue.stopTokenCounter++
+    SpeakQueue.stopScope = sessionId
     instance.clearQueue()
 
     SpeakQueue.stopCurrentModelSpeaking()
     homeStore.setState({ isSpeaking: false })
+  }
+
+  /**
+   * キューが完全に空転している場合のみ、発話完了コールバックの実行と
+   * 表情のリセットを行います。停止により発話が打ち切られた応答の
+   * ストリーム終端処理（speechDispatcher が disabled になった場合）から
+   * 呼び出されます。新しい応答が既に発話中（isSpeaking）の場合は何もしません。
+   */
+  public static async finalizeIfIdle(): Promise<void> {
+    const instance = SpeakQueue.getInstance()
+    if (
+      instance.queue.length > 0 ||
+      instance.isProcessing ||
+      homeStore.getState().isSpeaking
+    ) {
+      return
+    }
+    instance.stopped = false
+    SpeakQueue.speakCompletionCallbacks.forEach((callback) => {
+      try {
+        callback()
+      } catch (error) {
+        logger.error(
+          '発話完了コールバックの実行中にエラーが発生しました:',
+          error
+        )
+      }
+    })
+    await getCharacterRenderer()?.resetToIdle()
   }
 
   async addTask(task: SpeakTask) {

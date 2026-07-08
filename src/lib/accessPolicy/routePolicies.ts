@@ -13,6 +13,24 @@
 import type { RoutePolicy } from './types'
 
 export const routePolicies = {
+  '/api/ai/audio': {
+    path: '/api/ai/audio',
+    featureName: 'ai/audio',
+    methods: ['POST'],
+    resources: ['server-secret'],
+    secret: {
+      kind: 'pairs',
+      pairs: [
+        {
+          source: 'body',
+          key: 'apiKey',
+          envVars: ['OPENAI_KEY', 'OPENAI_API_KEY'],
+        },
+      ],
+    },
+    restrictedBehavior: 'none',
+    waf: { embedAllowed: true },
+  },
   '/api/ai/custom': {
     path: '/api/ai/custom',
     featureName: 'ai/custom',

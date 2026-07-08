@@ -1,5 +1,4 @@
 import { getOpenAIAudioChatResponseStream } from '../../../features/chat/openAIAudioChat'
-import OpenAI from 'openai'
 import settingsStore from '../../../features/stores/settings'
 import homeStore from '../../../features/stores/home'
 import { handleReceiveTextFromRtFn } from '../../../features/chat/handlers'
@@ -10,19 +9,6 @@ import {
 import { messageSelectors } from '../../../features/messages/messageSelectors'
 import { Message } from '../../../features/messages/messages'
 import { defaultModels } from '../../../features/constants/aiModels'
-
-jest.mock('openai', () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: jest.fn(),
-        },
-      },
-    })),
-  }
-})
 
 jest.mock('../../../features/stores/settings', () => ({
   getState: jest.fn(),
@@ -47,9 +33,24 @@ jest.mock('../../../features/messages/messageSelectors', () => ({
   },
 }))
 
+/** NDJSON行列からfetchレスポンスのbodyストリームを作る */
+const createNdjsonBody = (lines: Array<Record<string, unknown>>) => {
+  const encoder = new TextEncoder()
+  const payload = lines.map((l) => JSON.stringify(l) + '\n').join('')
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (payload) controller.enqueue(encoder.encode(payload))
+      controller.close()
+    },
+  })
+}
+
+const mockFetch = jest.fn()
+
 describe('openAIAudioChat', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = mockFetch
 
     const mockSettings = {
       openaiKey: 'test-openai-key',
@@ -103,105 +104,53 @@ describe('openAIAudioChat', () => {
     { role: 'user', content: 'こんにちは', timestamp: '2023-01-01T00:00:01Z' },
   ]
 
+  const drainStream = async (stream: ReadableStream<string>) => {
+    const reader = stream.getReader()
+    let result = ''
+    const chunks: string[] = []
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      if (value) {
+        chunks.push(value)
+        result += value
+      }
+    }
+    return { result, chunks }
+  }
+
   describe('getOpenAIAudioChatResponseStream', () => {
     it('オーディオストリームを正しく処理する', async () => {
-      const mockChunks = [
-        {
-          choices: [
-            {
-              delta: {
-                audio: {
-                  transcript: 'こんにちは、',
-                  data: 'base64data1',
-                },
-              },
-            },
-          ],
-        },
-        {
-          choices: [
-            {
-              delta: {
-                audio: {
-                  transcript: 'お元気ですか？',
-                  data: 'base64data2',
-                },
-              },
-            },
-          ],
-        },
-        {
-          choices: [
-            {
-              delta: {
-                audio: {
-                  id: 'audio-id-123',
-                },
-              },
-            },
-          ],
-        },
-      ]
-
-      const mockAsyncIterator = {
-        async *[Symbol.asyncIterator]() {
-          for (const chunk of mockChunks) {
-            yield chunk
-          }
-        },
-      }
-
-      const mockCreate = jest.fn().mockResolvedValue(mockAsyncIterator)
-      ;(OpenAI as unknown as jest.Mock).mockImplementation(() => ({
-        chat: {
-          completions: {
-            create: mockCreate,
-          },
-        },
-      }))
-
-      const mockController = {
-        enqueue: jest.fn(),
-        close: jest.fn(),
-      }
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: createNdjsonBody([
+          { transcript: 'こんにちは、', data: 'base64data1' },
+          { transcript: 'お元気ですか？', data: 'base64data2' },
+          { id: 'audio-id-123' },
+        ]),
+      })
 
       const stream = await getOpenAIAudioChatResponseStream(testMessages)
+      const { chunks } = await drainStream(stream)
 
-      // ストリームの内容を読み取る
-      const reader = (stream as ReadableStream<string>).getReader()
-      let result = ''
-      let done = false
-      while (!done) {
-        const { value, done: readerDone } = await reader.read()
-        if (readerDone) {
-          done = true
-          break
-        }
-        if (value) {
-          // 実際の enqueue 呼び出しを模倣（テストのアサーション用）
-          mockController.enqueue(value)
-          result += value
-        }
-      }
+      // サーバー中継ルートへ正しいペイロードで送信する
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/ai/audio',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: testMessages,
+            apiKey: 'test-openai-key',
+            model: defaultModels.openaiAudio,
+            voice: 'alloy',
+          }),
+        })
+      )
 
-      expect(OpenAI).toHaveBeenCalledWith({
-        apiKey: 'test-openai-key',
-        dangerouslyAllowBrowser: true,
-      })
-
-      expect(mockCreate).toHaveBeenCalledWith({
-        model: defaultModels.openaiAudio,
-        messages: testMessages,
-        stream: true,
-        modalities: ['text', 'audio'],
-        audio: {
-          voice: 'alloy',
-          format: 'pcm16',
-        },
-      })
-
-      expect(mockController.enqueue).toHaveBeenCalledWith('こんにちは、')
-      expect(mockController.enqueue).toHaveBeenCalledWith('お元気ですか？')
+      expect(chunks).toContain('こんにちは、')
+      expect(chunks).toContain('お元気ですか？')
 
       expect(base64ToArrayBuffer).toHaveBeenCalledWith('base64data1')
       expect(base64ToArrayBuffer).toHaveBeenCalledWith('base64data2')
@@ -220,59 +169,58 @@ describe('openAIAudioChat', () => {
       expect(bufferManagerInstance.flush).toHaveBeenCalled()
     })
 
-    it('AbortSignalが指定された場合はOpenAI SDKへ渡す', async () => {
+    it('AbortSignalが指定された場合はfetchへ渡す', async () => {
       const controller = new AbortController()
-      const mockAsyncIterator = {
-        async *[Symbol.asyncIterator]() {},
-      }
-      const mockCreate = jest.fn().mockResolvedValue(mockAsyncIterator)
-      ;(OpenAI as unknown as jest.Mock).mockImplementation(() => ({
-        chat: {
-          completions: {
-            create: mockCreate,
-          },
-        },
-      }))
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: createNdjsonBody([]),
+      })
 
       await getOpenAIAudioChatResponseStream(testMessages, {
         signal: controller.signal,
       })
 
-      expect(mockCreate).toHaveBeenCalledWith(
-        {
-          model: defaultModels.openaiAudio,
-          messages: testMessages,
-          stream: true,
-          modalities: ['text', 'audio'],
-          audio: {
-            voice: 'alloy',
-            format: 'pcm16',
-          },
-        },
-        { signal: controller.signal }
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/ai/audio',
+        expect.objectContaining({ signal: controller.signal })
       )
     })
 
-    it('APIエラーを適切に処理する', async () => {
-      const mockError = new Error('API error')
-      const mockCreate = jest.fn().mockRejectedValue(mockError)
-      ;(OpenAI as unknown as jest.Mock).mockImplementation(() => ({
-        chat: {
-          completions: {
-            create: mockCreate,
-          },
-        },
-      }))
+    it('APIエラーレスポンスを適切に処理する', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: jest
+          .fn()
+          .mockResolvedValue({ errorCode: 'ServerSecretAccessDenied' }),
+      })
 
       const originalConsoleError = console.error
       console.error = jest.fn()
 
-      // エラーが発生することを期待する
       await expect(
         getOpenAIAudioChatResponseStream(testMessages)
-      ).rejects.toThrow('API error')
+      ).rejects.toThrow(
+        'OpenAI Audio API request failed with status 403: ServerSecretAccessDenied'
+      )
 
-      // エラーがコンソールに出力されることを確認
+      expect(console.error).toHaveBeenCalled()
+
+      console.error = originalConsoleError
+    })
+
+    it('fetch自体の失敗をrethrowする', async () => {
+      const mockError = new Error('network error')
+      mockFetch.mockRejectedValue(mockError)
+
+      const originalConsoleError = console.error
+      console.error = jest.fn()
+
+      await expect(
+        getOpenAIAudioChatResponseStream(testMessages)
+      ).rejects.toThrow('network error')
+
       expect(console.error).toHaveBeenCalledWith(
         'OpenAI Audio API error:',
         mockError
@@ -282,61 +230,70 @@ describe('openAIAudioChat', () => {
     })
 
     it('オーディオデータなしのレスポンスを処理する', async () => {
-      const mockChunks = [
-        {
-          choices: [
-            {
-              delta: {
-                content: 'テキストのみの応答', // オーディオデータなし
-              },
-            },
-          ],
-        },
-      ]
-
-      const mockAsyncIterator = {
-        async *[Symbol.asyncIterator]() {
-          for (const chunk of mockChunks) {
-            yield chunk
-          }
-        },
-      }
-
-      const mockCreate = jest.fn().mockResolvedValue(mockAsyncIterator)
-      ;(OpenAI as unknown as jest.Mock).mockImplementation(() => ({
-        chat: {
-          completions: {
-            create: mockCreate,
-          },
-        },
-      }))
-
-      const mockController = {
-        // このテストケース用のmockController
-        enqueue: jest.fn(),
-        close: jest.fn(),
-      }
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: createNdjsonBody([]),
+      })
 
       const stream = await getOpenAIAudioChatResponseStream(testMessages)
+      const { chunks } = await drainStream(stream)
 
-      // ストリームの内容を読み取る
-      const reader = (stream as ReadableStream<string>).getReader()
-      while (true) {
-        const { done } = await reader.read()
-        if (done) break
-        // データは処理しない（テキストのみのため）
-      }
-
-      expect(mockController.enqueue).not.toHaveBeenCalled() // mockController.enqueue は呼ばれないはず
+      expect(chunks).toHaveLength(0)
       expect(base64ToArrayBuffer).not.toHaveBeenCalled()
 
-      // AudioBufferManager のインスタンスを取得して確認
       const bufferManagerInstance = (AudioBufferManager as jest.Mock).mock
-        .results[0].value // このテストケースでのインスタンスを取得
+        .results[0].value
       expect(bufferManagerInstance.addData).not.toHaveBeenCalled()
-
       expect(bufferManagerInstance.flush).toHaveBeenCalled()
-      // ストリームが正常に終了したことを確認 (read ループの終了で確認)
+    })
+
+    it('ストリーム途中のエラーはストリームのエラーとして伝播する', async () => {
+      let sent = false
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (!sent) {
+            sent = true
+            controller.enqueue(
+              new TextEncoder().encode(
+                JSON.stringify({ transcript: '途中まで' }) + '\n'
+              )
+            )
+          } else {
+            controller.error(new Error('upstream disconnected'))
+          }
+        },
+      })
+      mockFetch.mockResolvedValue({ ok: true, status: 200, body })
+
+      const originalConsoleError = console.error
+      console.error = jest.fn()
+
+      const stream = await getOpenAIAudioChatResponseStream(testMessages)
+      const reader = stream.getReader()
+      const { value } = await reader.read()
+      expect(value).toBe('途中まで')
+      await expect(reader.read()).rejects.toThrow('upstream disconnected')
+
+      console.error = originalConsoleError
+    })
+
+    it('チャンク境界で分割されたNDJSON行を結合して処理する', async () => {
+      const encoder = new TextEncoder()
+      const line = JSON.stringify({ transcript: '分割された行' }) + '\n'
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode(line.slice(0, 5)))
+          controller.enqueue(encoder.encode(line.slice(5)))
+          controller.close()
+        },
+      })
+      mockFetch.mockResolvedValue({ ok: true, status: 200, body })
+
+      const stream = await getOpenAIAudioChatResponseStream(testMessages)
+      const { chunks } = await drainStream(stream)
+
+      expect(chunks).toEqual(['分割された行'])
     })
   })
 })

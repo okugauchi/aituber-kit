@@ -11,11 +11,7 @@ interface SlidesProps {
   markdown: string
 }
 
-export const goToSlide = (index: number) => {
-  slideStore.setState({
-    currentSlide: index,
-  })
-}
+export { goToSlide } from '@/features/stores/slide'
 
 const Slides: React.FC<SlidesProps> = ({ markdown }) => {
   const [marpitContainer, setMarpitContainer] = useState<Element | null>(null)

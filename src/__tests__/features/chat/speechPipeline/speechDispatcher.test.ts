@@ -1,0 +1,141 @@
+import {
+  createSpeechDispatcher,
+  __resetLatestResponseSessionId,
+} from '@/features/chat/speechPipeline/speechDispatcher'
+import { speakCharacter } from '@/features/messages/speakCharacter'
+import { SpeakQueue } from '@/features/messages/speakQueue'
+import homeStore from '@/features/stores/home'
+
+jest.mock('@/features/messages/speakCharacter', () => ({
+  speakCharacter: jest.fn(),
+}))
+
+jest.mock('@/features/messages/characterRenderer', () => ({
+  getCharacterRenderer: jest.fn(() => ({
+    speak: jest.fn(),
+    stopSpeaking: jest.fn(),
+    resetToIdle: jest.fn(),
+  })),
+}))
+
+jest.mock('@/features/stores/home', () => ({
+  getState: jest.fn(),
+  setState: jest.fn(),
+}))
+
+const mockHomeState = {
+  isSpeaking: false,
+  slideMessages: [] as string[],
+  incrementChatProcessingCount: jest.fn(),
+  decrementChatProcessingCount: jest.fn(),
+}
+
+const speech = (text: string, emotionTag = '', motionTag?: string) =>
+  ({ kind: 'speech', text, emotionTag, motionTag }) as const
+
+describe('speechDispatcher', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    __resetLatestResponseSessionId()
+    ;(homeStore.getState as jest.Mock).mockReturnValue(mockHomeState)
+  })
+
+  it('通常のテキストをspeakCharacterへ依頼する', () => {
+    const d = createSpeechDispatcher('session-1')
+    expect(d.dispatch(speech('こんにちは。', '[happy]', 'wave'))).toBe(true)
+    expect(speakCharacter).toHaveBeenCalledWith(
+      'session-1',
+      { message: 'こんにちは。', emotion: 'happy', motion: 'wave' },
+      expect.any(Function),
+      expect.any(Function)
+    )
+    expect(d.anyDispatched).toBe(true)
+  })
+
+  it('タグなしはneutralとして依頼する', () => {
+    const d = createSpeechDispatcher('session-1')
+    d.dispatch(speech('やあ。'))
+    expect(speakCharacter).toHaveBeenCalledWith(
+      'session-1',
+      { message: 'やあ。', emotion: 'neutral', motion: undefined },
+      expect.any(Function),
+      expect.any(Function)
+    )
+  })
+
+  it('記号・空白のみは依頼しない（ただし無効化はされない）', () => {
+    const d = createSpeechDispatcher('session-1')
+    expect(d.dispatch(speech('、、、'))).toBe(false)
+    expect(speakCharacter).not.toHaveBeenCalled()
+    expect(d.disabled).toBe(false)
+    expect(d.dispatch(speech('本文。'))).toBe(true)
+  })
+
+  it('初回dispatch後のstopAllで無効化される（D1/契約6-1）', () => {
+    const d = createSpeechDispatcher('session-1')
+    expect(d.dispatch(speech('一文目。'))).toBe(true)
+    SpeakQueue.stopAll()
+    expect(d.dispatch(speech('二文目。'))).toBe(false)
+    expect(d.disabled).toBe(true)
+    expect(speakCharacter).toHaveBeenCalledTimes(1)
+    // 無効化後は永続的に依頼しない
+    expect(d.dispatch(speech('三文目。'))).toBe(false)
+  })
+
+  it('初回dispatch前のstopAllは影響しない＝遅延捕捉（契約6-5）', () => {
+    const d = createSpeechDispatcher('session-1')
+    SpeakQueue.stopAll()
+    expect(d.dispatch(speech('応答遅延後の一文目。'))).toBe(true)
+    expect(d.disabled).toBe(false)
+  })
+
+  it('自セッションへのstopSessionで無効化される（契約6-3）', () => {
+    const d = createSpeechDispatcher('session-1')
+    d.dispatch(speech('一文目。'))
+    // session-1 を現在発話中セッションにしてから停止
+    SpeakQueue.getInstance().checkSessionId('session-1')
+    SpeakQueue.stopSession('session-1')
+    expect(d.dispatch(speech('二文目。'))).toBe(false)
+    expect(d.disabled).toBe(true)
+  })
+
+  it('他セッションへのstopSessionでは巻き添えにならず継続する（契約6-4）', () => {
+    const other = createSpeechDispatcher('session-other')
+    other.dispatch(speech('他セッション。'))
+    const d = createSpeechDispatcher('session-1')
+    d.dispatch(speech('一文目。'))
+    // 他セッションを現在発話中にして停止（トークンが増える）
+    SpeakQueue.getInstance().checkSessionId('session-other')
+    SpeakQueue.stopSession('session-other')
+    expect(SpeakQueue.currentStopScope).toBe('session-other')
+    // このセッションはトークンを追従して発話を継続する
+    expect(d.dispatch(speech('二文目。'))).toBe(true)
+    expect(d.disabled).toBe(false)
+  })
+
+  it('新しい応答セッションの開始で旧dispatcherが無効化される（契約6-2/6-6）', () => {
+    const oldDispatcher = createSpeechDispatcher('session-old')
+    oldDispatcher.dispatch(speech('旧応答。'))
+    createSpeechDispatcher('session-new')
+    expect(oldDispatcher.dispatch(speech('旧応答の続き。'))).toBe(false)
+    expect(oldDispatcher.disabled).toBe(true)
+    expect(speakCharacter).toHaveBeenCalledTimes(1)
+  })
+
+  it('onStart/onCompleteでスライド字幕とchatProcessingCountを連動する', () => {
+    const d = createSpeechDispatcher('session-1')
+    d.dispatch(speech('一文目。'))
+    const [, , onStart, onComplete] = (speakCharacter as jest.Mock).mock
+      .calls[0]
+
+    onStart()
+    expect(mockHomeState.incrementChatProcessingCount).toHaveBeenCalled()
+    expect(homeStore.setState).toHaveBeenCalledWith({
+      slideMessages: ['一文目。'],
+    })
+
+    onComplete()
+    expect(mockHomeState.decrementChatProcessingCount).toHaveBeenCalled()
+    expect(homeStore.setState).toHaveBeenLastCalledWith({ slideMessages: [] })
+  })
+})

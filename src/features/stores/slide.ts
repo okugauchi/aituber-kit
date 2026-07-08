@@ -21,4 +21,11 @@ const slideStore = create<SlideState>()(
   )
 )
 
+/** 指定したスライド番号へ移動する */
+export const goToSlide = (index: number) => {
+  slideStore.setState({
+    currentSlide: index,
+  })
+}
+
 export default slideStore
