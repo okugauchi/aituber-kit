@@ -190,3 +190,4 @@ export type ReasoningEffort =
   | 'medium'
   | 'high'
   | 'xhigh'
+  | 'max'

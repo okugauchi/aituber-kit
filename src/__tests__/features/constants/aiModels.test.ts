@@ -10,6 +10,7 @@ import {
   getOpenAIAudioModels,
   getOpenAIWhisperModels,
   getOpenAITTSModels,
+  getReasoningEfforts,
   isMultiModalModel,
   isMultiModalModelWithToggle,
   isMultiModalAvailable,
@@ -24,6 +25,8 @@ import {
 import { AIService } from '@/features/constants/settings'
 
 describe('aiModels', () => {
+  const openAI56Models = ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']
+
   const allServices: AIService[] = [
     'openai',
     'anthropic',
@@ -74,6 +77,13 @@ describe('aiModels', () => {
       allServices.forEach((service) => {
         expect(getModels(service)).toEqual(aiModels[service])
       })
+    })
+
+    it('should include newly released OpenAI and xAI models', () => {
+      expect(getModels('openai')).toEqual(
+        expect.arrayContaining(openAI56Models)
+      )
+      expect(getModels('xai')).toContain('grok-4.5')
     })
   })
 
@@ -136,6 +146,7 @@ describe('aiModels', () => {
       expect(models).toContain('gpt-5.4')
       expect(models).toContain('gpt-4o')
       expect(models).toContain('gpt-4.1')
+      expect(models).toEqual(expect.arrayContaining(openAI56Models))
     })
 
     it('should return all models for anthropic (all are multimodal)', () => {
@@ -161,6 +172,7 @@ describe('aiModels', () => {
       expect(models).not.toContain('grok-4-fast-reasoning')
       expect(models).not.toContain('grok-code-fast-1')
       expect(models).toContain('grok-4')
+      expect(models).toContain('grok-4.5')
     })
 
     it('should return subset for groq (most are not multimodal)', () => {
@@ -294,6 +306,27 @@ describe('aiModels', () => {
           'accounts/fireworks/models/kimi-k2-thinking'
         )
       ).toBe(true)
+    })
+
+    it('should treat latest OpenAI and xAI models as reasoning models', () => {
+      for (const model of openAI56Models) {
+        expect(isReasoningModel('openai', model)).toBe(true)
+        expect(getReasoningEfforts('openai', model)).toEqual([
+          'none',
+          'low',
+          'medium',
+          'high',
+          'xhigh',
+          'max',
+        ])
+      }
+
+      expect(isReasoningModel('xai', 'grok-4.5')).toBe(true)
+      expect(getReasoningEfforts('xai', 'grok-4.5')).toEqual([
+        'low',
+        'medium',
+        'high',
+      ])
     })
   })
 
