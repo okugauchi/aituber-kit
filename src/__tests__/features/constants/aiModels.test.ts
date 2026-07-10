@@ -10,6 +10,7 @@ import {
   getOpenAIAudioModels,
   getOpenAIWhisperModels,
   getOpenAITTSModels,
+  getReasoningEfforts,
   isMultiModalModel,
   isMultiModalModelWithToggle,
   isMultiModalAvailable,
@@ -74,6 +75,13 @@ describe('aiModels', () => {
       allServices.forEach((service) => {
         expect(getModels(service)).toEqual(aiModels[service])
       })
+    })
+
+    it('should include newly released OpenAI and xAI models', () => {
+      expect(getModels('openai')).toEqual(
+        expect.arrayContaining(['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna'])
+      )
+      expect(getModels('xai')).toContain('grok-4.5')
     })
   })
 
@@ -294,6 +302,21 @@ describe('aiModels', () => {
           'accounts/fireworks/models/kimi-k2-thinking'
         )
       ).toBe(true)
+    })
+
+    it('should treat latest OpenAI and xAI models as reasoning models', () => {
+      expect(isReasoningModel('openai', 'gpt-5.6-terra')).toBe(true)
+      expect(getReasoningEfforts('openai', 'gpt-5.6-terra')).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high',
+        'xhigh',
+        'max',
+      ])
+
+      expect(isReasoningModel('xai', 'grok-4.5')).toBe(true)
+      expect(getReasoningEfforts('xai', 'grok-4.5')).toEqual(['low', 'high'])
     })
   })
 

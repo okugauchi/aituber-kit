@@ -27,6 +27,21 @@ interface ModelInfo {
 const modelDefinitions: Record<AIService, ModelInfo[]> = {
   openai: [
     {
+      name: 'gpt-5.6-sol',
+      multiModal: true,
+      reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    },
+    {
+      name: 'gpt-5.6-terra',
+      multiModal: true,
+      reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    },
+    {
+      name: 'gpt-5.6-luna',
+      multiModal: true,
+      reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    },
+    {
       name: 'gpt-5.5',
       multiModal: true,
       reasoningEfforts: ['minimal', 'low', 'medium', 'high'],
@@ -464,6 +479,10 @@ const modelDefinitions: Record<AIService, ModelInfo[]> = {
   ],
   azure: [],
   xai: [
+    {
+      name: 'grok-4.5',
+      reasoningEfforts: ['low', 'high'],
+    },
     {
       name: 'grok-4-1-fast-reasoning',
       reasoningEfforts: ['low', 'high'],
