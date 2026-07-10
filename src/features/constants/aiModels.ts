@@ -481,7 +481,8 @@ const modelDefinitions: Record<AIService, ModelInfo[]> = {
   xai: [
     {
       name: 'grok-4.5',
-      reasoningEfforts: ['low', 'high'],
+      multiModal: true,
+      reasoningEfforts: ['low', 'medium', 'high'],
     },
     {
       name: 'grok-4-1-fast-reasoning',
