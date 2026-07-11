@@ -199,6 +199,8 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
         position: 'absolute',
         width: '100%',
         transform: 'translateX(-200px)',
+        zIndex: 50,
+        pointerEvents: 'none',
       }}
     >
       <div
@@ -217,6 +219,7 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
           margin: '10px auto 0',
           position: 'relative',
           zIndex: 10,
+          pointerEvents: 'auto',
         }}
       >
         <SlideControls
