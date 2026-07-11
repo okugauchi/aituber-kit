@@ -43,6 +43,11 @@ export default function App({ Component, pageProps }: AppProps) {
 
     // 初期テーマを適用
     document.documentElement.setAttribute('data-theme', ss.colorTheme)
+    // UI ドロップシャドウモード同期
+    document.documentElement.setAttribute(
+      'data-ui-shadow-mode',
+      String(ss.uiDropShadowEnabled)
+    )
 
     homeStore.setState({ userOnboarded: true })
   }, [])

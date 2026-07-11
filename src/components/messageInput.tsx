@@ -66,6 +66,9 @@ export const MessageInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const realtimeAPIMode = settingsStore((s) => s.realtimeAPIMode)
   const showSilenceProgressBar = settingsStore((s) => s.showSilenceProgressBar)
+  const uiDarkMode = settingsStore((s) => s.uiDarkMode)
+  const bottomPaneOpacity = settingsStore((s) => s.bottomPaneOpacity)
+  const uiDropShadowEnabled = settingsStore((s) => s.uiDropShadowEnabled)
 
   const { t } = useTranslation()
 
@@ -496,7 +499,14 @@ export const MessageInput = ({
           )}
 
           <div
-            className="aurora-glass-capsule flex items-end gap-1.5 rounded-[31px] p-2 pl-2.5 sm:gap-2"
+            className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} aurora-glass-capsule flex items-end gap-1.5 rounded-[31px] p-2 pl-2.5 sm:gap-2`}
+            style={uiDarkMode ? {
+              background: `rgba(51,45,45,${bottomPaneOpacity / 100})`,
+              color: '#ffffff',
+              borderColor: 'rgba(255,255,255,0.18)',
+            } : {
+              background: `rgba(255,255,255,${0.58 * (bottomPaneOpacity / 60)})`,
+            }}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >

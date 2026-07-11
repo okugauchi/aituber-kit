@@ -87,6 +87,15 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
       div.marpit > svg > foreignObject > section {
         padding: 2em;
       }
+      div.marpit > svg {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+      div.marpit {
+        left: -200px !important;
+      }
     `
     const styleElement = document.createElement('style')
     styleElement.textContent = customStyle

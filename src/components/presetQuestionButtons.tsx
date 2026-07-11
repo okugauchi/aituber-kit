@@ -11,6 +11,7 @@ type Props = {
 export const PresetQuestionButtons = ({ onSelectQuestion }: Props) => {
   const presetQuestions = settingsStore((s) => s.presetQuestions)
   const showPresetQuestions = settingsStore((s) => s.showPresetQuestions)
+  const uiDropShadowEnabled = settingsStore((s) => s.uiDropShadowEnabled)
   const [shouldCenter, setShouldCenter] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -66,7 +67,7 @@ export const PresetQuestionButtons = ({ onSelectQuestion }: Props) => {
             <button
               key={question.id}
               onClick={() => handleQuestionClick(question.text)}
-              className="aurora-glass-popover group inline-flex max-w-[82vw] items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-bold text-theme-default shadow-[0_2px_8px_rgba(31,38,60,0.08)] transition-colors duration-200 hover:border-secondary sm:max-w-none sm:px-4"
+              className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} aurora-glass-popover group inline-flex max-w-[82vw] items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-bold text-theme-default shadow-[0_2px_8px_rgba(31,38,60,0.08)] transition-colors duration-200 hover:border-secondary sm:max-w-none sm:px-4`}
             >
               <span className="truncate">{question.text}</span>
               <span

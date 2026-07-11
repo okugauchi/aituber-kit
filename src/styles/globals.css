@@ -498,6 +498,31 @@ body {
     display: none;
   }
 
+  /* UI ドロップシャドウ — 画面共有モードでの識別性向上 */
+  .ui-shadow {
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.6),
+      0 4px 12px rgba(0,0,0,0.25) !important;
+  }
+
+  html[data-ui-shadow-mode='true']
+    :where(
+      button,
+      input,
+      textarea,
+      select,
+      .rounded-2xl,
+      .rounded-lg,
+      .rounded-xl,
+      .rounded-\[18px\],
+      .rounded-\[31px\],
+      .rounded-\[20px\]
+    ) {
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.6),
+      0 4px 12px rgba(0,0,0,0.25) !important;
+  }
+
   .preset-questions-scroll {
     scrollbar-width: thin;
     scrollbar-color: theme('colors.secondary') transparent;

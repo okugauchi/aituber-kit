@@ -356,6 +356,86 @@ const Based = () => {
           </select>
         </div>
       </div>
+
+      {/* UIカスタマイズ設定 */}
+      <div className="border-t border-gray-300 pt-6 my-6">
+        <div className="flex items-center mb-6">
+          <div
+            className="w-6 h-6 mr-2 icon-mask-default"
+            style={{
+              maskImage: 'url(/images/setting-icons/basic-settings.svg)',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+            }}
+          />
+          <h2 className="text-2xl font-bold">{t('UiCustomization')}</h2>
+        </div>
+        <div className="my-2 text-sm whitespace-pre-wrap">
+          {t('UiCustomizationDescription')}
+        </div>
+
+        {/* ドロップシャドウ */}
+        <div className="my-4">
+          <div className="my-4 text-xl font-bold">{t('UiDropShadow')}</div>
+          <div className="my-2 text-sm whitespace-pre-wrap">
+            {t('UiDropShadowDescription')}
+          </div>
+          <div className="my-2">
+            <ToggleSwitch
+              enabled={settingsStore((s) => s.uiDropShadowEnabled)}
+              onChange={(v) => {
+                settingsStore.setState({ uiDropShadowEnabled: v })
+                document.documentElement.setAttribute(
+                  'data-ui-shadow-mode',
+                  String(v)
+                )
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ダークモード */}
+        <div className="my-4">
+          <div className="my-4 text-xl font-bold">{t('UiDarkMode')}</div>
+          <div className="my-2 text-sm whitespace-pre-wrap">
+            {t('UiDarkModeDescription')}
+          </div>
+          <div className="my-2">
+            <ToggleSwitch
+              enabled={settingsStore((s) => s.uiDarkMode)}
+              onChange={(v) =>
+                settingsStore.setState({ uiDarkMode: v })
+              }
+            />
+          </div>
+        </div>
+
+        {/* ボトムペイン透過度 */}
+        <div className="my-4">
+          <div className="my-4 text-xl font-bold">{t('BottomPaneOpacity')}</div>
+          <div className="my-2 text-sm whitespace-pre-wrap">
+            {t('BottomPaneOpacityDescription')}
+          </div>
+          <div className="my-2">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              className="input-range"
+              value={settingsStore((s) => s.bottomPaneOpacity)}
+              onChange={(e) =>
+                settingsStore.setState({
+                  bottomPaneOpacity: Number(e.target.value),
+                })
+              }
+            />
+            <span className="ml-2">
+              {settingsStore((s) => s.bottomPaneOpacity)}%
+            </span>
+          </div>
+        </div>
+      </div>
     </>
   )
 }
