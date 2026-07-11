@@ -648,6 +648,7 @@ export const MessageInput = ({
                   continuousMicListeningMode || chatProcessing || isSpeaking
                 }
                 onClick={handleMicClick}
+                title={t('MicButtonTitle')}
                 className={`!h-10 !min-h-10 !w-10 !min-w-10 !rounded-full !p-2 sm:!h-[46px] sm:!min-h-[46px] sm:!w-[46px] sm:!min-w-[46px] ring-0 transition-colors duration-200 focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
                   isMicRecording && !continuousMicListeningMode
                     ? 'animate-[aurora-mic-pulse_1.5s_ease-out_infinite]'
@@ -661,6 +662,7 @@ export const MessageInput = ({
                 isProcessing={chatProcessing}
                 disabled={chatProcessing || !userMessage || realtimeAPIMode}
                 onClick={handleSendClick}
+                title={t('SendButtonTitle')}
                 data-testid="chat-send-button"
               />
 
@@ -670,6 +672,7 @@ export const MessageInput = ({
                 className="!h-10 !min-h-10 !w-10 !min-w-10 !rounded-full !p-2 sm:!h-[46px] sm:!min-h-[46px] sm:!w-[46px] sm:!min-w-[46px] ring-0 transition-colors duration-200 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                 onClick={onClickStopButton}
                 isProcessing={false}
+                title={t('StopButtonTitle')}
                 data-testid="chat-stop-button"
               />
             </div>

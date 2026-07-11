@@ -263,6 +263,7 @@ export const Menu = () => {
                     isProcessing={false}
                     onClick={() => setShowSettings(true)}
                     aria-label={t('Settings')}
+                    title={t('SettingsButtonTitle')}
                     data-testid="open-settings-button"
                     backgroundColor="bg-transparent hover:bg-primary/10 active:bg-primary/15 disabled:bg-transparent"
                     iconColor="text-text1"
@@ -284,6 +285,7 @@ export const Menu = () => {
                   isProcessing={false}
                   onClick={() => setChatLogMode((prev) => (prev + 1) % 3)}
                   aria-label={t('ChatLog')}
+                  title={t('ChatLogButtonTitle')}
                   backgroundColor="bg-transparent hover:bg-black/5 active:bg-black/10 disabled:bg-transparent"
                   iconColor="text-text1"
                   className="!rounded-[13px] transition-colors duration-200"
