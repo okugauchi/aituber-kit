@@ -198,6 +198,7 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
         padding: '10px 0',
         position: 'absolute',
         width: '100%',
+        transform: 'translateX(-200px)',
       }}
     >
       <div

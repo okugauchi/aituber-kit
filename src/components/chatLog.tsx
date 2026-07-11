@@ -332,12 +332,14 @@ const GlassChat = ({
 }) => {
   const { t } = useTranslation()
   const showThinkingText = settingsStore((s) => s.showThinkingText)
+  const uiDropShadowEnabled = settingsStore((s) => s.uiDropShadowEnabled)
+  const uiDarkMode = settingsStore((s) => s.uiDarkMode)
   const [isLocalExpanded, setIsLocalExpanded] = useState(false)
   const isThinkingExpanded = showThinkingText || isLocalExpanded
   const emotionPattern = new RegExp(`\\[(${EMOTIONS.join('|')})\\]\\s*`, 'gi')
   const processedMessage = message
     .replace(emotionPattern, '')
-    .replace(/\[motion:[^\]]*\]\s*/gi, '')
+    .replace(/\\[motion:[^\\]]*\\]\\s*/gi, '')
 
   const isUser = role === 'user'
   const senderName = isUser
@@ -368,11 +370,17 @@ const GlassChat = ({
         </span>
       )}
       <div
-        className={`w-fit max-w-full px-3.5 py-[9px] text-[13px] leading-[1.6] ${
+        className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} w-fit max-w-full px-3.5 py-[9px] text-[13px] leading-[1.6] ${
           isUser
             ? 'rounded-[16px_16px_4px_16px] bg-primary text-white'
-            : 'rounded-[16px_16px_16px_4px] bg-white/80 text-[var(--aurora-text-medium)]'
+            : 'rounded-[16px_16px_16px_4px] text-[var(--aurora-text-medium)]'
         }`}
+        style={!isUser && uiDarkMode ? {
+          background: 'rgba(17, 19, 28, 0.58)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+        } : !isUser ? {
+          background: 'rgba(255, 255, 255, 0.8)',
+        } : undefined}
       >
         {thinking && !isUser && (
           <div className="mb-2">
@@ -534,12 +542,13 @@ const ClassicChat = ({
 }) => {
   const { t } = useTranslation()
   const showThinkingText = settingsStore((s) => s.showThinkingText)
+  const uiDropShadowEnabled = settingsStore((s) => s.uiDropShadowEnabled)
   const [isLocalExpanded, setIsLocalExpanded] = useState(false)
   const isThinkingExpanded = showThinkingText || isLocalExpanded
   const emotionPattern = new RegExp(`\\[(${EMOTIONS.join('|')})\\]\\s*`, 'gi')
   const processedMessage = message
     .replace(emotionPattern, '')
-    .replace(/\[motion:[^\]]*\]\s*/gi, '')
+    .replace(/\\[motion:[^\\]]*\\]\\s*/gi, '')
 
   const isUser = role === 'user'
   const roleBadge = isUser
@@ -559,7 +568,7 @@ const ClassicChat = ({
           <code className="font-mono text-xs sm:text-sm">{message}</code>
         </pre>
       ) : (
-        <div className="classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base">
+        <div className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base`}>
           <div className="mb-2 flex items-center gap-2">
             <span
               className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-bold ${roleBadge}`}

@@ -96,7 +96,6 @@ export const Menu = () => {
   // モバイルデバイス検出
   const isMobile = useIsMobile()
 
-  const selectedSlideDocs = slideStore((state) => state.selectedSlideDocs)
   const { t } = useTranslation()
 
   const [markdownContent, setMarkdownContent] = useState('')
@@ -261,7 +260,7 @@ export const Menu = () => {
 
       <div className="absolute z-15 m-3 sm:m-6">
         <div
-          className="aurora-glass-dock relative mb-10 grid grid-flow-col gap-0.5 rounded-[18px] p-1.5"
+          className="aurora-glass-dock relative mb-10 grid grid-flow-col gap-2 rounded-[18px] p-1.5"
           style={{ width: 'max-content' }}
         >
           {effectiveShowControlPanel && (
@@ -320,7 +319,7 @@ export const Menu = () => {
               {slideMode && slideVisible && slideFolders.length > 0 && (
                 <div className="order-4 flex items-center">
                   <select
-                    className="px-2 py-1 ml-1 bg-transparent hover:bg-black/5 rounded-lg text-sm font-bold text-theme-default max-w-[120px] truncate"
+                    className="px-2 py-[14px] ml-1 bg-transparent hover:bg-black/5 rounded-lg text-sm font-bold text-theme-default min-w-[140px]"
                     value={selectedSlideDocs || ''}
                     onChange={(e) => {
                       slideStore.setState({

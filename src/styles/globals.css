@@ -105,6 +105,22 @@ body {
     border-color: rgba(255, 255, 255, 0.16);
   }
 
+  /* ダークモード時のトップペイン(glass-dock)内のボタンテキスト・アイコンを白色系に */
+  .dark .aurora-glass-dock button {
+    color: var(--aurora-icon);
+  }
+  .dark .aurora-glass-dock select {
+    color: var(--aurora-icon);
+  }
+  .dark .aurora-glass-dock select option {
+    color: initial;
+    background: rgba(17, 19, 28, 0.9);
+  }
+  .dark .aurora-glass-dock select {
+    background: rgba(17, 19, 28, 0.5);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
   .theme-surface-popover {
     border-color: color-mix(in srgb, var(--color-primary) 14%, transparent);
     background-color: color-mix(
