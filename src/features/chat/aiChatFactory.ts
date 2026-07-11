@@ -9,6 +9,16 @@ export interface AIChatResponseStreamOptions {
   signal?: AbortSignal
 }
 
+/** ユーザーメッセージに `@hermes` が含まれているか判定 */
+const isHermesRequest = (messages: Message[]): boolean => {
+  const lastUserMessage = [...messages].reverse().find(
+    (m) => m.role === 'user' && typeof m.content === 'string'
+  )
+  return lastUserMessage
+    ? lastUserMessage.content.toLowerCase().includes('@hermes')
+    : false
+}
+
 export async function getAIChatResponseStream(
   messages: Message[],
   options: AIChatResponseStreamOptions = {}
@@ -19,6 +29,28 @@ export async function getAIChatResponseStream(
     return options.signal
       ? getOpenAIAudioChatResponseStream(messages, options)
       : getOpenAIAudioChatResponseStream(messages)
+  }
+
+  // @hermes ルーティング: 含む → Gateway (8642), 含まない → ds4-server (9000)
+  if (ss.selectAIService === 'custom-api') {
+    const useGateway = isHermesRequest(messages)
+    if (useGateway) {
+      // Gateway 用の設定で上書き
+      settingsStore.setState({
+        customApiUrl: 'http://127.0.0.1:8642/v1/chat/completions',
+        customApiHeaders: JSON.stringify({
+          Authorization: 'Bearer change-me-local-dev',
+        }),
+        customApiBody: JSON.stringify({ model: 'hermes-agent' }),
+      })
+    } else {
+      // ds4-server 直接（軽量クイック応答）
+      settingsStore.setState({
+        customApiUrl: 'http://127.0.0.1:9000/v1/chat/completions',
+        customApiHeaders: '{}',
+        customApiBody: JSON.stringify({ model: 'ds4-server' }),
+      })
+    }
   }
 
   switch (ss.selectAIService as AIService) {
