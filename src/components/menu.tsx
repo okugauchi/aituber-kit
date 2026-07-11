@@ -57,6 +57,8 @@ export const Menu = () => {
   const showCapture = menuStore((s) => s.showCapture)
   const slidePlaying = slideStore((s) => s.isPlaying)
   const showAssistantText = settingsStore((s) => s.showAssistantText)
+  const selectedSlideDocs = slideStore((s) => s.selectedSlideDocs)
+  const [slideFolders, setSlideFolders] = useState<string[]>([])
 
   // デモ端末モード関連
   const { isKioskMode, isTemporaryUnlocked, canAccessSettings } = useKioskMode()
@@ -120,6 +122,14 @@ export const Menu = () => {
   const handleTouchCancel = () => {
     setTouchStartTime(null)
   }
+
+  // スライドフォルダ一覧取得
+  useEffect(() => {
+    fetch('/api/getSlideFolders')
+      .then((r) => r.json())
+      .then((data) => setSlideFolders(data))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!selectedSlideDocs) return
@@ -306,6 +316,30 @@ export const Menu = () => {
                   className="!rounded-[13px] transition-colors duration-200"
                 />
               </div>
+              {/* スライド選択プルダウン — スライドモードかつ表示状態の時のみ */}
+              {slideMode && slideVisible && slideFolders.length > 0 && (
+                <div className="order-4 flex items-center">
+                  <select
+                    className="px-2 py-1 ml-1 bg-transparent hover:bg-black/5 rounded-lg text-sm font-bold text-theme-default max-w-[120px] truncate"
+                    value={selectedSlideDocs || ''}
+                    onChange={(e) => {
+                      slideStore.setState({
+                        selectedSlideDocs: e.target.value,
+                        isPlaying: false,
+                        currentSlide: 0,
+                      })
+                    }}
+                    aria-label={t('SelectedSlideDocs')}
+                  >
+                    <option value="">{t('PleaseSelectSlide')}</option>
+                    {slideFolders.map((folder) => (
+                      <option key={folder} value={folder}>
+                        {folder}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {showToolMenu && (
                 <div
                   className="aurora-glass-popover absolute left-0 top-full z-20 mt-2 grid w-max min-w-[180px] max-w-[calc(100vw-24px)] gap-0.5 rounded-[18px] p-2 sm:min-w-[220px]"
