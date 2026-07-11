@@ -323,6 +323,7 @@ export const Menu = () => {
                     }
                     active={showCapture}
                     onClick={toggleCapture}
+                    title={t('CaptureButtonTitle')}
                     data-testid="capture-toggle-button"
                   />
                   <ToolMenuButton
@@ -330,6 +331,7 @@ export const Menu = () => {
                     label={t('Camera')}
                     active={showWebcam}
                     onClick={toggleWebcam}
+                    title={t('WebcamButtonTitle')}
                   />
                   {isMultiModalAvailable(
                     selectAIService as AIService,
@@ -342,6 +344,7 @@ export const Menu = () => {
                         iconName="24/AddImage"
                         label={t('SelectImage')}
                         onClick={() => imageFileInputRef.current?.click()}
+                        title={t('AddImageButtonTitle')}
                       />
                       <input
                         type="file"
@@ -374,6 +377,7 @@ export const Menu = () => {
                           youtubePlaying: !youtubePlaying,
                         })
                       }
+                      title={t('YoutubeButtonTitle')}
                       aria-pressed={youtubePlaying}
                       data-testid="youtube-play-toggle-button"
                     />
@@ -392,6 +396,7 @@ export const Menu = () => {
                       }
                       active={gameCommentaryPlaying}
                       onClick={toggleGameCommentary}
+                      title={t('PresetTabTitle')}
                       aria-pressed={gameCommentaryPlaying}
                       data-testid="game-commentary-play-toggle-button"
                     />
@@ -405,6 +410,7 @@ export const Menu = () => {
                         menuStore.setState({ slideVisible: !slideVisible })
                       }
                       disabled={slidePlaying}
+                      title={t('SlideButtonTitle')}
                       aria-pressed={slideVisible}
                       data-testid="slide-visibility-toggle-button"
                     />
