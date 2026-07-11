@@ -225,7 +225,7 @@ export async function handleCustomApi(
     method: 'POST',
     headers: apiHeaders,
     body: apiBody,
-    signal: AbortSignal.timeout(180000), // 3分でタイムアウト
+    signal: AbortSignal.timeout(600000), // 10分でタイムアウト（ds4-server 長時間思考対応）
   }
 
   let apiResponse = await fetch(customApiUrl, requestInit)

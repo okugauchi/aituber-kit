@@ -163,6 +163,12 @@ export const handleSendChatFn =
 
       homeStore.setState({ chatProcessing: true })
 
+      // 思考中プレアンブル発話（Hermes Gateway 応答までの間を埋める）
+      const preambleText = i18next.t('ThinkingPreamble', 'わかりました。これからじっくり考えますので、しばらくお待ちください。')
+      import('./speechPipeline/speakMessageHandler').then(({ speakMessageHandler }) => {
+        speakMessageHandler(preambleText)
+      }).catch(() => {})
+
       // マルチモーダル対応チェック
       if (
         modalImage &&

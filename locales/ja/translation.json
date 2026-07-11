@@ -819,6 +819,7 @@
     "response": "レスポンス",
     "noResponse": "まだレスポンスはありません。"
   },
+  "ThinkingPreamble": "わかりました。これからじっくり考えますので、しばらくお待ちください。",
   "UiCustomization": "UIカスタマイズ",
   "UiCustomizationDescription": "画面共有モードでのUIパーツ識別性を向上させます。",
   "UiDropShadow": "ドロップシャドウ",
