@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import settingsStore from '@/features/stores/settings'
 import { Link } from '../../link'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface AivisCloudApiSettingsProps {
   aivisCloudApiKey: string
@@ -112,7 +112,7 @@ export const AivisCloudApiSettings = ({
             <div className="font-bold">{t('StyleID')}</div>
             <div className="mt-2">
               <input
-                className="w-full rounded-lg bg-white px-4 py-2 hover:bg-white-hover sm:w-24"
+                className={settingsControlClass.numeric}
                 type="number"
                 min="0"
                 max="31"

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import settingsStore from '@/features/stores/settings'
 import { TextButton } from '../textButton'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 import { ToggleSwitch } from '../toggleSwitch'
 import Image from 'next/image'
 import { WhisperTranscriptionModel } from '@/features/constants/settings'

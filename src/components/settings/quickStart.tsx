@@ -25,7 +25,7 @@ import { useModelProviderState } from '@/components/settings/modelProvider/hooks
 import { ToggleSwitch } from '@/components/toggleSwitch'
 import { languageOptions } from '@/components/settings/languageOptions'
 import speakers from '@/components/speakers.json'
-import { settingsFieldWidth } from './formStyles'
+import { settingsFieldWidth } from '@/components/settings/formStyles'
 
 type SpeakerOption = {
   id: number | string

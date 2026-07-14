@@ -12,7 +12,7 @@ import { ToggleSwitch } from '../toggleSwitch'
 import { IMAGE_CONSTANTS } from '@/constants/images'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import { languageOptions } from '@/components/settings/languageOptions'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 const Based = () => {
   const { t } = useTranslation()

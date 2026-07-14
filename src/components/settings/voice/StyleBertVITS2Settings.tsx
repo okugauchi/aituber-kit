@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import settingsStore from '@/features/stores/settings'
 import { Link } from '../../link'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface StyleBertVITS2SettingsProps {
   stylebertvits2ServerUrl: string
@@ -66,7 +66,7 @@ export const StyleBertVITS2Settings = ({
       <div className="mt-4 font-bold">{t('StyleBeatVITS2ModelID')}</div>
       <div className="mt-2">
         <input
-          className="w-full rounded-lg bg-white px-4 py-2 hover:bg-white-hover sm:w-24"
+          className={settingsControlClass.numeric}
           type="number"
           placeholder="..."
           value={stylebertvits2ModelId}

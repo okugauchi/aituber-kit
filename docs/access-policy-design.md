@@ -129,7 +129,7 @@ interface RoutePolicy {
     source: 'body' | 'query'
     key: string // 例: 'serverUrl'
     envVar: string // 例: 'VOICEVOX_SERVER_URL'
-    allowLocalLoopback?: true // 同一マシン利用に限る互換例外
+    allowLocalLoopback?: true // プロキシを介さない同一マシン利用に限る互換例外
   }
   restrictedBehavior: 'deny' | 'in-route' | 'none'
   // 'deny': ラッパー内で403（feature_disabled_in_restricted_mode）
@@ -185,7 +185,8 @@ function withAccessPolicy(
    - `kind: 'pairs'`: `computeUsesServerSecret(pairs)` または `isProtectedServerResource` が真なら `guardServerSecretAccess()`
    - `kind: 'always'`: 無条件で `guardServerSecretAccess()`
    - `kind: 'dynamic'`: ここでは何もしない。ルートが `gate.guardServerSecret()` を呼ぶ（呼んでいることを静的テストで強制 — §7.2-3）
-   - ただし `allowLocalLoopback` を宣言したルートは、`disabled` かつリクエスト元Host・ソケット接続元・接続先URLがすべてループバックの場合のみガードを省略する
+   - ただし `allowLocalLoopback` を宣言したルートは、`disabled` かつリクエスト元Host・ソケット接続元・接続先URLがすべてループバックで、`Forwarded` / `X-Forwarded-*` などのプロキシ転送ヘッダーがない直接接続の場合のみガードを省略する
+   - リバースプロキシ経由ではソケット接続元がプロキシのループバックアドレスに見え、Hostや転送ヘッダーも構成次第で信頼できないため、`allowLocalLoopback` を安全境界として扱わない。プロキシ経由の要求ではこの例外を無効化し、`protected` / `demo` / `unprotected` の明示的な運用モードを使用する
 6. すべて通過 → `handler(req, res, gate)` を実行
 
 エラーレスポンスのシェイプは既存関数（`createRestrictedModeErrorResponse` / `rejectServerSecretAccess` / `requireApiKey`）をそのまま呼ぶことで保存する。

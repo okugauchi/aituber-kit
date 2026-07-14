@@ -7,7 +7,10 @@ import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import { Link } from '../../link'
 import speakers from '../../speakers.json'
 import { getSpeakerUpdateErrorMessage } from './speakerUpdateError'
-import { settingsActionWidth, settingsControlClass } from '../formStyles'
+import {
+  settingsActionWidth,
+  settingsControlClass,
+} from '@/components/settings/formStyles'
 
 interface VoicevoxSettingsProps {
   selectVoice: string

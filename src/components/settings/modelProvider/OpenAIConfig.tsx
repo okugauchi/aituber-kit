@@ -9,7 +9,7 @@ import { ApiKeyInput } from './ApiKeyInput'
 import { ModelSelector } from './ModelSelector'
 import { MultiModalToggle } from './MultiModalToggle'
 import { ModelCapabilityLegend } from '@/components/settings/modelProvider/ModelCapabilityLegend'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 import {
   getModels,
   getOpenAIRealtimeModels,

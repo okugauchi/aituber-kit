@@ -8,7 +8,7 @@ import { isMultiModalAvailable } from '@/features/constants/aiModels'
 import menuStore from '@/features/stores/menu'
 import slideStore from '@/features/stores/slide'
 import { TextButton } from '../textButton'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 import { ToggleSwitch } from '../toggleSwitch'
 import SlideConvert from './slideConvert'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
@@ -89,8 +89,8 @@ const Slide = () => {
       <div className="mt-6 mb-4 text-xl font-bold">
         {t('SelectedSlideDocs')}
       </div>
-      {/* プルダウンと編集ボタンを横並びにする */}
-      <div className="flex items-center gap-2">
+      {/* モバイルでは縦積み、sm以上では横並びにする */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <select
           id="folder-select"
           data-testid="slide-folder-select"

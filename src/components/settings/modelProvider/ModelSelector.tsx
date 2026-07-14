@@ -8,7 +8,7 @@ import {
 } from '@/features/constants/aiModels'
 import { AIService } from '@/features/constants/settings'
 import { ModelCapabilityLegend } from '@/components/settings/modelProvider/ModelCapabilityLegend'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface ModelSelectorProps {
   aiService: AIService

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid'
 import Link from 'next/link'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import { DisabledSettingNote } from '@/components/settings/disabledSettingNote'
+import { settingsActionWidth } from '@/components/settings/formStyles'
 
 const MessageReceiverSetting = () => {
   const { t } = useTranslation()
@@ -106,13 +107,13 @@ const MessageReceiverSetting = () => {
                 />
                 <TextButton
                   onClick={handleSaveClientId}
-                  className="w-full rounded-3xl bg-primary px-3 py-2 text-sm font-bold hover:bg-primary-hover sm:w-auto"
+                  className={`${settingsActionWidth} rounded-3xl bg-primary px-3 py-2 text-sm font-bold hover:bg-primary-hover`}
                 >
                   {t('Save')}
                 </TextButton>
                 <TextButton
                   onClick={handleCancelEdit}
-                  className="w-full rounded-3xl bg-gray-500 px-3 py-2 text-sm font-bold hover:bg-gray-600 sm:w-auto"
+                  className={`${settingsActionWidth} rounded-3xl bg-gray-500 px-3 py-2 text-sm font-bold hover:bg-gray-600`}
                 >
                   {t('Cancel')}
                 </TextButton>

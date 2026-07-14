@@ -8,7 +8,7 @@ import {
   CharacterVrmExtrasSection,
   CharacterPromptSection,
 } from './character/index'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 const Character = () => {
   const { t } = useTranslation()

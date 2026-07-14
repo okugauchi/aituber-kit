@@ -12,7 +12,7 @@ import {
   RealtimeAPIModeVoice,
   RealtimeAPIModeAzureVoice,
 } from '@/features/constants/settings'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface AzureConfigProps {
   azureKey: string

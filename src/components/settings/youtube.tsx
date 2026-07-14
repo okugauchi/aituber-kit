@@ -5,7 +5,7 @@ import Image from 'next/image'
 import settingsStore from '@/features/stores/settings'
 import toastStore from '@/features/stores/toast'
 import { ToggleSwitch } from '../toggleSwitch'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 import { loadPreset } from '@/features/presets/presetLoader'
 import { DisabledSettingNote } from '@/components/settings/disabledSettingNote'
 
@@ -162,7 +162,7 @@ const YouTube = () => {
             <div className="my-4 text-xl font-bold">{t('OneCommePort')}</div>
             <input
               data-testid="onecomme-port-input"
-              className="w-full rounded-lg bg-white px-4 py-2 hover:bg-white-hover sm:w-24"
+              className={settingsControlClass.numeric}
               type="number"
               placeholder="11180"
               value={onecommePort}

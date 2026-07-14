@@ -7,7 +7,7 @@ import {
   isMultiModalAvailable,
 } from '@/features/constants/aiModels'
 import { TextButton } from '../textButton'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 import toastStore from '@/features/stores/toast'
 
 interface SlideConvertProps {

@@ -18,7 +18,7 @@ import {
 } from './modelProvider/utils/aiServiceConfigs'
 import { AIService, ReasoningEffort } from '@/features/constants/settings'
 import { DisabledSettingNote } from '@/components/settings/disabledSettingNote'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 const ModelProvider = () => {
   const { t } = useTranslation()
@@ -454,7 +454,7 @@ const ModelProvider = () => {
                               type="number"
                               min="1024"
                               max="131072"
-                              className="w-full rounded-lg bg-white px-4 py-2 hover:bg-white-hover sm:w-32"
+                              className={settingsControlClass.numericWide}
                               value={state.reasoningTokenBudget}
                               onChange={(e) => {
                                 const value = parseInt(e.target.value)
@@ -517,7 +517,7 @@ const ModelProvider = () => {
                     <input
                       type="number"
                       min="1"
-                      className="w-full rounded-lg bg-white px-4 py-2 hover:bg-white-hover sm:w-32"
+                      className={settingsControlClass.numericWide}
                       value={state.maxTokens}
                       onChange={(e) => {
                         const value = parseInt(e.target.value)

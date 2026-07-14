@@ -10,7 +10,7 @@ import { ToggleSwitch } from '../../toggleSwitch'
 import { useLive2DEnabled } from '@/hooks/useLive2DEnabled'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import { Live2DSettingsForm } from './Live2DSettingsForm'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface CharacterModelSectionProps {
   modelType: SettingsState['modelType']

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '../../link'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface ApiKeyInputProps {
   label: string

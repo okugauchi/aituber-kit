@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import settingsStore from '@/features/stores/settings'
 import { ToggleSwitch } from '../toggleSwitch'
-import { settingsControlClass } from './formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 import { useCallback } from 'react'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import externalLinkageWebSocketStore from '@/features/stores/externalLinkageWebSocketStore'

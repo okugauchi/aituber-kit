@@ -216,6 +216,45 @@ describe('/api/tts-voicevox', () => {
     expect(mockAxiosPost).not.toHaveBeenCalled()
   })
 
+  it('should reject a proxied remote request even when the proxy connection is loopback', async () => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+
+    const req = createMockReq({
+      body: { text: 'test', speaker: 1, speed: 1, pitch: 0, intonation: 1 },
+      headers: {
+        host: 'aituberkit.example.com',
+        'x-forwarded-for': '198.51.100.20',
+      },
+      socket: { remoteAddress: '127.0.0.1' } as NextApiRequest['socket'],
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(403)
+    expect(mockAxiosPost).not.toHaveBeenCalled()
+  })
+
+  it('should reject a proxied request with an attacker-supplied localhost Host header', async () => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+
+    const req = createMockReq({
+      body: { text: 'test', speaker: 1, speed: 1, pitch: 0, intonation: 1 },
+      headers: {
+        host: 'localhost:3000',
+        'x-forwarded-for': '198.51.100.20',
+        'x-forwarded-host': 'localhost:3000',
+      },
+      socket: { remoteAddress: '127.0.0.1' } as NextApiRequest['socket'],
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(403)
+    expect(mockAxiosPost).not.toHaveBeenCalled()
+  })
+
   it('should still require authentication in protected mode locally', async () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'protected'
     process.env.AITUBERKIT_SERVER_SECRET_TOKEN = 'test-token'

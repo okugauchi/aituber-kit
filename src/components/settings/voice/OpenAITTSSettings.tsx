@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { getOpenAITTSModels } from '@/features/constants/aiModels'
 import { OpenAITTSModel, OpenAITTSVoice } from '@/features/constants/settings'
 import settingsStore from '@/features/stores/settings'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface OpenAITTSSettingsProps {
   openaiAPIKey: string

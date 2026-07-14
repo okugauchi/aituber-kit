@@ -4,7 +4,7 @@ import homeStore from '@/features/stores/home'
 import settingsStore, { PoseConfigItem } from '@/features/stores/settings'
 import { ToggleSwitch } from '../../toggleSwitch'
 import { PoseConfigSettings } from './PoseConfigSettings'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface CharacterVrmExtrasSectionProps {
   lightingIntensity: number

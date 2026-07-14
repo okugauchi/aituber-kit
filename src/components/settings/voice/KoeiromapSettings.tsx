@@ -9,7 +9,7 @@ import {
 import settingsStore, { SettingsState } from '@/features/stores/settings'
 import { Link } from '../../link'
 import { TextButton } from '../../textButton'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface KoeiromapSettingsProps {
   koeiromapKey: string

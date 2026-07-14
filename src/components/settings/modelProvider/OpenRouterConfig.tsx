@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 import settingsStore from '@/features/stores/settings'
 import { ApiKeyInput } from './ApiKeyInput'
 import { MultiModalToggle } from './MultiModalToggle'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface OpenRouterConfigProps {
   openrouterKey: string

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import settingsStore, { SettingsState } from '@/features/stores/settings'
 import toastStore from '@/features/stores/toast'
-import { settingsControlClass } from '../formStyles'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 // Character型の定義
 type Character = Pick<
