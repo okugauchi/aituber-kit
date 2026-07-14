@@ -122,11 +122,7 @@ export const handleSendChatFn =
       }
     } else {
       let systemPrompt = ss.systemPrompt
-      if (ss.slideMode) {
-        if (sls.isPlaying) {
-          return
-        }
-
+      if (ss.slideMode && sls.isPlaying) {
         try {
           let scripts = JSON.stringify(
             require(
