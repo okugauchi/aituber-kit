@@ -216,8 +216,11 @@ export async function handleCustomApi(
     : messages
 
   // messagesをデフォルトでbodyに含める
+  // stream: true を常に強制 — handleCustomApi は上流に常にストリーミング要求を送る
+  // これにより上流 API が非ストリーミング応答を返すのを防ぐ
   const apiBody = JSON.stringify({
     ...parsedBody,
+    stream: true,
     messages: processedMessages,
   })
 

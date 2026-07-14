@@ -43,6 +43,10 @@ async function handler(
   // サーバーサイド環境変数を優先（秘匿設定）
   const apiUrl = process.env.CUSTOM_API_URL || customApiUrl
 
+  // デバッグログ: 実際にどの upstream URL が使われるか
+  console.error('[Hermes-debug] customApiUrl from request:', customApiUrl)
+  console.error('[Hermes-debug] apiUrl resolved:', apiUrl)
+
   // ヘッダー: フロントエンド設定をベースに、サーバーサイド環境変数で上書きマージ
   const frontHeaders = customApiHeaders === '' ? '{}' : customApiHeaders
   const serverHeaders = process.env.CUSTOM_API_HEADERS || ''

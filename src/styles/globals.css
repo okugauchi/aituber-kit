@@ -82,7 +82,7 @@ body {
   .aurora-scrim {
     background: linear-gradient(
       to top,
-      rgba(8, 8, 13, 0.62),
+      rgba(8, 8, 13, 0.88),
       rgba(8, 8, 13, 0)
     );
   }

@@ -92,7 +92,8 @@ function handleApiError(errorCode: string): string {
 function getApiEndpoint(aiService: string): string {
   // isVercelLocalAIServiceを使用してapiサービスかどうかを判定
   if (isVercelLocalAIService(aiService) && aiService === 'custom-api') {
-    return '/api/ai/custom'
+    // trailingSlash: true のため、末尾スラッシュ必須
+    return '/api/ai/custom/'
   }
   return '/api/ai/vercel'
 }

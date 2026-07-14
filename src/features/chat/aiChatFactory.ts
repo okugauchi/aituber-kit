@@ -31,24 +31,27 @@ export async function getAIChatResponseStream(
       : getOpenAIAudioChatResponseStream(messages)
   }
 
-  // @hermes ルーティング: 含む → Gateway (8642), 含まない → ds4-server (9000)
+  // @hermes ルーティング: 含む → Gateway (8642), 含まない → oMLX (9000)
   if (ss.selectAIService === 'custom-api') {
     const useGateway = isHermesRequest(messages)
     if (useGateway) {
-      // Gateway 用の設定で上書き
+      // Gateway ルート: .env のデフォルト設定にリセット（oMLX ルートで上書きされた場合に備えて）
       settingsStore.setState({
-        customApiUrl: 'http://127.0.0.1:8642/v1/chat/completions',
-        customApiHeaders: JSON.stringify({
-          Authorization: 'Bearer change-me-local-dev',
-        }),
-        customApiBody: JSON.stringify({ model: 'hermes-agent' }),
+        customApiUrl: process.env.NEXT_PUBLIC_CUSTOM_API_URL || 'http://127.0.0.1:8642/v1/chat/completions',
+        customApiHeaders: process.env.NEXT_PUBLIC_CUSTOM_API_HEADERS || '{"Authorization": "Bearer change-me-local-dev"}',
+        customApiBody: process.env.NEXT_PUBLIC_CUSTOM_API_BODY || '{"model": "hermes-agent"}',
+        includeSystemMessagesInCustomApi: true,
       })
     } else {
-      // ds4-server 直接（軽量クイック応答）
+      // oMLX 直接（軽量クイック応答）— system prompt 不要
       settingsStore.setState({
         customApiUrl: 'http://127.0.0.1:9000/v1/chat/completions',
         customApiHeaders: '{}',
-        customApiBody: JSON.stringify({ model: 'ds4-server' }),
+        customApiBody: JSON.stringify({ model: 'gemma-4-12B-it-8bit' }),
+      })
+      // system メッセージを除外（Gemma は AITuberKit の system prompt を必要としない）
+      settingsStore.setState({
+        includeSystemMessagesInCustomApi: false,
       })
     }
   }

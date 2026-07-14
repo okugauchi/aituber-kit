@@ -1,6 +1,48 @@
-import { getVercelAIChatResponse } from '@/features/chat/vercelAIChat'
+import { Message } from '@/features/messages/messages'
 import settingsStore from '@/features/stores/settings'
 import { isMultiModalAvailable } from '@/features/constants/aiModels'
+
+/**
+ * custom-api モードのとき、judgeSlide は /api/ai/custom/ 経由では
+ * なく、oMLX (9000) を直接呼ぶ。Gateway (8642) はエージェント処理で
+ * 遅延するため、スライド判定のような軽量タスクには oMLX を使う。
+ */
+async function directCustomApiRequest(
+  messages: Message[],
+): Promise<string> {
+  const url = 'http://127.0.0.1:9000/v1/chat/completions'
+
+  const apiBody = JSON.stringify({
+    model: 'gemma-4-12B-it-8bit',
+    messages,
+    stream: false,
+    max_tokens: 512,
+  })
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: apiBody,
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) {
+      return '{"judge": "false", "page": ""}'
+    }
+    const data = await res.json()
+    const rawContent = data.choices?.[0]?.message?.content || data.content || data.text || '{"judge": "false", "page": ""}'
+    // oMLX は JSON をマークダウンコードブロックで包む場合があるので抽出する
+    // 最初の `{` から最後の `}` までを抽出
+    const braceStart = rawContent.indexOf('{')
+    const braceEnd = rawContent.lastIndexOf('}')
+    if (braceStart !== -1 && braceEnd > braceStart) {
+      return rawContent.slice(braceStart, braceEnd + 1)
+    }
+    return rawContent
+  } catch {
+    return '{"judge": "false", "page": ""}'
+  }
+}
 
 export const judgeSlide = async (
   queryText: string,
@@ -53,6 +95,18 @@ ${supplement}
 Based on the user's comment and the content of both the script document and supplementary text, provide "only" your final answer in the specified JSON format.
 `
 
+  // custom-api モードでは /api/ai/custom/ を経由せず直接上流 API を呼ぶ
+  if (aiService === 'custom-api') {
+    return await directCustomApiRequest([
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: queryText },
+    ])
+  }
+
+  // 通常モードは既存の Vercel AI SDK 経由
+  const { getVercelAIChatResponse } = await import(
+    '@/features/chat/vercelAIChat'
+  )
   const response = await getVercelAIChatResponse([
     { role: 'system', content: systemMessage },
     { role: 'user', content: queryText },
