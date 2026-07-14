@@ -11,6 +11,7 @@
  * 設計ドキュメント: docs/access-policy-design.md §4.2
  */
 
+import { isIP } from 'node:net'
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import {
   guardServerSecretAccess,
@@ -56,21 +57,74 @@ export type PolicyGuardedHandler = (
   gate: PolicyGate
 ) => unknown | Promise<unknown>
 
-const PROXY_HEADER_NAMES = [
+const EXPLICIT_PROXY_HEADER_NAMES = [
   'forwarded',
-  'x-forwarded-for',
-  'x-forwarded-host',
-  'x-forwarded-proto',
   'x-real-ip',
   'cf-connecting-ip',
 ] as const
 
-function hasProxyHeaders(req: NextApiRequest): boolean {
-  return PROXY_HEADER_NAMES.some((name) => req.headers?.[name] !== undefined)
+function getCommaSeparatedHeaderValues(
+  value: string | string[] | undefined
+): string[] | undefined {
+  if (value === undefined) return undefined
+
+  return (Array.isArray(value) ? value : [value])
+    .flatMap((entry) => entry.split(','))
+    .map((entry) => entry.trim())
+}
+
+function isStrictLoopbackIpAddress(value: string): boolean {
+  return isIP(value) !== 0 && isLoopbackHost(value)
+}
+
+function isLoopbackForwardedHost(value: string): boolean {
+  try {
+    const parsed = new URL(`http://${value}`)
+    return (
+      !parsed.username &&
+      !parsed.password &&
+      parsed.pathname === '/' &&
+      !parsed.search &&
+      !parsed.hash &&
+      isLoopbackHost(parsed.hostname)
+    )
+  } catch {
+    return false
+  }
+}
+
+function hasExternalProxyEvidence(req: NextApiRequest): boolean {
+  if (
+    EXPLICIT_PROXY_HEADER_NAMES.some(
+      (name) => req.headers?.[name] !== undefined
+    )
+  ) {
+    return true
+  }
+
+  const forwardedAddresses = getCommaSeparatedHeaderValues(
+    req.headers?.['x-forwarded-for']
+  )
+  if (
+    forwardedAddresses !== undefined &&
+    (forwardedAddresses.length === 0 ||
+      forwardedAddresses.some((address) => !isStrictLoopbackIpAddress(address)))
+  ) {
+    return true
+  }
+
+  const forwardedHosts = getCommaSeparatedHeaderValues(
+    req.headers?.['x-forwarded-host']
+  )
+  return (
+    forwardedHosts !== undefined &&
+    (forwardedHosts.length === 0 ||
+      forwardedHosts.some((host) => !isLoopbackForwardedHost(host)))
+  )
 }
 
 function isSameMachineLoopbackRequest(req: NextApiRequest): boolean {
-  if (hasProxyHeaders(req)) return false
+  if (hasExternalProxyEvidence(req)) return false
 
   const hostHeader = req.headers?.host
   if (!hostHeader) return false

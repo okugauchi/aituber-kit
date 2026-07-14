@@ -185,8 +185,8 @@ function withAccessPolicy(
    - `kind: 'pairs'`: `computeUsesServerSecret(pairs)` または `isProtectedServerResource` が真なら `guardServerSecretAccess()`
    - `kind: 'always'`: 無条件で `guardServerSecretAccess()`
    - `kind: 'dynamic'`: ここでは何もしない。ルートが `gate.guardServerSecret()` を呼ぶ（呼んでいることを静的テストで強制 — §7.2-3）
-   - ただし `allowLocalLoopback` を宣言したルートは、`disabled` かつリクエスト元Host・ソケット接続元・接続先URLがすべてループバックで、`Forwarded` / `X-Forwarded-*` などのプロキシ転送ヘッダーがない直接接続の場合のみガードを省略する
-   - リバースプロキシ経由ではソケット接続元がプロキシのループバックアドレスに見え、Hostや転送ヘッダーも構成次第で信頼できないため、`allowLocalLoopback` を安全境界として扱わない。プロキシ経由の要求ではこの例外を無効化し、`protected` / `demo` / `unprotected` の明示的な運用モードを使用する
+   - ただし `allowLocalLoopback` を宣言したルートは、`disabled` かつリクエスト元Host・ソケット接続元・接続先URLがすべてループバックの場合のみガードを省略する。Next.jsが直接接続にも補完する `X-Forwarded-For` / `X-Forwarded-Host` は、値がすべてループバックの場合に限り許容する
+   - 外部IPを含む `X-Forwarded-For`、非ループバックの `X-Forwarded-Host`、Next.jsが補完しない `Forwarded` / `X-Real-IP` / `CF-Connecting-IP` がある場合はプロキシ経由と判断して例外を無効化する。リバースプロキシ環境では `protected` / `demo` / `unprotected` の明示的な運用モードを使用する
 6. すべて通過 → `handler(req, res, gate)` を実行
 
 エラーレスポンスのシェイプは既存関数（`createRestrictedModeErrorResponse` / `rejectServerSecretAccess` / `requireApiKey`）をそのまま呼ぶことで保存する。
