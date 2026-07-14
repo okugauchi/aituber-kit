@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import settingsStore from '@/features/stores/settings'
 import { TextButton } from '../textButton'
+import { settingsControlClass } from './formStyles'
 import { ToggleSwitch } from '../toggleSwitch'
 import Image from 'next/image'
 import { WhisperTranscriptionModel } from '@/features/constants/settings'
@@ -88,7 +89,7 @@ const SpeechInput = () => {
               />
             </div>
             <input
-              className="text-ellipsis px-4 py-2 w-full md:w-1/2 bg-white hover:bg-white-hover rounded-lg"
+              className={settingsControlClass.long}
               type="text"
               placeholder="sk-..."
               value={openaiKey}
@@ -106,7 +107,7 @@ const SpeechInput = () => {
             </div>
             <select
               id="whisper-model-select"
-              className="px-4 py-2 bg-white hover:bg-white-hover rounded-lg w-full md:w-1/2"
+              className={settingsControlClass.medium}
               value={whisperTranscriptionModel}
               onChange={(e) =>
                 settingsStore.setState({

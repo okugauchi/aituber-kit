@@ -8,6 +8,7 @@ import { isMultiModalAvailable } from '@/features/constants/aiModels'
 import menuStore from '@/features/stores/menu'
 import slideStore from '@/features/stores/slide'
 import { TextButton } from '../textButton'
+import { settingsControlClass } from './formStyles'
 import { ToggleSwitch } from '../toggleSwitch'
 import SlideConvert from './slideConvert'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
@@ -93,7 +94,7 @@ const Slide = () => {
         <select
           id="folder-select"
           data-testid="slide-folder-select"
-          className="px-4 py-2 bg-white hover:bg-white-hover rounded-lg w-full md:w-1/2"
+          className={settingsControlClass.medium}
           value={selectedSlideDocs || ''}
           onChange={handleFolderChange}
           key={updateKey}
