@@ -1,7 +1,7 @@
 export const Footer = () => {
   return (
     <footer className="theme-surface-contrast shrink-0 border-t border-primary/20 py-1 text-center font-Montserrat text-xs">
-      powered by ChatVRM from Pixiv / ver. 2.57.0
+      powered by ChatVRM from Pixiv / ver. 2.58.0
     </footer>
   )
 }

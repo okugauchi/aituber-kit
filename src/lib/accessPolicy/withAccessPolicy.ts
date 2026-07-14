@@ -12,10 +12,14 @@
  */
 
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import {
+  guardServerSecretAccess,
+  isServerSecretAccessDisabled,
+} from '@/lib/api-services/serverSecretGuard'
 import {
   isAllowedConfiguredOrListedUrl,
   isHttpUrl,
+  isLoopbackHost,
 } from '@/lib/api-services/serverUrlGuard'
 import {
   isRestrictedMode,
@@ -51,6 +55,54 @@ export type PolicyGuardedHandler = (
   res: NextApiResponse,
   gate: PolicyGate
 ) => unknown | Promise<unknown>
+
+const PROXY_HEADER_NAMES = [
+  'forwarded',
+  'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-proto',
+  'x-real-ip',
+  'cf-connecting-ip',
+] as const
+
+function hasProxyHeaders(req: NextApiRequest): boolean {
+  return PROXY_HEADER_NAMES.some((name) => req.headers?.[name] !== undefined)
+}
+
+function isSameMachineLoopbackRequest(req: NextApiRequest): boolean {
+  if (hasProxyHeaders(req)) return false
+
+  const hostHeader = req.headers?.host
+  if (!hostHeader) return false
+
+  let requestHostname: string
+  try {
+    requestHostname = new URL(`http://${hostHeader}`).hostname
+  } catch {
+    return false
+  }
+
+  const remoteAddress = req.socket?.remoteAddress
+  return (
+    Boolean(remoteAddress) &&
+    isLoopbackHost(requestHostname) &&
+    isLoopbackHost(remoteAddress || '')
+  )
+}
+
+function allowsLocalLoopbackAccess(
+  policy: RoutePolicy,
+  req: NextApiRequest,
+  resolvedServerUrl: ResolvedServerUrl | undefined
+): boolean {
+  return (
+    policy.serverUrl?.allowLocalLoopback === true &&
+    isServerSecretAccessDisabled() &&
+    Boolean(resolvedServerUrl) &&
+    isLoopbackHost(resolvedServerUrl?.parsed.hostname || '') &&
+    isSameMachineLoopbackRequest(req)
+  )
+}
 
 export function withAccessPolicy(
   policy: RoutePolicy,
@@ -132,11 +184,17 @@ export function withAccessPolicy(
 
     // 5. サーバー秘匿リソースガード
     let usesServerSecret = false
+    const allowsLocalLoopback = allowsLocalLoopbackAccess(
+      policy,
+      req,
+      resolvedServerUrl
+    )
     if (policy.secret.kind === 'pairs') {
       usesServerSecret = evaluateSecretPairs(req, policy.secret.pairs)
       const mustGuard =
-        usesServerSecret ||
-        Boolean(resolvedServerUrl?.isProtectedServerResource)
+        !allowsLocalLoopback &&
+        (usesServerSecret ||
+          Boolean(resolvedServerUrl?.isProtectedServerResource))
       if (
         mustGuard &&
         !guardServerSecretAccess(req, res, { featureName: policy.featureName })
@@ -146,6 +204,7 @@ export function withAccessPolicy(
     } else if (policy.secret.kind === 'always') {
       usesServerSecret = true
       if (
+        !allowsLocalLoopback &&
         !guardServerSecretAccess(req, res, { featureName: policy.featureName })
       ) {
         return

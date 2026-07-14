@@ -41,23 +41,33 @@ function getIpv4MappedAddress(normalizedHost: string): string | undefined {
   )
 }
 
+export function isLoopbackHost(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  const ipv4MappedAddress = getIpv4MappedAddress(normalized)
+
+  if (ipv4MappedAddress) {
+    return /^127\./.test(ipv4MappedAddress)
+  }
+
+  return (
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    /^127\./.test(normalized) ||
+    normalized === '::1' ||
+    normalized === '0:0:0:0:0:0:0:1'
+  )
+}
+
 export function isLocalOrPrivateHost(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  if (isLoopbackHost(normalized)) return true
+
   const ipv4MappedAddress = getIpv4MappedAddress(normalized)
   if (ipv4MappedAddress) {
     return (
       PRIVATE_IPV4_RANGES.some((range) => range.test(ipv4MappedAddress)) ||
       ipv4MappedAddress.includes(':')
     )
-  }
-
-  if (
-    normalized === 'localhost' ||
-    normalized.endsWith('.localhost') ||
-    normalized === '::1' ||
-    normalized === '0:0:0:0:0:0:0:1'
-  ) {
-    return true
   }
 
   if (PRIVATE_IPV4_RANGES.some((range) => range.test(normalized))) {
