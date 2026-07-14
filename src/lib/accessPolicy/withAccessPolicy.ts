@@ -75,6 +75,20 @@ function isSameMachineLoopbackRequest(req: NextApiRequest): boolean {
   )
 }
 
+function allowsLocalLoopbackAccess(
+  policy: RoutePolicy,
+  req: NextApiRequest,
+  resolvedServerUrl: ResolvedServerUrl | undefined
+): boolean {
+  return (
+    policy.serverUrl?.allowLocalLoopback === true &&
+    isServerSecretAccessDisabled() &&
+    Boolean(resolvedServerUrl) &&
+    isLoopbackHost(resolvedServerUrl?.parsed.hostname || '') &&
+    isSameMachineLoopbackRequest(req)
+  )
+}
+
 export function withAccessPolicy(
   policy: RoutePolicy,
   handler: PolicyGuardedHandler
@@ -155,14 +169,13 @@ export function withAccessPolicy(
 
     // 5. サーバー秘匿リソースガード
     let usesServerSecret = false
+    const allowsLocalLoopback = allowsLocalLoopbackAccess(
+      policy,
+      req,
+      resolvedServerUrl
+    )
     if (policy.secret.kind === 'pairs') {
       usesServerSecret = evaluateSecretPairs(req, policy.secret.pairs)
-      const allowsLocalLoopback =
-        policy.serverUrl?.allowLocalLoopback === true &&
-        isServerSecretAccessDisabled() &&
-        Boolean(resolvedServerUrl) &&
-        isLoopbackHost(resolvedServerUrl?.parsed.hostname || '') &&
-        isSameMachineLoopbackRequest(req)
       const mustGuard =
         !allowsLocalLoopback &&
         (usesServerSecret ||
@@ -176,6 +189,7 @@ export function withAccessPolicy(
     } else if (policy.secret.kind === 'always') {
       usesServerSecret = true
       if (
+        !allowsLocalLoopback &&
         !guardServerSecretAccess(req, res, { featureName: policy.featureName })
       ) {
         return
