@@ -178,6 +178,30 @@ describe('/api/tts-voicevox', () => {
     expect(mockAxiosPost).toHaveBeenCalledTimes(2)
   })
 
+  it('should allow Next.js synthesized forwarding headers for a local request', async () => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+    mockAxiosPost
+      .mockResolvedValueOnce({ data: {} })
+      .mockResolvedValueOnce({ data: Buffer.from([]) })
+
+    const req = createMockReq({
+      body: { text: 'test', speaker: 1, speed: 1, pitch: 0, intonation: 1 },
+      headers: {
+        host: 'localhost:3000',
+        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-host': 'localhost:3000',
+        'x-forwarded-port': '3000',
+        'x-forwarded-proto': 'http',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(200)
+    expect(mockAxiosPost).toHaveBeenCalledTimes(2)
+  })
+
   it('should reject the default localhost VOICEVOX URL for a remote request', async () => {
     delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
 
@@ -244,6 +268,26 @@ describe('/api/tts-voicevox', () => {
         host: 'localhost:3000',
         'x-forwarded-for': '198.51.100.20',
         'x-forwarded-host': 'localhost:3000',
+      },
+      socket: { remoteAddress: '127.0.0.1' } as NextApiRequest['socket'],
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(403)
+    expect(mockAxiosPost).not.toHaveBeenCalled()
+  })
+
+  it('should reject a proxied request with a non-loopback forwarded host', async () => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+
+    const req = createMockReq({
+      body: { text: 'test', speaker: 1, speed: 1, pitch: 0, intonation: 1 },
+      headers: {
+        host: 'localhost:3000',
+        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-host': 'aituberkit.example.com',
       },
       socket: { remoteAddress: '127.0.0.1' } as NextApiRequest['socket'],
     })

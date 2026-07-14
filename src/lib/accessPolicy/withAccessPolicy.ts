@@ -56,21 +56,55 @@ export type PolicyGuardedHandler = (
   gate: PolicyGate
 ) => unknown | Promise<unknown>
 
-const PROXY_HEADER_NAMES = [
+const EXPLICIT_PROXY_HEADER_NAMES = [
   'forwarded',
-  'x-forwarded-for',
-  'x-forwarded-host',
-  'x-forwarded-proto',
   'x-real-ip',
   'cf-connecting-ip',
 ] as const
 
-function hasProxyHeaders(req: NextApiRequest): boolean {
-  return PROXY_HEADER_NAMES.some((name) => req.headers?.[name] !== undefined)
+function getCommaSeparatedHeaderValues(
+  value: string | string[] | undefined
+): string[] {
+  if (!value) return []
+
+  return (Array.isArray(value) ? value : [value])
+    .flatMap((entry) => entry.split(','))
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+function isLoopbackForwardedHost(value: string): boolean {
+  try {
+    return isLoopbackHost(new URL(`http://${value}`).hostname)
+  } catch {
+    return false
+  }
+}
+
+function hasExternalProxyEvidence(req: NextApiRequest): boolean {
+  if (
+    EXPLICIT_PROXY_HEADER_NAMES.some(
+      (name) => req.headers?.[name] !== undefined
+    )
+  ) {
+    return true
+  }
+
+  const forwardedAddresses = getCommaSeparatedHeaderValues(
+    req.headers?.['x-forwarded-for']
+  )
+  if (forwardedAddresses.some((address) => !isLoopbackHost(address))) {
+    return true
+  }
+
+  const forwardedHosts = getCommaSeparatedHeaderValues(
+    req.headers?.['x-forwarded-host']
+  )
+  return forwardedHosts.some((host) => !isLoopbackForwardedHost(host))
 }
 
 function isSameMachineLoopbackRequest(req: NextApiRequest): boolean {
-  if (hasProxyHeaders(req)) return false
+  if (hasExternalProxyEvidence(req)) return false
 
   const hostHeader = req.headers?.host
   if (!hostHeader) return false
