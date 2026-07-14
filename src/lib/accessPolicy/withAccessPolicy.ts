@@ -12,10 +12,14 @@
  */
 
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
-import { guardServerSecretAccess } from '@/lib/api-services/serverSecretGuard'
+import {
+  guardServerSecretAccess,
+  isServerSecretAccessDisabled,
+} from '@/lib/api-services/serverSecretGuard'
 import {
   isAllowedConfiguredOrListedUrl,
   isHttpUrl,
+  isLoopbackHost,
 } from '@/lib/api-services/serverUrlGuard'
 import {
   isRestrictedMode,
@@ -51,6 +55,25 @@ export type PolicyGuardedHandler = (
   res: NextApiResponse,
   gate: PolicyGate
 ) => unknown | Promise<unknown>
+
+function isSameMachineLoopbackRequest(req: NextApiRequest): boolean {
+  const hostHeader = req.headers?.host
+  if (!hostHeader) return false
+
+  let requestHostname: string
+  try {
+    requestHostname = new URL(`http://${hostHeader}`).hostname
+  } catch {
+    return false
+  }
+
+  const remoteAddress = req.socket?.remoteAddress
+  return (
+    Boolean(remoteAddress) &&
+    isLoopbackHost(requestHostname) &&
+    isLoopbackHost(remoteAddress || '')
+  )
+}
 
 export function withAccessPolicy(
   policy: RoutePolicy,
@@ -134,9 +157,16 @@ export function withAccessPolicy(
     let usesServerSecret = false
     if (policy.secret.kind === 'pairs') {
       usesServerSecret = evaluateSecretPairs(req, policy.secret.pairs)
+      const allowsLocalLoopback =
+        policy.serverUrl?.allowLocalLoopback === true &&
+        isServerSecretAccessDisabled() &&
+        Boolean(resolvedServerUrl) &&
+        isLoopbackHost(resolvedServerUrl?.parsed.hostname || '') &&
+        isSameMachineLoopbackRequest(req)
       const mustGuard =
-        usesServerSecret ||
-        Boolean(resolvedServerUrl?.isProtectedServerResource)
+        !allowsLocalLoopback &&
+        (usesServerSecret ||
+          Boolean(resolvedServerUrl?.isProtectedServerResource))
       if (
         mustGuard &&
         !guardServerSecretAccess(req, res, { featureName: policy.featureName })

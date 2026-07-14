@@ -382,6 +382,7 @@ export const routePolicies = {
       key: 'serverUrl',
       envVar: 'VOICEVOX_SERVER_URL',
       defaultUrl: 'http://localhost:50021',
+      allowLocalLoopback: true,
     },
     restrictedBehavior: 'none',
   },

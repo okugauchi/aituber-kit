@@ -1,6 +1,21 @@
-import { isLocalOrPrivateHost } from '@/lib/api-services/serverUrlGuard'
+import {
+  isLocalOrPrivateHost,
+  isLoopbackHost,
+} from '@/lib/api-services/serverUrlGuard'
 
 describe('serverUrlGuard', () => {
+  describe('isLoopbackHost', () => {
+    it('detects loopback names and addresses only', () => {
+      expect(isLoopbackHost('localhost')).toBe(true)
+      expect(isLoopbackHost('app.localhost')).toBe(true)
+      expect(isLoopbackHost('127.0.0.1')).toBe(true)
+      expect(isLoopbackHost('::1')).toBe(true)
+      expect(isLoopbackHost('::ffff:127.0.0.1')).toBe(true)
+      expect(isLoopbackHost('192.168.1.10')).toBe(false)
+      expect(isLoopbackHost('::ffff:10.0.0.1')).toBe(false)
+    })
+  })
+
   describe('isLocalOrPrivateHost', () => {
     it('detects IPv4-mapped IPv6 localhost and private ranges', () => {
       expect(isLocalOrPrivateHost('::ffff:127.0.0.1')).toBe(true)
