@@ -11,6 +11,7 @@
  * 設計ドキュメント: docs/access-policy-design.md §4.2
  */
 
+import { isIP } from 'node:net'
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import {
   guardServerSecretAccess,
@@ -64,18 +65,29 @@ const EXPLICIT_PROXY_HEADER_NAMES = [
 
 function getCommaSeparatedHeaderValues(
   value: string | string[] | undefined
-): string[] {
-  if (!value) return []
+): string[] | undefined {
+  if (value === undefined) return undefined
 
   return (Array.isArray(value) ? value : [value])
     .flatMap((entry) => entry.split(','))
     .map((entry) => entry.trim())
-    .filter(Boolean)
+}
+
+function isStrictLoopbackIpAddress(value: string): boolean {
+  return isIP(value) !== 0 && isLoopbackHost(value)
 }
 
 function isLoopbackForwardedHost(value: string): boolean {
   try {
-    return isLoopbackHost(new URL(`http://${value}`).hostname)
+    const parsed = new URL(`http://${value}`)
+    return (
+      !parsed.username &&
+      !parsed.password &&
+      parsed.pathname === '/' &&
+      !parsed.search &&
+      !parsed.hash &&
+      isLoopbackHost(parsed.hostname)
+    )
   } catch {
     return false
   }
@@ -93,14 +105,22 @@ function hasExternalProxyEvidence(req: NextApiRequest): boolean {
   const forwardedAddresses = getCommaSeparatedHeaderValues(
     req.headers?.['x-forwarded-for']
   )
-  if (forwardedAddresses.some((address) => !isLoopbackHost(address))) {
+  if (
+    forwardedAddresses !== undefined &&
+    (forwardedAddresses.length === 0 ||
+      forwardedAddresses.some((address) => !isStrictLoopbackIpAddress(address)))
+  ) {
     return true
   }
 
   const forwardedHosts = getCommaSeparatedHeaderValues(
     req.headers?.['x-forwarded-host']
   )
-  return forwardedHosts.some((host) => !isLoopbackForwardedHost(host))
+  return (
+    forwardedHosts !== undefined &&
+    (forwardedHosts.length === 0 ||
+      forwardedHosts.some((host) => !isLoopbackForwardedHost(host)))
+  )
 }
 
 function isSameMachineLoopbackRequest(req: NextApiRequest): boolean {

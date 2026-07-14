@@ -1,3 +1,5 @@
+import { isIP } from 'node:net'
+
 const PRIVATE_IPV4_RANGES = [
   /^10\./,
   /^127\./,
@@ -43,16 +45,21 @@ function getIpv4MappedAddress(normalizedHost: string): string | undefined {
 
 export function isLoopbackHost(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  if (normalized === 'localhost' || normalized.endsWith('.localhost')) {
+    return true
+  }
+
+  const addressKind = isIP(normalized)
+  if (addressKind === 0) return false
+
   const ipv4MappedAddress = getIpv4MappedAddress(normalized)
 
   if (ipv4MappedAddress) {
-    return /^127\./.test(ipv4MappedAddress)
+    return isIP(ipv4MappedAddress) === 4 && /^127\./.test(ipv4MappedAddress)
   }
 
   return (
-    normalized === 'localhost' ||
-    normalized.endsWith('.localhost') ||
-    /^127\./.test(normalized) ||
+    (addressKind === 4 && /^127\./.test(normalized)) ||
     normalized === '::1' ||
     normalized === '0:0:0:0:0:0:0:1'
   )
@@ -62,6 +69,9 @@ export function isLocalOrPrivateHost(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '')
   if (isLoopbackHost(normalized)) return true
 
+  const addressKind = isIP(normalized)
+  if (addressKind === 0) return false
+
   const ipv4MappedAddress = getIpv4MappedAddress(normalized)
   if (ipv4MappedAddress) {
     return (
@@ -70,11 +80,14 @@ export function isLocalOrPrivateHost(hostname: string): boolean {
     )
   }
 
-  if (PRIVATE_IPV4_RANGES.some((range) => range.test(normalized))) {
+  if (
+    addressKind === 4 &&
+    PRIVATE_IPV4_RANGES.some((range) => range.test(normalized))
+  ) {
     return true
   }
 
-  if (!normalized.includes(':')) return false
+  if (addressKind !== 6) return false
 
   const firstHextet = Number.parseInt(normalized.split(':')[0], 16)
   if (!Number.isFinite(firstHextet)) return false

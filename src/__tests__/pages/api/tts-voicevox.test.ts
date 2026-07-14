@@ -299,6 +299,54 @@ describe('/api/tts-voicevox', () => {
     expect(mockAxiosPost).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['an empty forwarded address', { 'x-forwarded-for': '' }],
+    [
+      'an empty forwarded address token',
+      { 'x-forwarded-for': '127.0.0.1, , ::1' },
+    ],
+    ['a malformed forwarded address', { 'x-forwarded-for': 'localhost' }],
+    [
+      'a deceptive loopback-prefixed address',
+      { 'x-forwarded-for': '127.attacker.example' },
+    ],
+    [
+      'an empty forwarded host token',
+      {
+        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-host': 'localhost:3000,',
+      },
+    ],
+    [
+      'a malformed forwarded host',
+      {
+        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-host': 'localhost:invalid-port',
+      },
+    ],
+    [
+      'a deceptive loopback-prefixed host',
+      {
+        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-host': '127.attacker.example',
+      },
+    ],
+  ])('should reject a proxied request with %s', async (_label, headers) => {
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+
+    const req = createMockReq({
+      body: { text: 'test', speaker: 1, speed: 1, pitch: 0, intonation: 1 },
+      headers: { host: 'localhost:3000', ...headers },
+      socket: { remoteAddress: '127.0.0.1' } as NextApiRequest['socket'],
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(403)
+    expect(mockAxiosPost).not.toHaveBeenCalled()
+  })
+
   it('should still require authentication in protected mode locally', async () => {
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'protected'
     process.env.AITUBERKIT_SERVER_SECRET_TOKEN = 'test-token'
