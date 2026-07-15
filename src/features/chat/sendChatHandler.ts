@@ -159,11 +159,14 @@ export const handleSendChatFn =
 
       homeStore.setState({ chatProcessing: true })
 
-      // 思考中プレアンブル発話（Hermes Gateway 応答までの間を埋める）
-      const preambleText = i18next.t('ThinkingPreamble', 'わかりました。これからじっくり考えますので、しばらくお待ちください。')
-      import('./speechPipeline/speakMessageHandler').then(({ speakMessageHandler }) => {
-        speakMessageHandler(preambleText)
-      }).catch(() => {})
+      // 思考中プレアンブル発話 — @hermes を含むメッセージのみ（Gateway 経由の応答待ち間を埋める）
+      // @hermes なし → oMLX/Gemma への高速ルーティングのためプレアンブル不要
+      if (/@hermes/i.test(newMessage)) {
+        const preambleText = i18next.t('ThinkingPreamble', 'わかりました。これからじっくり考えますので、しばらくお待ちください。')
+        import('./speechPipeline/speakMessageHandler').then(({ speakMessageHandler }) => {
+          speakMessageHandler(preambleText)
+        }).catch(() => {})
+      }
 
       // マルチモーダル対応チェック
       if (
