@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import settingsStore from '@/features/stores/settings'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 interface GsviTtsSettingsProps {
   gsviTtsServerUrl: string
@@ -23,7 +24,7 @@ export const GsviTtsSettings = ({
       <div className="mt-4 font-bold">{t('GSVITTSServerUrl')}</div>
       <div className="mt-2">
         <input
-          className="text-ellipsis px-4 py-2 w-full bg-white hover:bg-white-hover rounded-lg"
+          className={settingsControlClass.long}
           type="text"
           placeholder="..."
           value={gsviTtsServerUrl}
@@ -37,7 +38,7 @@ export const GsviTtsSettings = ({
       <div className="mt-4 font-bold">{t('GSVITTSModelID')}</div>
       <div className="mt-2">
         <input
-          className="text-ellipsis px-4 py-2 w-full bg-white hover:bg-white-hover rounded-lg"
+          className={settingsControlClass.medium}
           type="text"
           placeholder="..."
           value={gsviTtsModelId}
@@ -49,7 +50,7 @@ export const GsviTtsSettings = ({
       <div className="mt-4 font-bold">{t('GSVITTSBatchSize')}</div>
       <div className="mt-2">
         <input
-          className="text-ellipsis px-4 py-2 w-full bg-white hover:bg-white-hover rounded-lg"
+          className={settingsControlClass.numeric}
           type="number"
           step="1"
           placeholder="..."
@@ -64,7 +65,7 @@ export const GsviTtsSettings = ({
       <div className="mt-4 font-bold">{t('GSVITTSSpeechRate')}</div>
       <div className="mt-2">
         <input
-          className="text-ellipsis px-4 py-2 w-full bg-white hover:bg-white-hover rounded-lg"
+          className={settingsControlClass.numeric}
           type="number"
           step="0.1"
           placeholder="..."

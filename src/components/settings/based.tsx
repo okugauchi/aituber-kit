@@ -12,6 +12,7 @@ import { ToggleSwitch } from '../toggleSwitch'
 import { IMAGE_CONSTANTS } from '@/constants/images'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import { languageOptions } from '@/components/settings/languageOptions'
+import { settingsControlClass } from '@/components/settings/formStyles'
 
 const Based = () => {
   const { t } = useTranslation()
@@ -119,7 +120,7 @@ const Based = () => {
         <div className="mb-4 text-xl font-bold">{t('Language')}</div>
         <div className="my-2">
           <select
-            className="px-4 py-2 bg-white hover:bg-white-hover rounded-lg"
+            className={settingsControlClass.compact}
             value={selectLanguage}
             onChange={(e) => {
               const newLanguage = e.target.value as Language
@@ -151,7 +152,7 @@ const Based = () => {
       <div className="border-t border-gray-300 pt-6 my-6">
         <div className="my-4 text-xl font-bold">{t('UserDisplayName')}</div>
         <input
-          className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+          className={settingsControlClass.compact}
           type="text"
           placeholder={t('UserDisplayName')}
           value={settingsStore((s) => s.userDisplayName)}
@@ -172,7 +173,7 @@ const Based = () => {
 
         <div className="flex flex-col mb-4">
           <select
-            className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+            className={settingsControlClass.medium}
             value={backgroundImageUrl}
             onChange={(e) => {
               const path = e.target.value
@@ -236,7 +237,7 @@ const Based = () => {
           </div>
           <div className="flex flex-col mb-4">
             <select
-              className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+              className={settingsControlClass.medium}
               value={assistantTextStyle}
               onChange={(e) =>
                 settingsStore.setState({
@@ -261,7 +262,7 @@ const Based = () => {
         </div>
         <div className="flex flex-col mb-4">
           <select
-            className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+            className={settingsControlClass.medium}
             value={chatLogStyle}
             onChange={(e) =>
               settingsStore.setState({
@@ -283,7 +284,7 @@ const Based = () => {
         </div>
         <div className="flex flex-col mb-4">
           <select
-            className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+            className={settingsControlClass.compact}
             value={chatLogPosition}
             onChange={(e) =>
               settingsStore.setState({
@@ -332,7 +333,7 @@ const Based = () => {
 
         <div className="flex flex-col mb-4">
           <select
-            className="text-ellipsis px-4 py-2 w-full sm:w-col-span-2 bg-white hover:bg-white-hover rounded-lg"
+            className={settingsControlClass.compact}
             value={colorTheme}
             onChange={(e) => {
               const theme = e.target.value as

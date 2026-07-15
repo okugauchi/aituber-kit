@@ -77,8 +77,22 @@ describe('プロファイル: self-host（既定 = serverSecretMode: disabled, F
     expect(handler).not.toHaveBeenCalled()
   })
 
-  it('ローカル既定URLのVOICEVOXは拒否される（プロキシ悪用防止）', async () => {
-    const { res } = await invoke('/api/tts-voicevox', { body: {} })
+  it('ローカルアプリからのVOICEVOX既定URLは通過する', async () => {
+    const { handler } = await invoke('/api/tts-voicevox', {
+      body: {},
+      headers: { host: 'localhost:3000' },
+    })
+    expect(handler).toHaveBeenCalled()
+  })
+
+  it('リモートからのVOICEVOX既定URLは拒否される（プロキシ悪用防止）', async () => {
+    const { res } = await invoke('/api/tts-voicevox', {
+      body: {},
+      headers: { host: 'aituberkit.example.com' },
+      socket: {
+        remoteAddress: '198.51.100.20',
+      } as NextApiRequest['socket'],
+    })
     expect(res._status).toBe(403)
   })
 
