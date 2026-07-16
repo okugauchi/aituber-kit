@@ -109,9 +109,15 @@ export class SpeakQueue {
     if (!sessionId) return
 
     const instance = SpeakQueue.getInstance()
-    instance.queue = instance.queue.filter(
-      (task) => task.sessionId !== sessionId
-    )
+    const remainingTasks: SpeakTask[] = []
+    instance.queue.forEach((task) => {
+      if (task.sessionId === sessionId) {
+        instance.disposeTask(task)
+      } else {
+        remainingTasks.push(task)
+      }
+    })
+    instance.queue = remainingTasks
 
     if (instance.currentSessionId !== sessionId) {
       return
@@ -220,6 +226,7 @@ export class SpeakQueue {
       if (task) {
         if (task.sessionId !== this.currentSessionId) {
           // 旧セッションのタスクは破棄
+          this.disposeTask(task, true)
           continue
         }
         try {
@@ -264,9 +271,7 @@ export class SpeakQueue {
             }
           }
         } catch (error) {
-          if (task.kind === 'pcm16-stream') {
-            await task.audioStream.cancel(error).catch(() => {})
-          }
+          await this.disposeTask(task, false, error)
           logger.error(
             'An error occurred while processing the speech synthesis task:',
             error
@@ -337,10 +342,33 @@ export class SpeakQueue {
   }
 
   clearQueue(shouldCallOnComplete = false) {
-    if (shouldCallOnComplete) {
-      this.queue.forEach((task) => task.onComplete?.())
-    }
+    this.queue.forEach((task) => this.disposeTask(task, shouldCallOnComplete))
     this.queue = []
+  }
+
+  private disposeTask(
+    task: SpeakTask,
+    shouldCallOnComplete = false,
+    reason: unknown = 'speech task discarded'
+  ) {
+    const complete = () => {
+      if (!shouldCallOnComplete) return
+      try {
+        task.onComplete?.()
+      } catch (error) {
+        logger.error('Speech task disposal callback failed:', error)
+      }
+    }
+
+    if (task.kind === 'pcm16-stream') {
+      void task.audioStream
+        .cancel(reason)
+        .catch(() => {})
+        .finally(complete)
+      return
+    }
+
+    complete()
   }
 
   private resetStoppedState() {

@@ -47,6 +47,7 @@ export function createMockRes(): MockApiResponse {
       return res
     },
     json(data: unknown) {
+      res.headersSent = true
       res._json = data
       res._ended = true
       res.writableEnded = true
@@ -63,12 +64,14 @@ export function createMockRes(): MockApiResponse {
       return res
     },
     send(data: unknown) {
+      res.headersSent = true
       res._body = data
       res._ended = true
       res.writableEnded = true
       return res
     },
     write(chunk: unknown) {
+      res.headersSent = true
       res._writes.push(String(chunk))
       res._writeChunks.push(chunk)
       return true
@@ -88,8 +91,11 @@ export function createMockRes(): MockApiResponse {
       listeners.delete(event)
       eventListeners.forEach((listener) => listener(...args))
     },
-    flushHeaders() {},
+    flushHeaders() {
+      res.headersSent = true
+    },
     end(data?: unknown) {
+      res.headersSent = true
       if (data !== undefined) {
         res._body = data
       }

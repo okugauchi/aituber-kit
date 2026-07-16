@@ -259,7 +259,10 @@ export class LipSync {
       await new Promise<void>((resolve) => {
         this.pendingPlaybacks.push(() => {
           if (queuedGeneration !== this.streamPlaybackGeneration) {
-            resolve()
+            void stream
+              .cancel('playback superseded')
+              .catch(() => {})
+              .finally(resolve)
             return
           }
           void this.playPcm16Stream(
@@ -283,8 +286,29 @@ export class LipSync {
     let pending = new Uint8Array(0)
     let nextStartAt = this.audio.currentTime + 0.03
     let lastSourceEnded: Promise<void> = Promise.resolve()
+    const scheduledSources: Array<{
+      duration: number
+      ended: Promise<void>
+    }> = []
+    let scheduledDuration = 0
     let playbackStarted = false
     let completed = false
+
+    // 100msフレームを最大約1.5秒分だけ予約し、全音声の先読みを避ける。
+    const maxReadAheadSeconds = 1.5
+
+    const waitForReadAheadCapacity = async () => {
+      while (
+        generation === this.streamPlaybackGeneration &&
+        scheduledDuration >= maxReadAheadSeconds &&
+        scheduledSources.length > 0
+      ) {
+        const nextSource = scheduledSources.shift()
+        if (!nextSource) break
+        await nextSource.ended
+        scheduledDuration = Math.max(0, scheduledDuration - nextSource.duration)
+      }
+    }
 
     const finish = () => {
       if (completed) return
@@ -327,12 +351,18 @@ export class LipSync {
       source.connect(this.analyser)
       this.currentStreamSources.add(source)
 
-      lastSourceEnded = new Promise<void>((resolve) => {
+      const sourceEnded = new Promise<void>((resolve) => {
         source.onended = () => {
           this.currentStreamSources.delete(source)
           resolve()
         }
       })
+      lastSourceEnded = sourceEnded
+      scheduledSources.push({
+        duration: audioBuffer.duration,
+        ended: sourceEnded,
+      })
+      scheduledDuration += audioBuffer.duration
 
       const startAt = Math.max(nextStartAt, this.audio.currentTime + 0.01)
       source.start(startAt)
@@ -345,18 +375,27 @@ export class LipSync {
 
     try {
       while (generation === this.streamPlaybackGeneration) {
+        await waitForReadAheadCapacity()
+        if (generation !== this.streamPlaybackGeneration) break
+
         const { done, value } = await reader.read()
         if (done) break
         if (!value?.byteLength) continue
 
         pending = append(pending, value)
         while (pending.byteLength >= bytesPerFrame) {
+          await waitForReadAheadCapacity()
+          if (generation !== this.streamPlaybackGeneration) break
           schedule(pending.slice(0, bytesPerFrame))
           pending = pending.slice(bytesPerFrame)
         }
       }
 
-      if (pending.byteLength >= 2) {
+      if (
+        generation === this.streamPlaybackGeneration &&
+        pending.byteLength >= 2
+      ) {
+        await waitForReadAheadCapacity()
         schedule(
           pending.slice(0, pending.byteLength - (pending.byteLength % 2))
         )

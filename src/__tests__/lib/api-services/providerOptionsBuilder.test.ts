@@ -69,7 +69,8 @@ describe('buildReasoningProviderOptions', () => {
         'custom-openai-model',
         true,
         'minimal',
-        8192
+        8192,
+        true
       )
       expect(result).toEqual({
         openai: { reasoningEffort: 'minimal', reasoningSummary: 'detailed' },

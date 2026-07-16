@@ -168,11 +168,15 @@ describe('/api/openAITTS', () => {
       },
     })
     const res = createMockRes()
+    let notifyFirstWrite!: () => void
+    const firstWrite = new Promise<void>((resolve) => {
+      notifyFirstWrite = resolve
+    })
     jest
       .spyOn(res, 'write')
       .mockImplementationOnce((chunk) => {
         res._writeChunks.push(chunk)
-        queueMicrotask(() => res._emit('drain'))
+        notifyFirstWrite()
         return false
       })
       .mockImplementationOnce((chunk) => {
@@ -180,7 +184,13 @@ describe('/api/openAITTS', () => {
         return true
       })
 
-    await handler(req, res)
+    const handling = handler(req, res)
+    await firstWrite
+
+    expect(res.write).toHaveBeenCalledTimes(1)
+
+    res._emit('drain')
+    await handling
 
     expect(res.write).toHaveBeenCalledTimes(2)
     expect(res._ended).toBe(true)
@@ -218,6 +228,42 @@ describe('/api/openAITTS', () => {
     await Promise.resolve()
 
     expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('should abort the upstream request when the client disconnects before headers', async () => {
+    let signal!: AbortSignal
+    let notifyFetchStarted!: () => void
+    const fetchStarted = new Promise<void>((resolve) => {
+      notifyFetchStarted = resolve
+    })
+    ;(global.fetch as jest.Mock).mockImplementation(
+      (_url: string, init: RequestInit) => {
+        signal = init.signal as AbortSignal
+        notifyFetchStarted()
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(new Error('aborted')))
+        })
+      }
+    )
+    const req = createMockReq({
+      query: { stream: 'true' },
+      body: {
+        message: 'hello',
+        voice: 'alloy',
+        model: 'tts-1',
+        speed: 1,
+        apiKey: 'key',
+      },
+    })
+    const res = createMockRes()
+
+    const handling = handler(req, res)
+    await fetchStarted
+    res._emit('close')
+    await handling
+
+    expect(signal.aborted).toBe(true)
+    expect(res._json).toBeNull()
   })
 
   it('should end an already-started PCM response when upstream reading fails', async () => {

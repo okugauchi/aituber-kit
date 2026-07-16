@@ -67,6 +67,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     return
   }
 
+  const abortController = stream ? new AbortController() : null
+  let downstreamClosed = false
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  const cancelUpstream = () => {
+    downstreamClosed = true
+    abortController?.abort()
+    void reader?.cancel('downstream closed').catch(() => {})
+  }
+  if (stream) res.once('close', cancelUpstream)
+
   try {
     const endpoint = stream
       ? `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=pcm_16000`
@@ -83,6 +93,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         model_id: 'eleven_turbo_v2_5',
         language_code: language,
       }),
+      ...(abortController ? { signal: abortController.signal } : {}),
     })
 
     if (!response.ok) {
@@ -96,6 +107,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         throw new Error('ElevenLabs APIの音声ストリームが空です')
       }
 
+      reader = response.body.getReader()
+      if (downstreamClosed) {
+        await reader.cancel('downstream closed').catch(() => {})
+        return
+      }
+
       res.writeHead(200, {
         'Content-Type': 'audio/pcm',
         'Cache-Control': 'no-store, no-transform',
@@ -104,13 +121,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       })
       res.flushHeaders?.()
 
-      const reader = response.body.getReader()
-      let downstreamClosed = false
-      const cancelUpstream = () => {
-        downstreamClosed = true
-        void reader.cancel('downstream closed').catch(() => {})
-      }
-      res.once('close', cancelUpstream)
       try {
         while (!downstreamClosed) {
           const { done, value } = await reader.read()
@@ -136,9 +146,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
           res.end()
         }
         return
-      } finally {
-        res.off('close', cancelUpstream)
-        reader.releaseLock()
       }
       if (!downstreamClosed) res.end()
       return
@@ -157,6 +164,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     })
     res.end(fullBuffer)
   } catch (error) {
+    if (downstreamClosed) return
     if (res.headersSent) {
       logger.error('ElevenLabs response failed after streaming started:', error)
       if (!res.writableEnded) res.end()
@@ -165,6 +173,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     res
       .status(500)
       .json({ error: error instanceof Error ? error.message : String(error) })
+  } finally {
+    if (stream) res.off('close', cancelUpstream)
+    reader?.releaseLock()
   }
 }
 

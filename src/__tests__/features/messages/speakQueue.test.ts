@@ -309,6 +309,25 @@ describe('SpeakQueue', () => {
       ).toEqual([])
       expect(mockModelStopSpeaking).not.toHaveBeenCalled()
     })
+
+    it('should cancel queued PCM16 streams', async () => {
+      const cancel = jest.fn()
+      const queue = SpeakQueue.getInstance()
+      ;(queue as unknown as { queue: unknown[] }).queue = [
+        {
+          sessionId: 'session1',
+          kind: 'pcm16-stream',
+          audioStream: new ReadableStream<Uint8Array>({ cancel }),
+          sampleRate: 16000,
+          talk: { emotion: 'neutral', message: 'test' },
+        },
+      ]
+
+      SpeakQueue.stopQueue()
+      await Promise.resolve()
+
+      expect(cancel).toHaveBeenCalledWith('speech task discarded')
+    })
   })
 
   describe('stopSession', () => {
@@ -408,6 +427,33 @@ describe('SpeakQueue', () => {
 
       speakDeferred.resolve()
       await firstTaskPromise
+    })
+
+    it('should cancel queued PCM16 streams discarded by session change', async () => {
+      const cancel = jest.fn()
+      let notifyComplete!: () => void
+      const completed = new Promise<void>((resolve) => {
+        notifyComplete = resolve
+      })
+      const onComplete = jest.fn(notifyComplete)
+      const queue = SpeakQueue.getInstance()
+      queue.checkSessionId('session1')
+      ;(queue as unknown as { queue: unknown[] }).queue = [
+        {
+          sessionId: 'session1',
+          kind: 'pcm16-stream',
+          audioStream: new ReadableStream<Uint8Array>({ cancel }),
+          sampleRate: 16000,
+          talk: { emotion: 'neutral', message: 'test' },
+          onComplete,
+        },
+      ]
+
+      queue.checkSessionId('session2')
+      await completed
+
+      expect(cancel).toHaveBeenCalledWith('speech task discarded')
+      expect(onComplete).toHaveBeenCalledTimes(1)
     })
 
     it('should reset stopped state when stopped', async () => {

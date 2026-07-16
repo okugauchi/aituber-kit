@@ -53,6 +53,28 @@ type PendingSpeakResult = {
   tokenAtStart: number
 }
 
+function disposeSynthesizedSpeech(
+  audio: SynthesizedSpeech | null | undefined,
+  onDisposed?: () => void
+): void {
+  const complete = () => {
+    try {
+      onDisposed?.()
+    } catch (error) {
+      logger.error('Discarded speech completion callback failed:', error)
+    }
+  }
+
+  if (audio?.kind === 'pcm16-stream') {
+    void audio.audioStream
+      .cancel('speech discarded')
+      .catch(() => {})
+      .then(complete)
+    return
+  }
+  complete()
+}
+
 export function preprocessMessage(
   message: string,
   settings: ReturnType<typeof settingsStore.getState>
@@ -220,7 +242,9 @@ const createSpeakCharacter = () => {
   const pendingResults = new Map<number, PendingSpeakResult>()
 
   const resetPendingResults = (sessionId: string) => {
-    pendingResults.forEach((result) => result.onComplete?.())
+    pendingResults.forEach((result) => {
+      disposeSynthesizedSpeech(result.audio, result.onComplete)
+    })
     pendingResults.clear()
     currentSessionId = sessionId
     nextSynthesisOrder = 0
@@ -244,7 +268,7 @@ const createSpeakCharacter = () => {
       }
 
       if (result.tokenAtStart !== SpeakQueue.currentStopToken) {
-        result.onComplete?.()
+        disposeSynthesizedSpeech(result.audio, result.onComplete)
         continue
       }
 
@@ -413,7 +437,7 @@ const createSpeakCharacter = () => {
     processAndSynthesizePromise
       .then((result) => {
         if (currentSessionId !== sessionId) {
-          guardedOnComplete()
+          disposeSynthesizedSpeech(result?.audio, guardedOnComplete)
           return
         }
 

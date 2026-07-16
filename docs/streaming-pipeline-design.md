@@ -236,7 +236,7 @@ public static async finalizeIfIdle(): Promise<void> {
 ### 5.6 TTS初動の低遅延化
 
 - OpenAI TTSはVRMレンダラーで24kHz PCM16のチャンク転送を利用し、全音声の生成完了を待たずに再生する。Live2D / PNGTuberは従来の一括再生へフォールバックする。
-- VOICEVOX / AivisSpeech / Google TTS / OpenAI TTS / Aivis Cloudは、初回だけ読点までの最小長を5文字へ下げる。最初の短い合成を前倒しし、2発話目以降は10文字へ戻して過度な細切れ化を避ける。
+- VOICEVOX / AivisSpeech / Google TTS / OpenAI TTS / Aivis Cloudは、初回だけ読点前の最小長を5文字（読点込み6文字）へ下げる。最初の短い合成を前倒しし、2発話目以降は10文字へ戻して過度な細切れ化を避ける。
 - Realtime API / Audio APIモードのPCMチャンクは、約2.1秒分だった再生開始閾値を約500ms分へ下げる。WebSocket/APIから届く増分音声を保持しすぎず、既存の全レンダラーへ順次渡す。
 
 ## 6. キャンセレーション意味論（テストで固定する契約）

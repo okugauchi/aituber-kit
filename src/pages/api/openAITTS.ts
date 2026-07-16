@@ -16,6 +16,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Missing required parameters' })
   }
 
+  const abortController = stream ? new AbortController() : null
+  let downstreamClosed = false
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  const cancelUpstream = () => {
+    downstreamClosed = true
+    abortController?.abort()
+    void reader?.cancel('downstream closed').catch(() => {})
+  }
+  if (stream) res.once('close', cancelUpstream)
+
   try {
     const options: Record<string, unknown> = {
       model: model,
@@ -38,6 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(options),
+        ...(abortController ? { signal: abortController.signal } : {}),
       }
     )
 
@@ -62,6 +73,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
       }
 
+      reader = speechResponse.body.getReader()
+      if (downstreamClosed) {
+        await reader.cancel('downstream closed').catch(() => {})
+        return
+      }
+
       res.writeHead(200, {
         'Content-Type': 'audio/pcm',
         'Cache-Control': 'no-store, no-transform',
@@ -70,13 +87,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
       res.flushHeaders?.()
 
-      const reader = speechResponse.body.getReader()
-      let downstreamClosed = false
-      const cancelUpstream = () => {
-        downstreamClosed = true
-        void reader.cancel('downstream closed').catch(() => {})
-      }
-      res.once('close', cancelUpstream)
       try {
         while (!downstreamClosed) {
           const { done, value } = await reader.read()
@@ -102,9 +112,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           res.end()
         }
         return
-      } finally {
-        res.off('close', cancelUpstream)
-        reader.releaseLock()
       }
       if (!downstreamClosed) res.end()
       return
@@ -118,12 +125,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     )
     res.send(buffer)
   } catch (error) {
+    if (downstreamClosed) return
     logger.error('OpenAI TTS error:', error)
     if (res.headersSent) {
       if (!res.writableEnded) res.end()
       return
     }
     res.status(500).json({ error: 'Failed to generate speech' })
+  } finally {
+    if (stream) res.off('close', cancelUpstream)
+    reader?.releaseLock()
   }
 }
 
