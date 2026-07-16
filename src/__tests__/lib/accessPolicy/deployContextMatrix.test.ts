@@ -21,7 +21,7 @@ async function invoke(
   policyPath: KnownApiPath,
   reqOverrides: Partial<NextApiRequest> = {}
 ) {
-  const handler = jest.fn(async (_req, res) => {
+  const handler = jest.fn(async (_req, res, _gate) => {
     res.status(200).json({ ok: true })
   })
   const wrapped = withAccessPolicy(routePolicies[policyPath], handler)
@@ -123,6 +123,20 @@ describe('プロファイル: self-host（サーバーキー利用 = unprotected
   it('ローカル既定URLのVOICEVOXが通過する', async () => {
     const { handler } = await invoke('/api/tts-voicevox', { body: {} })
     expect(handler).toHaveBeenCalled()
+  })
+
+  it('ローカル既定URLのAivisSpeechが通過する', async () => {
+    const { handler } = await invoke('/api/tts-aivisspeech', { body: {} })
+    expect(handler).toHaveBeenCalled()
+    expect(handler).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        serverUrl: expect.objectContaining({
+          raw: 'http://localhost:10101',
+        }),
+      })
+    )
   })
 
   it('常時ガードのtts-googleが通過する', async () => {

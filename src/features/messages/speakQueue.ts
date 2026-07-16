@@ -3,13 +3,26 @@ import { Talk } from './messages'
 import homeStore from '@/features/stores/home'
 import { getCharacterRenderer } from './characterRenderer'
 
-type SpeakTask = {
+type SpeakTaskBase = {
   sessionId: string
-  audioBuffer: ArrayBuffer
   talk: Talk
-  isNeedDecode: boolean
+  onPlaybackStart?: () => void
   onComplete?: () => void
 }
+
+type SpeakTask = SpeakTaskBase &
+  (
+    | {
+        kind?: 'buffer'
+        audioBuffer: ArrayBuffer
+        isNeedDecode: boolean
+      }
+    | {
+        kind: 'pcm16-stream'
+        audioStream: ReadableStream<Uint8Array>
+        sampleRate: number
+      }
+  )
 
 export class SpeakQueue {
   private static readonly QUEUE_CHECK_DELAY = 1500
@@ -210,16 +223,62 @@ export class SpeakQueue {
           continue
         }
         try {
-          const { audioBuffer, talk, isNeedDecode, onComplete } = task
-          await getCharacterRenderer()?.speak(audioBuffer, talk, isNeedDecode)
-          onComplete?.()
+          const renderer = getCharacterRenderer()
+          const observer = task.onPlaybackStart
+            ? { onPlaybackStart: task.onPlaybackStart }
+            : undefined
+          if (task.kind === 'pcm16-stream') {
+            if (!renderer?.speakPcm16Stream) {
+              throw new Error(
+                'Current character renderer does not support PCM16 streaming'
+              )
+            }
+            if (observer) {
+              await renderer.speakPcm16Stream(
+                task.audioStream,
+                task.talk,
+                task.sampleRate,
+                observer
+              )
+            } else {
+              await renderer.speakPcm16Stream(
+                task.audioStream,
+                task.talk,
+                task.sampleRate
+              )
+            }
+          } else {
+            if (observer) {
+              await renderer?.speak(
+                task.audioBuffer,
+                task.talk,
+                task.isNeedDecode,
+                observer
+              )
+            } else {
+              await renderer?.speak(
+                task.audioBuffer,
+                task.talk,
+                task.isNeedDecode
+              )
+            }
+          }
         } catch (error) {
+          if (task.kind === 'pcm16-stream') {
+            await task.audioStream.cancel(error).catch(() => {})
+          }
           logger.error(
             'An error occurred while processing the speech synthesis task:',
             error
           )
           if (error instanceof Error) {
             logger.error('Error details:', error.message)
+          }
+        } finally {
+          try {
+            task.onComplete?.()
+          } catch (error) {
+            logger.error('Speech synthesis completion callback failed:', error)
           }
         }
       }

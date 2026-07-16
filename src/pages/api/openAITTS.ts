@@ -8,6 +8,7 @@ const gpt4oEmotionalInstructionModels = ['gpt-4o']
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { message, voice, model, speed, apiKey, emotion } = req.body
+  const stream = req.query.stream === 'true'
   const openaiKey =
     apiKey || process.env.OPENAI_TTS_KEY || process.env.OPENAI_API_KEY
 
@@ -21,6 +22,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       voice: voice,
       speed: speed,
       input: message,
+      ...(stream ? { response_format: 'pcm' } : {}),
     }
 
     if (gpt4oEmotionalInstructionModels.some((m) => model.includes(m))) {
@@ -52,6 +54,62 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    if (stream) {
+      if (!speechResponse.body) {
+        return res.status(500).json({
+          error: 'OpenAI TTS returned an empty stream',
+          errorCode: 'OpenAITTSEmptyStream',
+        })
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'audio/pcm',
+        'Cache-Control': 'no-store, no-transform',
+        'X-Accel-Buffering': 'no',
+        'X-Audio-Sample-Rate': '24000',
+      })
+      res.flushHeaders?.()
+
+      const reader = speechResponse.body.getReader()
+      let downstreamClosed = false
+      const cancelUpstream = () => {
+        downstreamClosed = true
+        void reader.cancel('downstream closed').catch(() => {})
+      }
+      res.once('close', cancelUpstream)
+      try {
+        while (!downstreamClosed) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value?.byteLength) {
+            const canContinue = res.write(Buffer.from(value))
+            if (!canContinue && !downstreamClosed) {
+              await new Promise<void>((resolve) => {
+                const resume = () => {
+                  res.off('drain', resume)
+                  res.off('close', resume)
+                  resolve()
+                }
+                res.once('drain', resume)
+                res.once('close', resume)
+              })
+            }
+          }
+        }
+      } catch (error) {
+        if (!downstreamClosed) {
+          logger.error('OpenAI TTS PCM stream failed:', error)
+          res.end()
+        }
+        return
+      } finally {
+        res.off('close', cancelUpstream)
+        reader.releaseLock()
+      }
+      if (!downstreamClosed) res.end()
+      return
+    }
+
     const buffer = Buffer.from(await speechResponse.arrayBuffer())
 
     res.setHeader(
@@ -61,6 +119,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     res.send(buffer)
   } catch (error) {
     logger.error('OpenAI TTS error:', error)
+    if (res.headersSent) {
+      if (!res.writableEnded) res.end()
+      return
+    }
     res.status(500).json({ error: 'Failed to generate speech' })
   }
 }

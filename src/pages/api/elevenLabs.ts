@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
 import { routePolicies } from '@/lib/accessPolicy/routePolicies'
+import { logger } from '@/lib/logger'
 
 type Data = {
   audio?: Buffer
@@ -53,6 +54,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const voiceId = body.voiceId || process.env.ELEVENLABS_VOICE_ID
   const apiKey = body.apiKey || process.env.ELEVENLABS_API_KEY
   const language = body.language
+  const stream = req.query.stream === 'true'
 
   if (!apiKey) {
     res.status(400).json({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' })
@@ -66,27 +68,80 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   }
 
   try {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_16000`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': apiKey,
-          accept: 'audio/mpeg',
-        },
-        body: JSON.stringify({
-          text: message,
-          model_id: 'eleven_turbo_v2_5',
-          language_code: language,
-        }),
-      }
-    )
+    const endpoint = stream
+      ? `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=pcm_16000`
+      : `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_16000`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+        accept: 'audio/pcm',
+      },
+      body: JSON.stringify({
+        text: message,
+        model_id: 'eleven_turbo_v2_5',
+        language_code: language,
+      }),
+    })
 
     if (!response.ok) {
       throw new Error(
         `ElevenLabs APIからの応答が異常です。ステータスコード: ${response.status}`
       )
+    }
+
+    if (stream) {
+      if (!response.body) {
+        throw new Error('ElevenLabs APIの音声ストリームが空です')
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'audio/pcm',
+        'Cache-Control': 'no-store, no-transform',
+        'X-Accel-Buffering': 'no',
+        'X-Audio-Sample-Rate': '16000',
+      })
+      res.flushHeaders?.()
+
+      const reader = response.body.getReader()
+      let downstreamClosed = false
+      const cancelUpstream = () => {
+        downstreamClosed = true
+        void reader.cancel('downstream closed').catch(() => {})
+      }
+      res.once('close', cancelUpstream)
+      try {
+        while (!downstreamClosed) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value?.byteLength) {
+            const canContinue = res.write(Buffer.from(value))
+            if (!canContinue && !downstreamClosed) {
+              await new Promise<void>((resolve) => {
+                const resume = () => {
+                  res.off('drain', resume)
+                  res.off('close', resume)
+                  resolve()
+                }
+                res.once('drain', resume)
+                res.once('close', resume)
+              })
+            }
+          }
+        }
+      } catch (error) {
+        if (!downstreamClosed) {
+          logger.error('ElevenLabs PCM stream failed:', error)
+          res.end()
+        }
+        return
+      } finally {
+        res.off('close', cancelUpstream)
+        reader.releaseLock()
+      }
+      if (!downstreamClosed) res.end()
+      return
     }
 
     const arrayBuffer = await response.arrayBuffer()
@@ -102,6 +157,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     })
     res.end(fullBuffer)
   } catch (error) {
+    if (res.headersSent) {
+      logger.error('ElevenLabs response failed after streaming started:', error)
+      if (!res.writableEnded) res.end()
+      return
+    }
     res
       .status(500)
       .json({ error: error instanceof Error ? error.message : String(error) })

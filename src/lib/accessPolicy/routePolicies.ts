@@ -346,6 +346,7 @@ export const routePolicies = {
       key: 'serverUrl',
       envVar: 'AIVIS_SPEECH_SERVER_URL',
       defaultUrl: 'http://localhost:10101',
+      allowLocalLoopback: true,
     },
     restrictedBehavior: 'none',
   },

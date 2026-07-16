@@ -111,13 +111,29 @@ describe('settingsStore versioned migration', () => {
     expect(state.selectAIModel).toBe('gpt-audio-mini')
   })
 
+  it('migrates version 5 data by replacing a stale OpenAI reasoning effort', () => {
+    setPersisted(
+      {
+        selectAIService: 'openai',
+        selectAIModel: 'gpt-5.4-mini',
+        reasoningEffort: 'minimal',
+      },
+      5
+    )
+
+    const settingsStore = loadStore()
+    const state = settingsStore.getState()
+
+    expect(state.reasoningEffort).toBe('medium')
+  })
+
   it('does not run migration steps for already-current data', () => {
     setPersisted(
       {
         selectAIModel: 'gpt-4o',
         gameCommentaryEnabled: false,
       },
-      5
+      6
     )
 
     const settingsStore = loadStore()

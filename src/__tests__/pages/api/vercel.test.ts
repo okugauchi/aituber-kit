@@ -249,6 +249,38 @@ describe('/api/ai/vercel handler', () => {
     expect(mockGenerateAiText).toHaveBeenCalled()
   })
 
+  it('uses custom OpenAI model reasoning defaults', async () => {
+    mockModifyMessages.mockReturnValue([{ role: 'user', content: 'hi' }] as any)
+    mockGenerateAiText.mockResolvedValue(new Response('done', { status: 200 }))
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: 'openai-key',
+        aiService: 'openai',
+        model: 'gpt-5-pro',
+        stream: false,
+        reasoningMode: true,
+        reasoningEffort: 'low',
+        reasoningTokenBudget: 8192,
+        customModel: true,
+      },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(mockGenerateAiText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low',
+            reasoningSummary: 'detailed',
+          },
+        },
+      })
+    )
+  })
+
   it('calls generateAiText for azure requests using deployment name', async () => {
     mockModifyMessages.mockReturnValue([{ role: 'user', content: 'hi' }] as any)
 
