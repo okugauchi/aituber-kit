@@ -41,6 +41,7 @@ import {
 import {
   googleSearchGroundingModels,
   defaultModels,
+  getReasoningEfforts,
 } from '../constants/aiModels'
 import { migrateOpenAIModelName } from '@/utils/modelMigration'
 
@@ -964,6 +965,29 @@ const settingsMigrationSteps: Record<number, SettingsMigrationStep> = {
       typeof migrated.selectAIModel === 'string'
     ) {
       migrated.selectAIModel = migrateOpenAIModelName(migrated.selectAIModel)
+    }
+    return migrated
+  },
+  6: (state) => {
+    const migrated = { ...state }
+    if (
+      migrated.selectAIService === 'openai' &&
+      typeof migrated.selectAIModel === 'string' &&
+      migrated.customModel !== true &&
+      migrated.reasoningEffort
+    ) {
+      const supportedEfforts = getReasoningEfforts(
+        'openai',
+        migrated.selectAIModel
+      )
+      if (
+        supportedEfforts.length > 0 &&
+        !supportedEfforts.includes(migrated.reasoningEffort)
+      ) {
+        migrated.reasoningEffort = supportedEfforts.includes('medium')
+          ? 'medium'
+          : supportedEfforts[0]
+      }
     }
     return migrated
   },

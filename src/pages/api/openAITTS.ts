@@ -8,6 +8,7 @@ const gpt4oEmotionalInstructionModels = ['gpt-4o']
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { message, voice, model, speed, apiKey, emotion } = req.body
+  const stream = req.query.stream === 'true'
   const openaiKey =
     apiKey || process.env.OPENAI_TTS_KEY || process.env.OPENAI_API_KEY
 
@@ -21,6 +22,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       voice: voice,
       speed: speed,
       input: message,
+      ...(stream ? { response_format: 'pcm' } : {}),
     }
 
     if (gpt4oEmotionalInstructionModels.some((m) => model.includes(m))) {
@@ -50,6 +52,45 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         errorCode: 'OpenAITTSUpstreamError',
         status: speechResponse.status,
       })
+    }
+
+    if (stream) {
+      if (!speechResponse.body) {
+        return res.status(500).json({
+          error: 'OpenAI TTS returned an empty stream',
+          errorCode: 'OpenAITTSEmptyStream',
+        })
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'audio/pcm',
+        'Cache-Control': 'no-store, no-transform',
+        'X-Accel-Buffering': 'no',
+        'X-Audio-Sample-Rate': '24000',
+      })
+      res.flushHeaders?.()
+
+      const reader = speechResponse.body.getReader()
+      let downstreamClosed = false
+      const cancelUpstream = () => {
+        downstreamClosed = true
+        void reader.cancel('downstream closed').catch(() => {})
+      }
+      res.once('close', cancelUpstream)
+      try {
+        while (!downstreamClosed) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value?.byteLength) {
+            res.write(Buffer.from(value))
+          }
+        }
+      } finally {
+        res.off('close', cancelUpstream)
+        reader.releaseLock()
+      }
+      if (!downstreamClosed) res.end()
+      return
     }
 
     const buffer = Buffer.from(await speechResponse.arrayBuffer())

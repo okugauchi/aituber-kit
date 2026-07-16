@@ -53,6 +53,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const voiceId = body.voiceId || process.env.ELEVENLABS_VOICE_ID
   const apiKey = body.apiKey || process.env.ELEVENLABS_API_KEY
   const language = body.language
+  const stream = req.query.stream === 'true'
 
   if (!apiKey) {
     res.status(400).json({ error: 'Empty API Key', errorCode: 'EmptyAPIKey' })
@@ -66,27 +67,63 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   }
 
   try {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_16000`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': apiKey,
-          accept: 'audio/mpeg',
-        },
-        body: JSON.stringify({
-          text: message,
-          model_id: 'eleven_turbo_v2_5',
-          language_code: language,
-        }),
-      }
-    )
+    const endpoint = stream
+      ? `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=pcm_16000`
+      : `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_16000`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+        accept: 'audio/pcm',
+      },
+      body: JSON.stringify({
+        text: message,
+        model_id: 'eleven_turbo_v2_5',
+        language_code: language,
+      }),
+    })
 
     if (!response.ok) {
       throw new Error(
         `ElevenLabs APIからの応答が異常です。ステータスコード: ${response.status}`
       )
+    }
+
+    if (stream) {
+      if (!response.body) {
+        throw new Error('ElevenLabs APIの音声ストリームが空です')
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'audio/pcm',
+        'Cache-Control': 'no-store, no-transform',
+        'X-Accel-Buffering': 'no',
+        'X-Audio-Sample-Rate': '16000',
+      })
+      res.flushHeaders?.()
+
+      const reader = response.body.getReader()
+      let downstreamClosed = false
+      const cancelUpstream = () => {
+        downstreamClosed = true
+        void reader.cancel('downstream closed').catch(() => {})
+      }
+      res.once('close', cancelUpstream)
+      try {
+        while (!downstreamClosed) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value?.byteLength) {
+            res.write(Buffer.from(value))
+          }
+        }
+      } finally {
+        res.off('close', cancelUpstream)
+        reader.releaseLock()
+      }
+      if (!downstreamClosed) res.end()
+      return
     }
 
     const arrayBuffer = await response.arrayBuffer()

@@ -13,6 +13,7 @@ function createMockReq(
   return {
     method: 'POST',
     body: {},
+    query: {},
     ...overrides,
   } as NextApiRequest
 }
@@ -22,6 +23,7 @@ function createMockRes() {
     _status: 200,
     _json: null as unknown,
     _body: null as unknown,
+    _chunks: [] as Buffer[],
     _headers: {} as Record<string, string>,
     status(code: number) {
       res._status = code
@@ -39,11 +41,32 @@ function createMockRes() {
       res._headers[key] = value
       return res
     },
+    writeHead(code: number, headers: Record<string, string>) {
+      res._status = code
+      Object.assign(res._headers, headers)
+      return res
+    },
+    flushHeaders() {},
+    write(data: Buffer) {
+      res._chunks.push(data)
+      return true
+    },
+    once() {
+      return res
+    },
+    off() {
+      return res
+    },
+    end(data?: Buffer) {
+      if (data) res._chunks.push(data)
+      return res
+    },
   }
   return res as unknown as NextApiResponse & {
     _status: number
     _json: unknown
     _body: unknown
+    _chunks: Buffer[]
     _headers: Record<string, string>
   }
 }
@@ -145,6 +168,44 @@ describe('/api/openAITTS', () => {
 
     expect(res._headers['Content-Type']).toBe('audio/mpeg')
     expect(res._body).toBeTruthy()
+  })
+
+  it('should proxy raw PCM chunks in streaming mode', async () => {
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2]))
+        controller.enqueue(new Uint8Array([3, 4]))
+        controller.close()
+      },
+    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(upstream, {
+        status: 200,
+        headers: { 'content-type': 'audio/pcm' },
+      })
+    )
+
+    const req = createMockReq({
+      query: { stream: 'true' },
+      body: {
+        message: 'hello',
+        voice: 'alloy',
+        model: 'tts-1',
+        speed: 1,
+        apiKey: 'key',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    const requestBody = JSON.parse(
+      (global.fetch as jest.Mock).mock.calls[0][1].body
+    )
+    expect(requestBody.response_format).toBe('pcm')
+    expect(res._headers['Content-Type']).toBe('audio/pcm')
+    expect(res._headers['X-Audio-Sample-Rate']).toBe('24000')
+    expect(Buffer.concat(res._chunks)).toEqual(Buffer.from([1, 2, 3, 4]))
   })
 
   it('should add emotional instructions for gpt-4o model', async () => {

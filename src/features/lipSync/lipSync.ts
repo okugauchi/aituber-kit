@@ -12,6 +12,10 @@ export class LipSync {
   private pendingPlaybacks: Array<() => void> = []
   private forceStart: boolean = false
   private currentSource: AudioBufferSourceNode | null = null
+  private currentStreamReader: ReadableStreamDefaultReader<Uint8Array> | null =
+    null
+  private currentStreamSources = new Set<AudioBufferSourceNode>()
+  private streamPlaybackGeneration = 0
 
   public constructor(audio: AudioContext, options?: { forceStart?: boolean }) {
     this.audio = audio
@@ -153,7 +157,8 @@ export class LipSync {
     buffer: ArrayBuffer,
     onEnded?: () => void,
     isNeedDecode: boolean = true,
-    sampleRate: number = 24000
+    sampleRate: number = 24000,
+    onStarted?: () => void
   ) {
     // AudioContextが準備できているか確認
     const isReady = await this.ensureAudioContextReady()
@@ -161,7 +166,13 @@ export class LipSync {
     if (!isReady) {
       // ユーザーインタラクションを待つ
       this.pendingPlaybacks.push(() => {
-        this.playFromArrayBuffer(buffer, onEnded, isNeedDecode, sampleRate)
+        this.playFromArrayBuffer(
+          buffer,
+          onEnded,
+          isNeedDecode,
+          sampleRate,
+          onStarted
+        )
       })
       return
     }
@@ -209,6 +220,7 @@ export class LipSync {
       bufferSource.connect(this.audio.destination)
       bufferSource.connect(this.analyser)
       bufferSource.start()
+      onStarted?.()
       if (onEnded) {
         bufferSource.addEventListener('ended', onEnded)
       }
@@ -225,6 +237,134 @@ export class LipSync {
       }
       // ensure currentSource cleared on error
       this.currentSource = null
+    }
+  }
+
+  /**
+   * ヘッダーなしlittle-endian PCM16を読みながら100ms単位でWeb Audioへ予約する。
+   * 全レスポンスを待たず最初のチャンクから発話を始め、同じAnalyserNodeで
+   * 既存のVRMリップシンクを継続する。
+   */
+  public async playPcm16Stream(
+    stream: ReadableStream<Uint8Array>,
+    onEnded?: () => void,
+    sampleRate: number = 16000,
+    onStarted?: () => void
+  ): Promise<void> {
+    const isReady = await this.ensureAudioContextReady()
+    if (!isReady) {
+      await new Promise<void>((resolve) => {
+        this.pendingPlaybacks.push(() => {
+          void this.playPcm16Stream(
+            stream,
+            onEnded,
+            sampleRate,
+            onStarted
+          ).finally(resolve)
+        })
+      })
+      return
+    }
+
+    this.stopCurrentPlayback()
+    const generation = this.streamPlaybackGeneration
+    const reader = stream.getReader()
+    this.currentStreamReader = reader
+
+    // 100msはネットワークチャンクの細分化を抑えつつ、初動を遅らせすぎない。
+    const bytesPerFrame = Math.max(2, Math.floor(sampleRate / 10) * 2)
+    let pending = new Uint8Array(0)
+    let nextStartAt = this.audio.currentTime + 0.03
+    let lastSourceEnded: Promise<void> = Promise.resolve()
+    let playbackStarted = false
+    let completed = false
+
+    const finish = () => {
+      if (completed) return
+      completed = true
+      onEnded?.()
+    }
+
+    const append = (left: Uint8Array, right: Uint8Array) => {
+      const combined = new Uint8Array(left.byteLength + right.byteLength)
+      combined.set(left)
+      combined.set(right, left.byteLength)
+      return combined
+    }
+
+    const schedule = (pcmBytes: Uint8Array) => {
+      if (
+        generation !== this.streamPlaybackGeneration ||
+        pcmBytes.byteLength < 2
+      ) {
+        return
+      }
+
+      const sampleCount = Math.floor(pcmBytes.byteLength / 2)
+      const floatData = new Float32Array(sampleCount)
+      const view = new DataView(
+        pcmBytes.buffer,
+        pcmBytes.byteOffset,
+        sampleCount * 2
+      )
+      for (let index = 0; index < sampleCount; index++) {
+        const sample = view.getInt16(index * 2, true)
+        floatData[index] = sample < 0 ? sample / 32768 : sample / 32767
+      }
+
+      const audioBuffer = this.audio.createBuffer(1, sampleCount, sampleRate)
+      audioBuffer.getChannelData(0).set(floatData)
+      const source = this.audio.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(this.audio.destination)
+      source.connect(this.analyser)
+      this.currentStreamSources.add(source)
+
+      lastSourceEnded = new Promise<void>((resolve) => {
+        source.onended = () => {
+          this.currentStreamSources.delete(source)
+          resolve()
+        }
+      })
+
+      const startAt = Math.max(nextStartAt, this.audio.currentTime + 0.01)
+      source.start(startAt)
+      nextStartAt = startAt + audioBuffer.duration
+      if (!playbackStarted) {
+        playbackStarted = true
+        onStarted?.()
+      }
+    }
+
+    try {
+      while (generation === this.streamPlaybackGeneration) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (!value?.byteLength) continue
+
+        pending = append(pending, value)
+        while (pending.byteLength >= bytesPerFrame) {
+          schedule(pending.slice(0, bytesPerFrame))
+          pending = pending.slice(bytesPerFrame)
+        }
+      }
+
+      if (pending.byteLength >= 2) {
+        schedule(
+          pending.slice(0, pending.byteLength - (pending.byteLength % 2))
+        )
+      }
+      await lastSourceEnded
+    } catch (error) {
+      if (generation === this.streamPlaybackGeneration) {
+        logger.error('Failed to play PCM16 stream:', error)
+      }
+    } finally {
+      if (this.currentStreamReader === reader) {
+        this.currentStreamReader = null
+      }
+      reader.releaseLock()
+      finish()
     }
   }
 
@@ -277,6 +417,19 @@ export class LipSync {
    * 現在再生中の音声を停止
    */
   public stopCurrentPlayback() {
+    this.streamPlaybackGeneration++
+    if (this.currentStreamReader) {
+      void this.currentStreamReader.cancel().catch(() => {})
+      this.currentStreamReader = null
+    }
+    for (const source of this.currentStreamSources) {
+      try {
+        source.stop()
+      } catch (e) {
+        logger.warn('LipSync stop stream source error:', e)
+      }
+    }
+    this.currentStreamSources.clear()
     try {
       this.currentSource?.stop()
     } catch (e) {

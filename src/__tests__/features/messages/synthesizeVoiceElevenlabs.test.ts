@@ -1,4 +1,7 @@
-import { synthesizeVoiceElevenlabsApi } from '@/features/messages/synthesizeVoiceElevenlabs'
+import {
+  synthesizeVoiceElevenlabsApi,
+  synthesizeVoiceElevenlabsStreamApi,
+} from '@/features/messages/synthesizeVoiceElevenlabs'
 import type { Talk } from '@/features/messages/messages'
 
 const mockFetch = jest.fn()
@@ -79,5 +82,44 @@ describe('synthesizeVoiceElevenlabsApi', () => {
     await expect(
       synthesizeVoiceElevenlabsApi(mockTalk, 'key', 'voice-id', 'ja')
     ).rejects.toThrow('ElevenLabsで不明なエラーが発生しました')
+  })
+
+  it('should expose PCM16 chunks without buffering the full response', async () => {
+    const onFirstChunk = jest.fn()
+    const chunk = new Uint8Array([1, 2, 3, 4])
+    mockFetch.mockResolvedValue({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(chunk)
+          controller.close()
+        },
+      }),
+    })
+
+    const result = await synthesizeVoiceElevenlabsStreamApi(
+      mockTalk,
+      'key',
+      'voice-id',
+      'ja',
+      onFirstChunk
+    )
+    const reader = result.stream.getReader()
+
+    await expect(reader.read()).resolves.toEqual({ done: false, value: chunk })
+    expect(result.sampleRate).toBe(16000)
+    expect(onFirstChunk).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/elevenLabs?stream=true',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('should reject an empty streaming response body', async () => {
+    mockFetch.mockResolvedValue({ ok: true, body: null })
+
+    await expect(
+      synthesizeVoiceElevenlabsStreamApi(mockTalk, 'key', 'voice-id', 'ja')
+    ).rejects.toThrow('ElevenLabs APIの音声ストリームが空です')
   })
 })

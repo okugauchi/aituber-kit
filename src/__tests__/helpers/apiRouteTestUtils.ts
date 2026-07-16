@@ -63,6 +63,12 @@ export function createMockRes(): MockApiResponse {
       res._writes.push(String(chunk))
       return true
     },
+    once() {
+      return res
+    },
+    off() {
+      return res
+    },
     end(data?: unknown) {
       if (data !== undefined) {
         res._body = data

@@ -87,6 +87,40 @@ describe('/api/elevenLabs', () => {
     expect(res._ended).toBe(true)
   })
 
+  it('should forward raw PCM chunks in streaming mode', async () => {
+    const firstChunk = new Uint8Array([1, 2, 3, 4])
+    const secondChunk = new Uint8Array([5, 6])
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(firstChunk)
+          controller.enqueue(secondChunk)
+          controller.close()
+        },
+      }),
+    })
+
+    const req = createMockReq({
+      query: { stream: 'true' },
+      body: { message: 'hello', apiKey: 'key', voiceId: 'v1' },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.elevenlabs.io/v1/text-to-speech/v1/stream?output_format=pcm_16000',
+      expect.any(Object)
+    )
+    expect(res._status).toBe(200)
+    expect(res._headers['Content-Type']).toBe('audio/pcm')
+    expect(res._headers['X-Accel-Buffering']).toBe('no')
+    expect(res._headers['Content-Length']).toBeUndefined()
+    expect(res._writes).toHaveLength(2)
+    expect(res._ended).toBe(true)
+  })
+
   it('should reject server env key usage when guard mode is not configured', async () => {
     process.env.ELEVENLABS_API_KEY = 'server-key'
     process.env.ELEVENLABS_VOICE_ID = 'server-voice'

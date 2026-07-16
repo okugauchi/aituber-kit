@@ -125,6 +125,11 @@ describe('プロファイル: self-host（サーバーキー利用 = unprotected
     expect(handler).toHaveBeenCalled()
   })
 
+  it('ローカル既定URLのAivisSpeechが通過する', async () => {
+    const { handler } = await invoke('/api/tts-aivisspeech', { body: {} })
+    expect(handler).toHaveBeenCalled()
+  })
+
   it('常時ガードのtts-googleが通過する', async () => {
     const { handler } = await invoke('/api/tts-google', { body: {} })
     expect(handler).toHaveBeenCalled()

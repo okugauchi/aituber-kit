@@ -317,7 +317,6 @@ describe('aiModels', () => {
           'medium',
           'high',
           'xhigh',
-          'max',
         ])
       }
 

@@ -1,4 +1,7 @@
-import { synthesizeVoiceOpenAIApi } from '@/features/messages/synthesizeVoiceOpenAI'
+import {
+  synthesizeVoiceOpenAIApi,
+  synthesizeVoiceOpenAIStreamApi,
+} from '@/features/messages/synthesizeVoiceOpenAI'
 import type { Talk } from '@/features/messages/messages'
 
 const mockFetch = jest.fn()
@@ -79,5 +82,50 @@ describe('synthesizeVoiceOpenAIApi', () => {
     await expect(
       synthesizeVoiceOpenAIApi(mockTalk, 'key', 'alloy', 'tts-1', 1.0)
     ).rejects.toThrow('OpenAI TTSで不明なエラーが発生しました')
+  })
+
+  it('should expose streamed PCM and observe the first chunk', async () => {
+    const firstChunk = jest.fn()
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2, 3]))
+        controller.close()
+      },
+    })
+    mockFetch.mockResolvedValue({ ok: true, body: upstream })
+
+    const result = await synthesizeVoiceOpenAIStreamApi(
+      mockTalk,
+      'key',
+      'alloy',
+      'tts-1',
+      1,
+      firstChunk
+    )
+    const reader = result.stream.getReader()
+    const chunk = await reader.read()
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/openAITTS?stream=true', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Hello world',
+        voice: 'alloy',
+        model: 'tts-1',
+        speed: 1,
+        apiKey: 'key',
+      }),
+    })
+    expect(result.sampleRate).toBe(24000)
+    expect(chunk.value).toEqual(new Uint8Array([1, 2, 3]))
+    expect(firstChunk).toHaveBeenCalledTimes(1)
+  })
+
+  it('should reject an empty streaming response', async () => {
+    mockFetch.mockResolvedValue({ ok: true, body: null })
+
+    await expect(
+      synthesizeVoiceOpenAIStreamApi(mockTalk, 'key', 'alloy', 'tts-1', 1)
+    ).rejects.toThrow('音声ストリームが空です')
   })
 })

@@ -27,6 +27,8 @@ import { processAIResponse } from './speechPipeline/processAIResponse'
  */
 export const handleSendChatFn =
   () => async (text: string, userName?: string) => {
+    const inputReceivedAt =
+      typeof performance !== 'undefined' ? performance.now() : Date.now()
     const newMessage = text
     const timestamp = new Date().toISOString()
 
@@ -246,7 +248,7 @@ export const handleSendChatFn =
       ]
 
       try {
-        await processAIResponse(messages)
+        await processAIResponse(messages, { inputReceivedAt })
       } catch (e) {
         logger.error(e)
         // 思考中ポーズのリセット

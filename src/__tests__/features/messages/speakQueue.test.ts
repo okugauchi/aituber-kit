@@ -65,7 +65,7 @@ function createTask(
   return {
     sessionId,
     audioBuffer: new ArrayBuffer(8),
-    talk: { style: 'talk', speakerX: 0, speakerY: 0, message: 'test' },
+    talk: { emotion: 'neutral' as const, message: 'test' },
     isNeedDecode: false,
     ...overrides,
   }
@@ -80,6 +80,7 @@ function createDeferred<T>() {
 }
 
 const mockModelSpeak = jest.fn().mockResolvedValue(undefined)
+const mockModelSpeakPcm16Stream = jest.fn().mockResolvedValue(undefined)
 const mockModelStopSpeaking = jest.fn()
 const mockModelPlayEmotion = jest.fn().mockResolvedValue(undefined)
 
@@ -91,6 +92,7 @@ function setupMocks(modelType = 'vrm') {
     viewer: {
       model: {
         speak: mockModelSpeak,
+        speakPcm16Stream: mockModelSpeakPcm16Stream,
         stopSpeaking: mockModelStopSpeaking,
         playEmotion: mockModelPlayEmotion,
       },
@@ -147,6 +149,29 @@ describe('SpeakQueue', () => {
         task.audioBuffer,
         task.talk,
         task.isNeedDecode
+      )
+    })
+
+    it('should process a PCM16 stream via the VRM model', async () => {
+      const queue = SpeakQueue.getInstance()
+      queue.checkSessionId('session1')
+      const stream = new ReadableStream<Uint8Array>()
+      const onPlaybackStart = jest.fn()
+
+      await queue.addTask({
+        sessionId: 'session1',
+        kind: 'pcm16-stream',
+        audioStream: stream,
+        sampleRate: 16000,
+        talk: { emotion: 'neutral', message: 'test' },
+        onPlaybackStart,
+      })
+
+      expect(mockModelSpeakPcm16Stream).toHaveBeenCalledWith(
+        stream,
+        expect.objectContaining({ message: 'test' }),
+        16000,
+        { onPlaybackStart }
       )
     })
 
