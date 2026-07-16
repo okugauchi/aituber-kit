@@ -43,12 +43,14 @@ export const processAIResponse = async (
     logger.error(e)
     thinkingPose.reset()
     homeStore.setState({ chatProcessing: false })
+    markConversationLatency(sessionId, 'response_complete')
     return
   }
 
   if (stream == null) {
     thinkingPose.reset()
     homeStore.setState({ chatProcessing: false })
+    markConversationLatency(sessionId, 'response_complete')
     return
   }
 

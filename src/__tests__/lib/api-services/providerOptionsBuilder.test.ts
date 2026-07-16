@@ -75,6 +75,20 @@ describe('buildReasoningProviderOptions', () => {
         openai: { reasoningEffort: 'minimal', reasoningSummary: 'detailed' },
       })
     })
+
+    it('uses service defaults when a custom model matches a standard model name', () => {
+      const result = buildReasoningProviderOptions(
+        'openai',
+        'gpt-5-pro',
+        true,
+        'low',
+        8192,
+        true
+      )
+      expect(result).toEqual({
+        openai: { reasoningEffort: 'low', reasoningSummary: 'detailed' },
+      })
+    })
   })
 
   describe('Azure', () => {

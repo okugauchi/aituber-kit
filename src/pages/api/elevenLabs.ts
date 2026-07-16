@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
 import { routePolicies } from '@/lib/accessPolicy/routePolicies'
+import { logger } from '@/lib/logger'
 
 type Data = {
   audio?: Buffer
@@ -115,9 +116,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
           const { done, value } = await reader.read()
           if (done) break
           if (value?.byteLength) {
-            res.write(Buffer.from(value))
+            const canContinue = res.write(Buffer.from(value))
+            if (!canContinue && !downstreamClosed) {
+              await new Promise<void>((resolve) => {
+                const resume = () => {
+                  res.off('drain', resume)
+                  res.off('close', resume)
+                  resolve()
+                }
+                res.once('drain', resume)
+                res.once('close', resume)
+              })
+            }
           }
         }
+      } catch (error) {
+        if (!downstreamClosed) {
+          logger.error('ElevenLabs PCM stream failed:', error)
+          res.end()
+        }
+        return
       } finally {
         res.off('close', cancelUpstream)
         reader.releaseLock()
@@ -139,6 +157,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     })
     res.end(fullBuffer)
   } catch (error) {
+    if (res.headersSent) {
+      logger.error('ElevenLabs response failed after streaming started:', error)
+      if (!res.writableEnded) res.end()
+      return
+    }
     res
       .status(500)
       .json({ error: error instanceof Error ? error.message : String(error) })

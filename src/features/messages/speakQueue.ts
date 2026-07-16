@@ -263,15 +263,22 @@ export class SpeakQueue {
               )
             }
           }
-          const { onComplete } = task
-          onComplete?.()
         } catch (error) {
+          if (task.kind === 'pcm16-stream') {
+            await task.audioStream.cancel(error).catch(() => {})
+          }
           logger.error(
             'An error occurred while processing the speech synthesis task:',
             error
           )
           if (error instanceof Error) {
             logger.error('Error details:', error.message)
+          }
+        } finally {
+          try {
+            task.onComplete?.()
+          } catch (error) {
+            logger.error('Speech synthesis completion callback failed:', error)
           }
         }
       }

@@ -82,9 +82,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           const { done, value } = await reader.read()
           if (done) break
           if (value?.byteLength) {
-            res.write(Buffer.from(value))
+            const canContinue = res.write(Buffer.from(value))
+            if (!canContinue && !downstreamClosed) {
+              await new Promise<void>((resolve) => {
+                const resume = () => {
+                  res.off('drain', resume)
+                  res.off('close', resume)
+                  resolve()
+                }
+                res.once('drain', resume)
+                res.once('close', resume)
+              })
+            }
           }
         }
+      } catch (error) {
+        if (!downstreamClosed) {
+          logger.error('OpenAI TTS PCM stream failed:', error)
+          res.end()
+        }
+        return
       } finally {
         res.off('close', cancelUpstream)
         reader.releaseLock()
@@ -102,6 +119,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     res.send(buffer)
   } catch (error) {
     logger.error('OpenAI TTS error:', error)
+    if (res.headersSent) {
+      if (!res.writableEnded) res.end()
+      return
+    }
     res.status(500).json({ error: 'Failed to generate speech' })
   }
 }

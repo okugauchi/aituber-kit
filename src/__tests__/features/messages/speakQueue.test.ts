@@ -175,6 +175,27 @@ describe('SpeakQueue', () => {
       )
     })
 
+    it('should cancel a PCM16 stream and complete when the renderer is unsupported', async () => {
+      setupMocks('live2d')
+      const cancel = jest.fn()
+      const stream = new ReadableStream<Uint8Array>({ cancel })
+      const onComplete = jest.fn()
+      const queue = SpeakQueue.getInstance()
+      queue.checkSessionId('session1')
+
+      await queue.addTask({
+        sessionId: 'session1',
+        kind: 'pcm16-stream',
+        audioStream: stream,
+        sampleRate: 16000,
+        talk: { emotion: 'neutral', message: 'test' },
+        onComplete,
+      })
+
+      expect(cancel).toHaveBeenCalledTimes(1)
+      expect(onComplete).toHaveBeenCalledTimes(1)
+    })
+
     it('should process via Live2DHandler when modelType is live2d', async () => {
       setupMocks('live2d')
       const queue = SpeakQueue.getInstance()

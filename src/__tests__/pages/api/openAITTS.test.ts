@@ -2,74 +2,10 @@
  * @jest-environment node
  */
 
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '@/pages/api/openAITTS'
+import { createMockReq, createMockRes } from '../../helpers/apiRouteTestUtils'
 
 const originalFetch = global.fetch
-
-function createMockReq(
-  overrides: Partial<NextApiRequest> = {}
-): NextApiRequest {
-  return {
-    method: 'POST',
-    body: {},
-    query: {},
-    ...overrides,
-  } as NextApiRequest
-}
-
-function createMockRes() {
-  const res = {
-    _status: 200,
-    _json: null as unknown,
-    _body: null as unknown,
-    _chunks: [] as Buffer[],
-    _headers: {} as Record<string, string>,
-    status(code: number) {
-      res._status = code
-      return res
-    },
-    json(data: unknown) {
-      res._json = data
-      return res
-    },
-    send(data: unknown) {
-      res._body = data
-      return res
-    },
-    setHeader(key: string, value: string) {
-      res._headers[key] = value
-      return res
-    },
-    writeHead(code: number, headers: Record<string, string>) {
-      res._status = code
-      Object.assign(res._headers, headers)
-      return res
-    },
-    flushHeaders() {},
-    write(data: Buffer) {
-      res._chunks.push(data)
-      return true
-    },
-    once() {
-      return res
-    },
-    off() {
-      return res
-    },
-    end(data?: Buffer) {
-      if (data) res._chunks.push(data)
-      return res
-    },
-  }
-  return res as unknown as NextApiResponse & {
-    _status: number
-    _json: unknown
-    _body: unknown
-    _chunks: Buffer[]
-    _headers: Record<string, string>
-  }
-}
 
 describe('/api/openAITTS', () => {
   beforeEach(() => {
@@ -205,7 +141,112 @@ describe('/api/openAITTS', () => {
     expect(requestBody.response_format).toBe('pcm')
     expect(res._headers['Content-Type']).toBe('audio/pcm')
     expect(res._headers['X-Audio-Sample-Rate']).toBe('24000')
-    expect(Buffer.concat(res._chunks)).toEqual(Buffer.from([1, 2, 3, 4]))
+    expect(Buffer.concat(res._writeChunks as Buffer[])).toEqual(
+      Buffer.from([1, 2, 3, 4])
+    )
+  })
+
+  it('should wait for drain before reading the next PCM chunk', async () => {
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2]))
+        controller.enqueue(new Uint8Array([3, 4]))
+        controller.close()
+      },
+    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(upstream, { status: 200 })
+    )
+    const req = createMockReq({
+      query: { stream: 'true' },
+      body: {
+        message: 'hello',
+        voice: 'alloy',
+        model: 'tts-1',
+        speed: 1,
+        apiKey: 'key',
+      },
+    })
+    const res = createMockRes()
+    jest
+      .spyOn(res, 'write')
+      .mockImplementationOnce((chunk) => {
+        res._writeChunks.push(chunk)
+        queueMicrotask(() => res._emit('drain'))
+        return false
+      })
+      .mockImplementationOnce((chunk) => {
+        res._writeChunks.push(chunk)
+        return true
+      })
+
+    await handler(req, res)
+
+    expect(res.write).toHaveBeenCalledTimes(2)
+    expect(res._ended).toBe(true)
+  })
+
+  it('should cancel the upstream PCM stream when the client disconnects', async () => {
+    const cancel = jest.fn()
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2]))
+      },
+      cancel,
+    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(upstream, { status: 200 })
+    )
+    const req = createMockReq({
+      query: { stream: 'true' },
+      body: {
+        message: 'hello',
+        voice: 'alloy',
+        model: 'tts-1',
+        speed: 1,
+        apiKey: 'key',
+      },
+    })
+    const res = createMockRes()
+    jest.spyOn(res, 'write').mockImplementation((chunk) => {
+      res._writeChunks.push(chunk)
+      res._emit('close')
+      return true
+    })
+
+    await handler(req, res)
+    await Promise.resolve()
+
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('should end an already-started PCM response when upstream reading fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    const upstream = new ReadableStream<Uint8Array>({
+      pull() {
+        throw new Error('stream failed')
+      },
+    })
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(upstream, { status: 200 })
+    )
+    const req = createMockReq({
+      query: { stream: 'true' },
+      body: {
+        message: 'hello',
+        voice: 'alloy',
+        model: 'tts-1',
+        speed: 1,
+        apiKey: 'key',
+      },
+    })
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(200)
+    expect(res._json).toBeNull()
+    expect(res._ended).toBe(true)
   })
 
   it('should add emotional instructions for gpt-4o model', async () => {

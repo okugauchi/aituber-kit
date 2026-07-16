@@ -65,4 +65,32 @@ describe('LipSync PCM16 streaming', () => {
     expect(starts[0]).toBeLessThan(starts[1])
     expect(onStarted).toHaveBeenCalledTimes(1)
   })
+
+  it('does not restart a pending stream after playback is stopped', async () => {
+    const createBufferSource = jest.fn()
+    const audioContext = {
+      state: 'suspended',
+      currentTime: 0,
+      destination: {},
+      createAnalyser: jest.fn(() => ({
+        getFloatTimeDomainData: jest.fn(),
+      })),
+      createBuffer: jest.fn(),
+      createBufferSource,
+      resume: jest.fn().mockResolvedValue(undefined),
+    }
+    const lipSync = new LipSync(audioContext as unknown as AudioContext)
+    const playback = lipSync.playPcm16Stream(
+      new ReadableStream<Uint8Array>(),
+      undefined,
+      16000
+    )
+
+    await Promise.resolve()
+    lipSync.stopCurrentPlayback()
+    window.dispatchEvent(new Event('click'))
+    await playback
+
+    expect(createBufferSource).not.toHaveBeenCalled()
+  })
 })

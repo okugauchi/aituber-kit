@@ -123,6 +123,33 @@ describe('vercelAIChat', () => {
       expect(result.text).toBe('Errors.InvalidAPIKey')
     })
 
+    it('customModel設定をVercel APIへ渡す', async () => {
+      ;(settingsStore.getState as jest.Mock).mockReturnValue({
+        selectAIService: 'openai',
+        openaiKey: 'test-openai-key',
+        selectAIModel: 'gpt-5-pro',
+        localLlmUrl: '',
+        azureEndpoint: '',
+        useSearchGrounding: false,
+        temperature: 0.7,
+        maxTokens: 1000,
+        reasoningMode: true,
+        reasoningEffort: 'low',
+        reasoningTokenBudget: 8192,
+        customModel: true,
+        selectLanguage: 'ja',
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ text: 'response' }),
+      })
+
+      await getVercelAIChatResponse(testMessages)
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+      expect(requestBody.customModel).toBe(true)
+    })
+
     it('カスタムAPIモードでシステムメッセージをフィルタリングする', async () => {
       ;(settingsStore.getState as jest.Mock).mockReturnValue({
         selectAIService: 'custom-api',

@@ -11,13 +11,14 @@ export function buildReasoningProviderOptions(
   model: string,
   reasoningMode: boolean,
   reasoningEffort: string,
-  reasoningTokenBudget: number
+  reasoningTokenBudget: number,
+  customModel: boolean = false
 ): Record<string, Record<string, unknown>> | undefined {
   if (!reasoningMode) return undefined
 
   switch (service) {
     case 'openai': {
-      const supportedEfforts = getReasoningEfforts('openai', model)
+      const supportedEfforts = getReasoningEfforts('openai', model, customModel)
       const normalizedEffort =
         supportedEfforts.length > 0 &&
         !(supportedEfforts as readonly string[]).includes(reasoningEffort)

@@ -86,7 +86,46 @@ describe('synthesizeVoiceElevenlabsApi', () => {
 
   it('should expose PCM16 chunks without buffering the full response', async () => {
     const onFirstChunk = jest.fn()
-    const chunk = new Uint8Array([1, 2, 3, 4])
+    const firstChunk = new Uint8Array([1, 2, 3, 4])
+    const secondChunk = new Uint8Array([5, 6])
+    mockFetch.mockResolvedValue({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(firstChunk)
+          controller.enqueue(secondChunk)
+          controller.close()
+        },
+      }),
+    })
+
+    const result = await synthesizeVoiceElevenlabsStreamApi(
+      mockTalk,
+      'key',
+      'voice-id',
+      'ja',
+      onFirstChunk
+    )
+    const reader = result.stream.getReader()
+
+    await expect(reader.read()).resolves.toEqual({
+      done: false,
+      value: firstChunk,
+    })
+    await expect(reader.read()).resolves.toEqual({
+      done: false,
+      value: secondChunk,
+    })
+    expect(result.sampleRate).toBe(16000)
+    expect(onFirstChunk).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/elevenLabs?stream=true',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('should continue streaming when the first chunk observer throws', async () => {
+    const chunk = new Uint8Array([1, 2])
     mockFetch.mockResolvedValue({
       ok: true,
       body: new ReadableStream({
@@ -102,17 +141,15 @@ describe('synthesizeVoiceElevenlabsApi', () => {
       'key',
       'voice-id',
       'ja',
-      onFirstChunk
+      () => {
+        throw new Error('observer failed')
+      }
     )
-    const reader = result.stream.getReader()
 
-    await expect(reader.read()).resolves.toEqual({ done: false, value: chunk })
-    expect(result.sampleRate).toBe(16000)
-    expect(onFirstChunk).toHaveBeenCalledTimes(1)
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/elevenLabs?stream=true',
-      expect.objectContaining({ method: 'POST' })
-    )
+    await expect(result.stream.getReader().read()).resolves.toEqual({
+      done: false,
+      value: chunk,
+    })
   })
 
   it('should reject an empty streaming response body', async () => {

@@ -1,6 +1,7 @@
 import { Talk } from './messages'
 import { Language } from '@/features/constants/settings'
 import { synthesizeVoiceApi } from './synthesizeVoiceApi'
+import { logger } from '@/lib/logger'
 
 export async function synthesizeVoiceOpenAIApi(
   talk: Talk,
@@ -73,7 +74,11 @@ export async function synthesizeVoiceOpenAIStreamApi(
         }
         if (!firstChunkReceived && value.byteLength > 0) {
           firstChunkReceived = true
-          onFirstChunk?.()
+          try {
+            onFirstChunk?.()
+          } catch (error) {
+            logger.warn('OpenAI TTS first chunk observer failed:', error)
+          }
         }
         controller.enqueue(value)
       } catch (error) {

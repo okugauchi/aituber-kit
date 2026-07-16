@@ -1,6 +1,7 @@
 import { Talk } from './messages'
 import { Language } from '@/features/constants/settings'
 import { synthesizeVoiceApi } from './synthesizeVoiceApi'
+import { logger } from '@/lib/logger'
 
 export async function synthesizeVoiceElevenlabsApi(
   talk: Talk,
@@ -63,7 +64,11 @@ export async function synthesizeVoiceElevenlabsStreamApi(
         }
         if (!firstChunkReceived && value.byteLength > 0) {
           firstChunkReceived = true
-          onFirstChunk?.()
+          try {
+            onFirstChunk?.()
+          } catch (error) {
+            logger.warn('ElevenLabs first chunk observer failed:', error)
+          }
         }
         controller.enqueue(value)
       } catch (error) {

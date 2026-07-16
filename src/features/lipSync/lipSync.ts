@@ -160,12 +160,14 @@ export class LipSync {
     sampleRate: number = 24000,
     onStarted?: () => void
   ) {
+    const queuedGeneration = this.streamPlaybackGeneration
     // AudioContextが準備できているか確認
     const isReady = await this.ensureAudioContextReady()
 
     if (!isReady) {
       // ユーザーインタラクションを待つ
       this.pendingPlaybacks.push(() => {
+        if (queuedGeneration !== this.streamPlaybackGeneration) return
         this.playFromArrayBuffer(
           buffer,
           onEnded,
@@ -251,10 +253,15 @@ export class LipSync {
     sampleRate: number = 16000,
     onStarted?: () => void
   ): Promise<void> {
+    const queuedGeneration = this.streamPlaybackGeneration
     const isReady = await this.ensureAudioContextReady()
     if (!isReady) {
       await new Promise<void>((resolve) => {
         this.pendingPlaybacks.push(() => {
+          if (queuedGeneration !== this.streamPlaybackGeneration) {
+            resolve()
+            return
+          }
           void this.playPcm16Stream(
             stream,
             onEnded,

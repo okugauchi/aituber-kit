@@ -47,6 +47,7 @@ async function handler(
     reasoningMode = false,
     reasoningEffort = 'medium',
     reasoningTokenBudget = 8192,
+    customModel = false,
   } = req.body
 
   // APIキーの取得と検証
@@ -158,7 +159,8 @@ async function handler(
       modifiedModel,
       reasoningMode,
       reasoningEffort,
-      reasoningTokenBudget
+      reasoningTokenBudget,
+      customModel
     )
 
     // ストリーミングレスポンスまたは一括レスポンスの生成
