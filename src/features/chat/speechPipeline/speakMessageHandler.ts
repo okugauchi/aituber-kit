@@ -1,8 +1,9 @@
 import { generateMessageId } from '@/utils/messageUtils'
-import { SpeechSegmenter } from './speechSegmenter'
+import { getFirstSpeechCommaMinChars, SpeechSegmenter } from './speechSegmenter'
 import { NormalizedMessageLogWriter } from './messageLogWriter'
 import { createSpeechDispatcher } from './speechDispatcher'
 import { SegmenterEvent } from './types'
+import settingsStore from '@/features/stores/settings'
 
 /**
  * 受け取った完成テキストを処理し、発話させる。
@@ -17,7 +18,11 @@ export const speakMessageHandler = async (receivedMessage: string) => {
   const sessionId = generateMessageId()
   const writer = new NormalizedMessageLogWriter()
   const dispatcher = createSpeechDispatcher(sessionId)
-  const segmenter = new SpeechSegmenter()
+  const segmenter = new SpeechSegmenter({
+    firstSpeechCommaMinChars: getFirstSpeechCommaMinChars(
+      settingsStore.getState().selectVoice
+    ),
+  })
 
   const handleEvent = (event: SegmenterEvent) => {
     writer.handleEvent(event)

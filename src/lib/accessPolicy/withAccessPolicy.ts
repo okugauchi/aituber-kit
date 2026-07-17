@@ -48,7 +48,13 @@ export interface PolicyGate {
    * secret.kind === 'dynamic' のルート専用の遅延ガード。
    * false が返ったらレスポンス送信済みなので即 return すること。
    */
-  guardServerSecret(usesServerSecret: boolean): boolean
+  guardServerSecret(
+    usesServerSecret: boolean,
+    options?: {
+      /** 動的URLルートで、同一マシンのループバック接続だけdisabledでも許可する */
+      allowLocalLoopbackUrl?: URL
+    }
+  ): boolean
 }
 
 export type PolicyGuardedHandler = (
@@ -268,11 +274,19 @@ export function withAccessPolicy(
     const gate: PolicyGate = {
       usesServerSecret,
       serverUrl: resolvedServerUrl,
-      guardServerSecret: (dynamicUsesServerSecret: boolean): boolean => {
+      guardServerSecret: (dynamicUsesServerSecret, options): boolean => {
         if (policy.secret.kind !== 'dynamic') {
           throw new Error(
             `guardServerSecret() is only available for secret.kind === 'dynamic' routes (${policy.path})`
           )
+        }
+        const allowsDynamicLocalLoopback =
+          Boolean(options?.allowLocalLoopbackUrl) &&
+          isServerSecretAccessDisabled() &&
+          isLoopbackHost(options?.allowLocalLoopbackUrl?.hostname || '') &&
+          isSameMachineLoopbackRequest(req)
+        if (allowsDynamicLocalLoopback) {
+          return true
         }
         if (!dynamicUsesServerSecret) {
           return true

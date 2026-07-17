@@ -5,14 +5,20 @@ import { wait } from '@/utils/wait'
 import { Talk } from './messages'
 import { synthesizeStyleBertVITS2Api } from './synthesizeStyleBertVITS2'
 import { synthesizeVoiceKoeiromapApi } from './synthesizeVoiceKoeiromap'
-import { synthesizeVoiceElevenlabsApi } from './synthesizeVoiceElevenlabs'
+import {
+  synthesizeVoiceElevenlabsApi,
+  synthesizeVoiceElevenlabsStreamApi,
+} from './synthesizeVoiceElevenlabs'
 import { synthesizeVoiceCartesiaApi } from './synthesizeVoiceCartesia'
 import { synthesizeVoiceGoogleApi } from './synthesizeVoiceGoogle'
 import { synthesizeVoiceVoicevoxApi } from './synthesizeVoiceVoicevox'
 import { synthesizeVoiceAivisSpeechApi } from './synthesizeVoiceAivisSpeech'
 import { synthesizeVoiceAivisCloudApi } from './synthesizeVoiceAivisCloudApi'
 import { synthesizeVoiceGSVIApi } from './synthesizeVoiceGSVI'
-import { synthesizeVoiceOpenAIApi } from './synthesizeVoiceOpenAI'
+import {
+  synthesizeVoiceOpenAIApi,
+  synthesizeVoiceOpenAIStreamApi,
+} from './synthesizeVoiceOpenAI'
 import { synthesizeVoiceAzureOpenAIApi } from './synthesizeVoiceAzureOpenAI'
 import toastStore from '@/features/stores/toast'
 import i18next from 'i18next'
@@ -22,17 +28,51 @@ import {
   asyncConvertEnglishToJapaneseReading,
   containsEnglish,
 } from '@/utils/textProcessing'
+import { markConversationLatency } from '@/features/chat/conversationLatency'
 
 const speakQueue = SpeakQueue.getInstance()
 const SYNTHESIS_START_GAP_MS = 250
 
+type SynthesizedSpeech =
+  | {
+      kind: 'buffer'
+      audioBuffer: ArrayBuffer
+      isNeedDecode: boolean
+    }
+  | {
+      kind: 'pcm16-stream'
+      audioStream: ReadableStream<Uint8Array>
+      sampleRate: number
+    }
+
 type PendingSpeakResult = {
   sessionId: string
-  audioBuffer: ArrayBuffer | null
+  audio: SynthesizedSpeech | null
   talk: Talk
-  isNeedDecode: boolean
   onComplete?: () => void
   tokenAtStart: number
+}
+
+function disposeSynthesizedSpeech(
+  audio: SynthesizedSpeech | null | undefined,
+  onDisposed?: () => void
+): void {
+  const complete = () => {
+    try {
+      onDisposed?.()
+    } catch (error) {
+      logger.error('Discarded speech completion callback failed:', error)
+    }
+  }
+
+  if (audio?.kind === 'pcm16-stream') {
+    void audio.audioStream
+      .cancel('speech discarded')
+      .catch(() => {})
+      .then(complete)
+    return
+  }
+  complete()
 }
 
 export function preprocessMessage(
@@ -202,7 +242,9 @@ const createSpeakCharacter = () => {
   const pendingResults = new Map<number, PendingSpeakResult>()
 
   const resetPendingResults = (sessionId: string) => {
-    pendingResults.forEach((result) => result.onComplete?.())
+    pendingResults.forEach((result) => {
+      disposeSynthesizedSpeech(result.audio, result.onComplete)
+    })
     pendingResults.clear()
     currentSessionId = sessionId
     nextSynthesisOrder = 0
@@ -220,21 +262,22 @@ const createSpeakCharacter = () => {
         continue
       }
 
-      if (!result.audioBuffer) {
+      if (!result.audio) {
         result.onComplete?.()
         continue
       }
 
       if (result.tokenAtStart !== SpeakQueue.currentStopToken) {
-        result.onComplete?.()
+        disposeSynthesizedSpeech(result.audio, result.onComplete)
         continue
       }
 
       void speakQueue.addTask({
         sessionId: result.sessionId,
-        audioBuffer: result.audioBuffer,
         talk: result.talk,
-        isNeedDecode: result.isNeedDecode,
+        ...result.audio,
+        onPlaybackStart: () =>
+          markConversationLatency(result.sessionId, 'playback_started'),
         onComplete: result.onComplete,
       })
     }
@@ -323,15 +366,59 @@ const createSpeakCharacter = () => {
         }
       }
 
-      let buffer
+      let audio: SynthesizedSpeech | null
       try {
         if (talk.message == '' && talk.buffer) {
-          buffer = talk.buffer
+          audio = {
+            kind: 'buffer',
+            audioBuffer: talk.buffer,
+            isNeedDecode: false,
+          }
           isNeedDecode = false
         } else if (talk.message !== '') {
-          buffer = await synthesizeVoice(talk, ss.selectVoice)
+          markConversationLatency(sessionId, 'tts_request_started')
+          if (
+            ss.selectVoice === 'elevenlabs' &&
+            getCharacterRenderer()?.speakPcm16Stream
+          ) {
+            const streamed = await synthesizeVoiceElevenlabsStreamApi(
+              talk,
+              ss.elevenlabsApiKey,
+              ss.elevenlabsVoiceId,
+              ss.selectLanguage,
+              () => markConversationLatency(sessionId, 'first_audio_chunk')
+            )
+            audio = {
+              kind: 'pcm16-stream',
+              audioStream: streamed.stream,
+              sampleRate: streamed.sampleRate,
+            }
+          } else if (
+            ss.selectVoice === 'openai' &&
+            getCharacterRenderer()?.speakPcm16Stream
+          ) {
+            const streamed = await synthesizeVoiceOpenAIStreamApi(
+              talk,
+              ss.openaiKey,
+              ss.openaiTTSVoice,
+              ss.openaiTTSModel,
+              ss.openaiTTSSpeed,
+              () => markConversationLatency(sessionId, 'first_audio_chunk')
+            )
+            audio = {
+              kind: 'pcm16-stream',
+              audioStream: streamed.stream,
+              sampleRate: streamed.sampleRate,
+            }
+          } else {
+            const buffer = await synthesizeVoice(talk, ss.selectVoice)
+            audio = buffer
+              ? { kind: 'buffer', audioBuffer: buffer, isNeedDecode }
+              : null
+          }
+          markConversationLatency(sessionId, 'tts_ready')
         } else {
-          buffer = null
+          audio = null
         }
       } catch (error) {
         handleTTSError(error, ss.selectVoice)
@@ -340,9 +427,8 @@ const createSpeakCharacter = () => {
 
       return {
         sessionId,
-        audioBuffer: buffer,
+        audio,
         talk,
-        isNeedDecode,
         onComplete: guardedOnComplete,
         tokenAtStart: initialToken,
       }
@@ -351,15 +437,14 @@ const createSpeakCharacter = () => {
     processAndSynthesizePromise
       .then((result) => {
         if (currentSessionId !== sessionId) {
-          guardedOnComplete()
+          disposeSynthesizedSpeech(result?.audio, guardedOnComplete)
           return
         }
 
         pendingResults.set(synthesisOrder, {
           sessionId,
-          audioBuffer: result?.audioBuffer ?? null,
+          audio: result?.audio ?? null,
           talk,
-          isNeedDecode: result?.isNeedDecode ?? isNeedDecode,
           onComplete: guardedOnComplete,
           tokenAtStart: result?.tokenAtStart ?? initialToken,
         })
@@ -373,9 +458,8 @@ const createSpeakCharacter = () => {
         }
         pendingResults.set(synthesisOrder, {
           sessionId,
-          audioBuffer: null,
+          audio: null,
           talk,
-          isNeedDecode,
           onComplete: guardedOnComplete,
           tokenAtStart: initialToken,
         })

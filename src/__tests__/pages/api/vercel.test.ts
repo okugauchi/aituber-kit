@@ -79,6 +79,8 @@ describe('/api/ai/vercel handler', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     process.env = { ...originalEnv }
+    delete process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE
+    delete process.env.AITUBERKIT_ALLOWED_LLM_SERVER_ORIGINS
     mockCreateAIRegistry.mockReturnValue(mockRegistry as any)
   })
 
@@ -168,6 +170,154 @@ describe('/api/ai/vercel handler', () => {
     })
   })
 
+  it.each(['ollama', 'lmstudio'])(
+    'allows same-machine %s loopback URLs by default',
+    async (aiService) => {
+      mockModifyMessages.mockReturnValue([
+        { role: 'user', content: 'hello' },
+      ] as any)
+      mockGenerateAiText.mockResolvedValue(
+        new Response('done', { status: 200 })
+      )
+      const localLlmUrl =
+        aiService === 'ollama'
+          ? 'http://127.0.0.1:11434'
+          : 'http://localhost:1234/v1'
+      const { req, res } = createMocks({
+        method: 'POST',
+        headers: { host: 'localhost:3000' },
+        body: {
+          messages: [],
+          apiKey: '',
+          aiService,
+          model: 'local-model',
+          localLlmUrl,
+          stream: false,
+          temperature: 1,
+          maxTokens: 10,
+        },
+      })
+      req.socket.remoteAddress = '127.0.0.1'
+
+      await handler(req as any, res as any)
+
+      expect(res._getStatusCode()).toBe(200)
+      expect(mockCreateAIRegistry).toHaveBeenCalledWith(aiService, {
+        apiKey: '',
+        baseURL: localLlmUrl,
+        resourceName: '',
+      })
+      expect(mockGenerateAiText).toHaveBeenCalled()
+    }
+  )
+
+  it('rejects remote requests to local LLM loopback URLs by default', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'aituberkit.example.com' },
+      body: {
+        messages: [],
+        apiKey: '',
+        aiService: 'ollama',
+        model: 'llama3',
+        localLlmUrl: 'http://127.0.0.1:11434',
+        stream: false,
+        temperature: 1,
+        maxTokens: 10,
+      },
+    })
+    req.socket.remoteAddress = '198.51.100.20'
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).toBe(403)
+    expect(res._getJSONData()).toEqual(
+      expect.objectContaining({
+        errorCode: 'ServerSecretAccessDenied',
+        feature: 'ai/vercel',
+      })
+    )
+    expect(mockCreateAIRegistry).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-HTTP local LLM URLs', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: '',
+        aiService: 'lmstudio',
+        model: 'local-model',
+        localLlmUrl: 'file:///etc/passwd',
+        stream: false,
+        temperature: 1,
+        maxTokens: 10,
+      },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).toBe(400)
+    expect(res._getJSONData()).toEqual({
+      error: 'Invalid Local LLM URL protocol',
+      errorCode: 'AIInvalidProperty',
+    })
+    expect(mockCreateAIRegistry).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-allowlisted public local LLM URLs', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: '',
+        aiService: 'lmstudio',
+        model: 'local-model',
+        localLlmUrl: 'https://llm.example/v1',
+        stream: false,
+        temperature: 1,
+        maxTokens: 10,
+      },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).toBe(400)
+    expect(res._getJSONData()).toEqual({
+      error: 'Local LLM URL is not allowed',
+      errorCode: 'AIInvalidProperty',
+    })
+    expect(mockCreateAIRegistry).not.toHaveBeenCalled()
+  })
+
+  it('allows explicitly allowlisted public local LLM URLs', async () => {
+    process.env.AITUBERKIT_ALLOWED_LLM_SERVER_ORIGINS = 'https://llm.example'
+    mockModifyMessages.mockReturnValue([{ role: 'user', content: 'hi' }] as any)
+    mockGenerateAiText.mockResolvedValue(new Response('done', { status: 200 }))
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: '',
+        aiService: 'lmstudio',
+        model: 'local-model',
+        localLlmUrl: 'https://llm.example/v1',
+        stream: false,
+        temperature: 1,
+        maxTokens: 10,
+      },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(res._getStatusCode()).toBe(200)
+    expect(mockCreateAIRegistry).toHaveBeenCalledWith('lmstudio', {
+      apiKey: '',
+      baseURL: 'https://llm.example/v1',
+      resourceName: '',
+    })
+  })
+
   it('streams google responses with search grounding using env API key', async () => {
     process.env.GOOGLE_KEY = 'env-google'
     process.env.AITUBERKIT_SERVER_SECRET_ACCESS_MODE = 'unprotected'
@@ -247,6 +397,38 @@ describe('/api/ai/vercel handler', () => {
       resourceName: '',
     })
     expect(mockGenerateAiText).toHaveBeenCalled()
+  })
+
+  it('uses custom OpenAI model reasoning defaults', async () => {
+    mockModifyMessages.mockReturnValue([{ role: 'user', content: 'hi' }] as any)
+    mockGenerateAiText.mockResolvedValue(new Response('done', { status: 200 }))
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        messages: [],
+        apiKey: 'openai-key',
+        aiService: 'openai',
+        model: 'gpt-5-pro',
+        stream: false,
+        reasoningMode: true,
+        reasoningEffort: 'low',
+        reasoningTokenBudget: 8192,
+        customModel: true,
+      },
+    })
+
+    await handler(req as any, res as any)
+
+    expect(mockGenerateAiText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low',
+            reasoningSummary: 'detailed',
+          },
+        },
+      })
+    )
   })
 
   it('calls generateAiText for azure requests using deployment name', async () => {

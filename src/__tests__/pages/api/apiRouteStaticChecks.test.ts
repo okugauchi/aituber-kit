@@ -249,8 +249,9 @@ describe('API route static checks', () => {
           const file = routeFilePath(policyPath)
           const source = fs.readFileSync(file, 'utf8')
           const callsServerUrlGuard =
-            /isAllowedConfiguredOrListedUrl\s*\(/.test(source) &&
-            /isHttpUrl\s*\(/.test(source)
+            (/isAllowedConfiguredOrListedUrl\s*\(/.test(source) &&
+              /isHttpUrl\s*\(/.test(source)) ||
+            /guardLocalLlmUrl\s*\(/.test(source)
           if (!callsServerUrlGuard) {
             violations.push(policyPath)
           }

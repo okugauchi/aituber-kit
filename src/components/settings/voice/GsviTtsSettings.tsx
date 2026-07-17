@@ -26,7 +26,7 @@ export const GsviTtsSettings = ({
         <input
           className={settingsControlClass.long}
           type="text"
-          placeholder="..."
+          placeholder="http://127.0.0.1:5000/tts"
           value={gsviTtsServerUrl}
           onChange={(e) =>
             settingsStore.setState({

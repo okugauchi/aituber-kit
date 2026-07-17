@@ -41,6 +41,7 @@ import {
 import {
   googleSearchGroundingModels,
   defaultModels,
+  getReasoningEfforts,
 } from '../constants/aiModels'
 import { migrateOpenAIModelName } from '@/utils/modelMigration'
 
@@ -417,8 +418,7 @@ const getInitialValuesFromEnv = (): SettingsState => ({
     0.2,
   stylebertvits2Length:
     parseFloat(process.env.NEXT_PUBLIC_STYLEBERTVITS2_LENGTH || '1.0') || 1.0,
-  gsviTtsServerUrl:
-    process.env.NEXT_PUBLIC_GSVI_TTS_URL || 'http://127.0.0.1:5000/tts',
+  gsviTtsServerUrl: process.env.NEXT_PUBLIC_GSVI_TTS_URL || '',
   gsviTtsModelId: process.env.NEXT_PUBLIC_GSVI_TTS_MODEL_ID || '0',
   gsviTtsBatchSize:
     parseInt(process.env.NEXT_PUBLIC_GSVI_TTS_BATCH_SIZE || '2') || 2,
@@ -964,6 +964,29 @@ const settingsMigrationSteps: Record<number, SettingsMigrationStep> = {
       typeof migrated.selectAIModel === 'string'
     ) {
       migrated.selectAIModel = migrateOpenAIModelName(migrated.selectAIModel)
+    }
+    return migrated
+  },
+  6: (state) => {
+    const migrated = { ...state }
+    if (
+      migrated.selectAIService === 'openai' &&
+      typeof migrated.selectAIModel === 'string' &&
+      migrated.customModel !== true &&
+      migrated.reasoningEffort
+    ) {
+      const supportedEfforts = getReasoningEfforts(
+        'openai',
+        migrated.selectAIModel
+      )
+      if (
+        supportedEfforts.length > 0 &&
+        !supportedEfforts.includes(migrated.reasoningEffort)
+      ) {
+        migrated.reasoningEffort = supportedEfforts.includes('medium')
+          ? 'medium'
+          : supportedEfforts[0]
+      }
     }
     return migrated
   },
