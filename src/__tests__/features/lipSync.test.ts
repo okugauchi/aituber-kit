@@ -166,7 +166,7 @@ describe('LipSync PCM16 streaming', () => {
 
     sourceNodes.slice(0, 5).forEach((source) => source.onended?.())
     await allScheduled
-    sourceNodes.forEach((source) => source.onended?.())
+    sourceNodes.slice(5).forEach((source) => source.onended?.())
     await playback
 
     expect(sourceNodes).toHaveLength(20)
