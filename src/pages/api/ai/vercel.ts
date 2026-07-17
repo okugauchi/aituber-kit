@@ -18,6 +18,7 @@ import { pipeResponse } from '@/utils/pipeResponse'
 import { withAccessPolicy } from '@/lib/accessPolicy/withAccessPolicy'
 import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
 import { routePolicies } from '@/lib/accessPolicy/routePolicies'
+import { guardLocalLlmUrl } from '@/lib/accessPolicy/guardLocalLlmUrl'
 
 export const config = {
   api: {
@@ -81,6 +82,9 @@ async function handler(
         error: 'Empty Local LLM URL',
         errorCode: 'EmptyLocalLLMURL',
       })
+    }
+    if (!guardLocalLlmUrl(res, gate, localLlmUrl)) {
+      return
     }
   }
 

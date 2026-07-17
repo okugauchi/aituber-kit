@@ -418,8 +418,7 @@ const getInitialValuesFromEnv = (): SettingsState => ({
     0.2,
   stylebertvits2Length:
     parseFloat(process.env.NEXT_PUBLIC_STYLEBERTVITS2_LENGTH || '1.0') || 1.0,
-  gsviTtsServerUrl:
-    process.env.NEXT_PUBLIC_GSVI_TTS_URL || 'http://127.0.0.1:5000/tts',
+  gsviTtsServerUrl: process.env.NEXT_PUBLIC_GSVI_TTS_URL || '',
   gsviTtsModelId: process.env.NEXT_PUBLIC_GSVI_TTS_MODEL_ID || '0',
   gsviTtsBatchSize:
     parseInt(process.env.NEXT_PUBLIC_GSVI_TTS_BATCH_SIZE || '2') || 2,

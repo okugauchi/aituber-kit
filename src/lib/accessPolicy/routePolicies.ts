@@ -67,7 +67,7 @@ export const routePolicies = {
     path: '/api/ai/vercel',
     featureName: 'ai/vercel',
     methods: ['POST'],
-    resources: ['server-secret'],
+    resources: ['server-secret', 'server-url'],
     // サービス名から `${SERVICE}_KEY` / `${SERVICE}_API_KEY` を動的合成
     secret: { kind: 'dynamic' },
     restrictedBehavior: 'none',
@@ -358,6 +358,24 @@ export const routePolicies = {
     secret: { kind: 'always' },
     restrictedBehavior: 'none',
   },
+  '/api/tts-gsvi': {
+    path: '/api/tts-gsvi',
+    featureName: 'tts-gsvi',
+    methods: ['POST'],
+    resources: ['server-secret', 'server-url'],
+    secret: {
+      kind: 'pairs',
+      pairs: [{ source: 'body', key: 'serverUrl', envVars: ['GSVI_TTS_URL'] }],
+    },
+    serverUrl: {
+      source: 'body',
+      key: 'serverUrl',
+      envVar: 'GSVI_TTS_URL',
+      defaultUrl: 'http://127.0.0.1:5000/tts',
+      allowLocalLoopback: true,
+    },
+    restrictedBehavior: 'none',
+  },
   '/api/tts-koeiromap': {
     path: '/api/tts-koeiromap',
     featureName: 'tts-koeiromap',
@@ -471,7 +489,7 @@ export const routePolicies = {
     path: '/api/youtube/continuation',
     featureName: 'youtube/continuation',
     methods: ['POST'],
-    resources: ['server-secret'],
+    resources: ['server-secret', 'server-url'],
     secret: { kind: 'dynamic' },
     restrictedBehavior: 'none',
   },
