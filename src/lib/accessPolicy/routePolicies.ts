@@ -398,6 +398,7 @@ export const routePolicies = {
       key: 'serverUrl',
       envVar: 'AIVIS_SPEECH_SERVER_URL',
       defaultUrl: 'http://127.0.0.1:10101',
+      allowLocalLoopback: true,
     },
     restrictedBehavior: 'deny',
   },
