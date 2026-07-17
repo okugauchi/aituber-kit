@@ -1,5 +1,5 @@
 import type { NextApiResponse } from 'next'
-import type { PolicyGate } from './withAccessPolicy'
+import type { PolicyGate } from '@/lib/accessPolicy/withAccessPolicy'
 import {
   isAllowedConfiguredOrListedUrl,
   isHttpUrl,

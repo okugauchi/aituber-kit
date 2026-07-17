@@ -133,4 +133,21 @@ describe('/api/tts-gsvi', () => {
     expect(res._status).toBe(503)
     expect(res._json).toEqual({ error: 'GSVI API returned status 503' })
   })
+
+  it.each([
+    ['message', { message: undefined }],
+    ['character', { character: '' }],
+    ['batchSize', { batchSize: Number.NaN }],
+    ['speed', { speed: null }],
+  ])('rejects an invalid %s before calling GSVI', async (_field, override) => {
+    const req = createLocalRequest()
+    req.body = { ...req.body, ...override }
+    const res = createMockRes()
+
+    await handler(req, res)
+
+    expect(res._status).toBe(400)
+    expect(res._json).toEqual({ error: 'Invalid GSVI request body' })
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
 })

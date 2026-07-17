@@ -20,6 +20,19 @@ async function handler(
   const { message, character, batchSize, speed } = req.body as RequestBody
   const serverUrl = gate.serverUrl!.raw.replace(/\/$/, '')
 
+  if (
+    typeof message !== 'string' ||
+    message.length === 0 ||
+    typeof character !== 'string' ||
+    character.length === 0 ||
+    typeof batchSize !== 'number' ||
+    !Number.isFinite(batchSize) ||
+    typeof speed !== 'number' ||
+    !Number.isFinite(speed)
+  ) {
+    return res.status(400).json({ error: 'Invalid GSVI request body' })
+  }
+
   try {
     const response = await fetch(serverUrl, {
       method: 'POST',
