@@ -15,16 +15,17 @@ aituber-kitで `develop => main` PRをマージし、新しいマイナーバー
 - タグは軽量タグで作成する。
 - GitHub Release本文は `develop => main` PR本文を転記するが、CodeRabbit自動生成ブロックとCodeRabbit由来の文言は含めない。
 - main checkoutに未追跡のネストrepo等がある場合、checkoutせず `git branch -f main origin/main` で参照だけ更新する。
-- 最終報告では、更新内容をできるだけ簡潔なリストで提示する。
-- 更新内容はコードブロックで共有し、次の形式にする。
+- 最終報告では、更新内容を関連するテーマごとにまとめ、詳細は入れ子のリストで簡潔に提示する。
+- Discord共有用の文面はコードブロックに入れ、リリースURLはMarkdownリンクにせず裸URLで末尾に置く。
+- 次の形式にする。
 
 ```markdown
 ## vX.Y.0
-
-- XXX
-- XXX
-
-[https://github.com/tegnike/aituber-kit/releases/tag/vX.Y.0](https://github.com/tegnike/aituber-kit/releases/tag/vX.Y.0)
+- XXXを改善
+  - XXXに対応
+  - XXXを修正
+- XXXを追加
+https://github.com/tegnike/aituber-kit/releases/tag/vX.Y.0
 ```
 
 ## 手順
