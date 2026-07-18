@@ -1,5 +1,9 @@
 import { generateMessageId } from '@/utils/messageUtils'
-import { THINKING_MARKER, TOOL_MARKER, ERROR_MARKER } from '@/features/chat/vercelAIChat'
+import {
+  THINKING_MARKER,
+  TOOL_MARKER,
+  ERROR_MARKER,
+} from '@/features/chat/vercelAIChat'
 import { getFirstSpeechCommaMinChars, SpeechSegmenter } from './speechSegmenter'
 import { NormalizedMessageLogWriter } from './messageLogWriter'
 import { createSpeechDispatcher } from './speechDispatcher'

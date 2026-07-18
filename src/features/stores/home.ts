@@ -38,6 +38,10 @@ export interface TransientState {
   decrementChatProcessingCount: () => void
   upsertMessage: (message: Partial<Message>) => void
   backgroundImageUrl: string
+  backgroundImageList: string[]
+  currentBackgroundIndex: number
+  backgroundSwitchMode: 'manual' | 'timer'
+  backgroundSwitchInterval: number
   modalImage: string
   triggerShutter: boolean
   webcamStatus: boolean
@@ -258,6 +262,13 @@ const homeStore = create<HomeState>()(
       backgroundImageUrl:
         process.env.NEXT_PUBLIC_BACKGROUND_IMAGE_PATH ??
         '/backgrounds/bg-c.png',
+      backgroundImageList: [
+        process.env.NEXT_PUBLIC_BACKGROUND_IMAGE_PATH ??
+          '/backgrounds/bg-c.png',
+      ],
+      currentBackgroundIndex: 0,
+      backgroundSwitchMode: 'manual',
+      backgroundSwitchInterval: 30,
       modalImage: '',
       triggerShutter: false,
       webcamStatus: false,

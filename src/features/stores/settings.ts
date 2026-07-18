@@ -651,13 +651,11 @@ const getInitialValuesFromEnv = (): SettingsState => ({
       | 'sunset') || 'default',
   uiDropShadowEnabled:
     process.env.NEXT_PUBLIC_UI_DROP_SHADOW_ENABLED !== 'false',
-  uiDarkMode:
-    process.env.NEXT_PUBLIC_UI_DARK_MODE !== 'false',
-  bottomPaneOpacity:
-    parseEnvInt(
-      process.env.NEXT_PUBLIC_BOTTOM_PANE_OPACITY,
-      60
-    ),
+  uiDarkMode: process.env.NEXT_PUBLIC_UI_DARK_MODE !== 'false',
+  bottomPaneOpacity: parseEnvInt(
+    process.env.NEXT_PUBLIC_BOTTOM_PANE_OPACITY,
+    60
+  ),
 
   // Custom model toggle
   customModel: process.env.NEXT_PUBLIC_CUSTOM_MODEL === 'true',

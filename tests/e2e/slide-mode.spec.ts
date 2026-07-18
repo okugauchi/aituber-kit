@@ -43,7 +43,7 @@ test.beforeEach(async ({ page }) => {
       },
     },
     settings: {
-      slideMode: true,      // start with slide mode enabled
+      slideMode: true, // start with slide mode enabled
       youtubeMode: false,
       gameCommentaryEnabled: false,
       selectAIService: 'openai',

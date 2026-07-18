@@ -11,12 +11,14 @@ export interface AIChatResponseStreamOptions {
 
 /** ユーザーメッセージに `@hermes` が含まれているか判定 */
 const isHermesRequest = (messages: Message[]): boolean => {
-  const lastUserMessage = [...messages].reverse().find(
-    (m) => m.role === 'user' && typeof m.content === 'string'
-  )
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((m) => m.role === 'user' && typeof m.content === 'string')
   if (!lastUserMessage) return false
   const content = lastUserMessage.content
-  return typeof content === 'string' && content.toLowerCase().includes('@hermes')
+  return (
+    typeof content === 'string' && content.toLowerCase().includes('@hermes')
+  )
 }
 
 export async function getAIChatResponseStream(
@@ -37,9 +39,15 @@ export async function getAIChatResponseStream(
     if (useGateway) {
       // Gateway ルート: .env のデフォルト設定にリセット（oMLX ルートで上書きされた場合に備えて）
       settingsStore.setState({
-        customApiUrl: process.env.NEXT_PUBLIC_CUSTOM_API_URL || 'http://127.0.0.1:8642/v1/chat/completions',
-        customApiHeaders: process.env.NEXT_PUBLIC_CUSTOM_API_HEADERS || '{"Authorization": "Bearer change-me-local-dev"}',
-        customApiBody: process.env.NEXT_PUBLIC_CUSTOM_API_BODY || '{"model": "hermes-agent"}',
+        customApiUrl:
+          process.env.NEXT_PUBLIC_CUSTOM_API_URL ||
+          'http://127.0.0.1:8642/v1/chat/completions',
+        customApiHeaders:
+          process.env.NEXT_PUBLIC_CUSTOM_API_HEADERS ||
+          '{"Authorization": "Bearer change-me-local-dev"}',
+        customApiBody:
+          process.env.NEXT_PUBLIC_CUSTOM_API_BODY ||
+          '{"model": "hermes-agent"}',
         includeSystemMessagesInCustomApi: true,
       })
     } else {

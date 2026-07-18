@@ -1,5 +1,9 @@
 import { logger } from '@/lib/logger'
-import { THINKING_MARKER, TOOL_MARKER, ERROR_MARKER } from '@/features/chat/vercelAIChat'
+import {
+  THINKING_MARKER,
+  TOOL_MARKER,
+  ERROR_MARKER,
+} from '@/features/chat/vercelAIChat'
 import { SpeechSegmenter } from './speechSegmenter'
 import { SegmenterEvent } from './types'
 

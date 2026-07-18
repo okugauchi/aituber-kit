@@ -35,6 +35,10 @@ const Based = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
+  const backgroundImageList = homeStore((s) => s.backgroundImageList)
+  const currentBackgroundIndex = homeStore((s) => s.currentBackgroundIndex)
+  const backgroundSwitchMode = homeStore((s) => s.backgroundSwitchMode)
+  const backgroundSwitchInterval = homeStore((s) => s.backgroundSwitchInterval)
 
   useEffect(() => {
     setIsLoading(true)
@@ -82,7 +86,15 @@ const Based = () => {
       }
 
       const { path } = await response.json()
-      homeStore.setState({ backgroundImageUrl: path })
+      const state = homeStore.getState()
+      const updatedList = state.backgroundImageList.includes(path)
+        ? state.backgroundImageList
+        : [...state.backgroundImageList, path]
+      homeStore.setState({
+        backgroundImageUrl: path,
+        backgroundImageList: updatedList,
+        currentBackgroundIndex: updatedList.indexOf(path),
+      })
 
       // バックグラウンドリストを更新
       setIsLoading(true)
@@ -171,6 +183,7 @@ const Based = () => {
         {error && <div className="my-2 text-red-500">{error}</div>}
         {uploadError && <div className="my-2 text-red-500">{uploadError}</div>}
 
+        {/* Single background selector (original) */}
         <div className="flex flex-col mb-4">
           <select
             className={settingsControlClass.medium}
@@ -212,6 +225,114 @@ const Based = () => {
           >
             {isUploading ? t('Uploading') : t('UploadBackground')}
           </TextButton>
+        </div>
+
+        {/* Multi-background management */}
+        <div className="border-t border-gray-300 pt-4 my-4">
+          <div className="my-2 text-lg font-bold">Multi-Background</div>
+
+          {/* Background list */}
+          <div className="my-2 space-y-1">
+            {backgroundImageList.map((url, index) => (
+              <div
+                key={`bg-${index}`}
+                className={`flex items-center gap-2 text-sm py-1 px-2 rounded ${
+                  index === currentBackgroundIndex
+                    ? 'bg-blue-500/20 border border-blue-500'
+                    : 'bg-gray-800/20'
+                }`}
+              >
+                <span className="flex-1 truncate">{url}</span>
+                {index === currentBackgroundIndex && (
+                  <span className="text-blue-300 text-xs">(active)</span>
+                )}
+                <button
+                  className="text-red-400 hover:text-red-300 text-xs ml-2"
+                  onClick={() => {
+                    const newList = backgroundImageList.filter(
+                      (_, i) => i !== index
+                    )
+                    if (newList.length === 0) {
+                      newList.push('/backgrounds/bg-c.png')
+                    }
+                    homeStore.setState({
+                      backgroundImageList: newList,
+                      currentBackgroundIndex: Math.min(
+                        currentBackgroundIndex,
+                        newList.length - 1
+                      ),
+                      backgroundImageUrl:
+                        newList[
+                          Math.min(currentBackgroundIndex, newList.length - 1)
+                        ] || newList[0],
+                    })
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add current background to list */}
+          <div className="my-2">
+            <TextButton
+              onClick={() => {
+                const alreadyInList =
+                  backgroundImageList.includes(backgroundImageUrl)
+                if (!alreadyInList) {
+                  homeStore.setState({
+                    backgroundImageList: [
+                      ...backgroundImageList,
+                      backgroundImageUrl,
+                    ],
+                  })
+                }
+              }}
+              disabled={backgroundImageList.includes(backgroundImageUrl)}
+            >
+              Add current to list
+            </TextButton>
+          </div>
+
+          {/* Switch mode */}
+          <div className="my-2 flex items-center gap-2">
+            <span className="text-sm">Switch mode:</span>
+            <select
+              className="text-xs bg-transparent border border-white/30 rounded px-2 py-1"
+              value={backgroundSwitchMode}
+              onChange={(e) =>
+                homeStore.setState({
+                  backgroundSwitchMode: e.target.value as 'manual' | 'timer',
+                })
+              }
+            >
+              <option value="manual">Manual</option>
+              <option value="timer">Timer</option>
+            </select>
+          </div>
+
+          {/* Timer interval */}
+          {backgroundSwitchMode === 'timer' && (
+            <div className="my-2 flex items-center gap-2">
+              <span className="text-sm">Interval (s):</span>
+              <input
+                type="number"
+                min="5"
+                max="3600"
+                className="w-16 bg-transparent border border-white/30 rounded px-2 py-1 text-sm"
+                value={backgroundSwitchInterval}
+                onChange={(e) =>
+                  homeStore.setState({
+                    backgroundSwitchInterval: Math.max(
+                      5,
+                      Number(e.target.value)
+                    ),
+                  })
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -405,9 +526,7 @@ const Based = () => {
           <div className="my-2">
             <ToggleSwitch
               enabled={settingsStore((s) => s.uiDarkMode)}
-              onChange={(v) =>
-                settingsStore.setState({ uiDarkMode: v })
-              }
+              onChange={(v) => settingsStore.setState({ uiDarkMode: v })}
             />
           </div>
         </div>

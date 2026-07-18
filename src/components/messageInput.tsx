@@ -500,13 +500,17 @@ export const MessageInput = ({
 
           <div
             className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} aurora-glass-capsule flex items-end gap-1.5 rounded-[31px] p-2 pl-2.5 sm:gap-2`}
-            style={uiDarkMode ? {
-              background: `rgba(51,45,45,${bottomPaneOpacity / 100})`,
-              color: '#ffffff',
-              borderColor: 'rgba(255,255,255,0.18)',
-            } : {
-              background: `rgba(255,255,255,${0.58 * (bottomPaneOpacity / 60)})`,
-            }}
+            style={
+              uiDarkMode
+                ? {
+                    background: `rgba(51,45,45,${bottomPaneOpacity / 100})`,
+                    color: '#ffffff',
+                    borderColor: 'rgba(255,255,255,0.18)',
+                  }
+                : {
+                    background: `rgba(255,255,255,${0.58 * (bottomPaneOpacity / 60)})`,
+                  }
+            }
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >

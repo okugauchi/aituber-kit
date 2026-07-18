@@ -258,7 +258,9 @@ export const Menu = () => {
         </div>
       )}
 
-      <div className={`absolute m-3 sm:m-6 ${slideVisible ? 'z-[60]' : 'z-15'}`}>
+      <div
+        className={`absolute m-3 sm:m-6 ${slideVisible ? 'z-[60]' : 'z-15'}`}
+      >
         <div
           className="aurora-glass-dock relative mb-10 grid grid-flow-col gap-2 rounded-[18px] p-1.5"
           style={{ width: 'max-content' }}
@@ -346,9 +348,19 @@ export const Menu = () => {
                 >
                   <ToolMenuButton
                     iconName="screen-share"
-                    label={showCapture ? (t('StopScreenShare', 'Stop screen sharing') as string) : t('ScreenShare')}
+                    label={
+                      showCapture
+                        ? (t(
+                            'StopScreenShare',
+                            'Stop screen sharing'
+                          ) as string)
+                        : t('ScreenShare')
+                    }
                     active={showCapture}
-                    onClick={() => { toggleCapture(); setShowToolMenu(false) }}
+                    onClick={() => {
+                      toggleCapture()
+                      setShowToolMenu(false)
+                    }}
                     title={t('CaptureButtonTitle')}
                     data-testid="capture-toggle-button"
                   />
@@ -356,7 +368,10 @@ export const Menu = () => {
                     iconName="24/Camera"
                     label={t('Camera')}
                     active={showWebcam}
-                    onClick={() => { toggleWebcam(); setShowToolMenu(false) }}
+                    onClick={() => {
+                      toggleWebcam()
+                      setShowToolMenu(false)
+                    }}
                     title={t('WebcamButtonTitle')}
                   />
                   {isMultiModalAvailable(
@@ -369,7 +384,10 @@ export const Menu = () => {
                       <ToolMenuButton
                         iconName="24/AddImage"
                         label={t('SelectImage')}
-                        onClick={() => { imageFileInputRef.current?.click(); setShowToolMenu(false) }}
+                        onClick={() => {
+                          imageFileInputRef.current?.click()
+                          setShowToolMenu(false)
+                        }}
                         title={t('AddImageButtonTitle')}
                       />
                       <input
@@ -394,7 +412,9 @@ export const Menu = () => {
                   {youtubeMode && (
                     <ToolMenuButton
                       iconName={youtubePlaying ? '24/PauseAlt' : '24/Video'}
-                      label={youtubePlaying ? t('PauseYoutube') : t('StartYoutube')}
+                      label={
+                        youtubePlaying ? t('PauseYoutube') : t('StartYoutube')
+                      }
                       active={youtubePlaying}
                       onClick={() => {
                         settingsStore.setState({
@@ -409,10 +429,21 @@ export const Menu = () => {
                   )}
                   {gameCommentaryEnabled && (
                     <ToolMenuButton
-                      iconName={gameCommentaryPlaying ? '24/PauseAlt' : 'game-controller'}
-                      label={gameCommentaryPlaying ? t('PauseGameCommentary') : t('StartGameCommentary')}
+                      iconName={
+                        gameCommentaryPlaying
+                          ? '24/PauseAlt'
+                          : 'game-controller'
+                      }
+                      label={
+                        gameCommentaryPlaying
+                          ? t('PauseGameCommentary')
+                          : t('StartGameCommentary')
+                      }
                       active={gameCommentaryPlaying}
-                      onClick={() => { toggleGameCommentary(); setShowToolMenu(false) }}
+                      onClick={() => {
+                        toggleGameCommentary()
+                        setShowToolMenu(false)
+                      }}
                       title={t('PresetTabTitle')}
                       aria-pressed={gameCommentaryPlaying}
                       data-testid="game-commentary-play-toggle-button"
@@ -492,7 +523,15 @@ export const Menu = () => {
           const file = e.target.files?.[0]
           if (file) {
             const imageUrl = URL.createObjectURL(file)
-            homeStore.setState({ backgroundImageUrl: imageUrl })
+            const state = homeStore.getState()
+            const updatedList = state.backgroundImageList.includes(imageUrl)
+              ? state.backgroundImageList
+              : [...state.backgroundImageList, imageUrl]
+            homeStore.setState({
+              backgroundImageUrl: imageUrl,
+              backgroundImageList: updatedList,
+              currentBackgroundIndex: updatedList.indexOf(imageUrl),
+            })
           }
         }}
       />

@@ -389,12 +389,18 @@ const GlassChat = ({
             ? 'rounded-[16px_16px_4px_16px] bg-primary text-white'
             : 'rounded-[16px_16px_16px_4px] text-[var(--aurora-text-medium)]'
         }`}
-        style={!isUser && uiDarkMode ? {
-          background: 'rgba(17, 19, 28, 0.58)',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
-        } : !isUser ? {
-          background: 'rgba(255, 255, 255, 0.8)',
-        } : undefined}
+        style={
+          !isUser && uiDarkMode
+            ? {
+                background: 'rgba(17, 19, 28, 0.58)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+              }
+            : !isUser
+              ? {
+                  background: 'rgba(255, 255, 255, 0.8)',
+                }
+              : undefined
+        }
       >
         {thinking && !isUser && (
           <div className="mb-2">
@@ -598,7 +604,9 @@ const ClassicChat = ({
           <code className="font-mono text-xs sm:text-sm">{message}</code>
         </pre>
       ) : (
-        <div className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base`}>
+        <div
+          className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base`}
+        >
           <div className="mb-2 flex items-center gap-2">
             <span
               className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-bold ${roleBadge}`}

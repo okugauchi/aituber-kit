@@ -65,6 +65,36 @@ const Home = () => {
     ]
   )
 
+  // Background switch timer
+  const backgroundImageList = homeStore((s) => s.backgroundImageList)
+  const currentBackgroundIndex = homeStore((s) => s.currentBackgroundIndex)
+  const backgroundSwitchMode = homeStore((s) => s.backgroundSwitchMode)
+  const backgroundSwitchInterval = homeStore((s) => s.backgroundSwitchInterval)
+
+  useEffect(() => {
+    if (backgroundSwitchMode !== 'timer' || backgroundImageList.length <= 1) {
+      return
+    }
+
+    const interval = backgroundSwitchInterval * 1000
+    const timer = setInterval(() => {
+      const state = homeStore.getState()
+      const nextIndex =
+        (state.currentBackgroundIndex + 1) % state.backgroundImageList.length
+      const nextUrl = state.backgroundImageList[nextIndex]
+      homeStore.setState({
+        currentBackgroundIndex: nextIndex,
+        backgroundImageUrl: nextUrl,
+      })
+    }, interval)
+
+    return () => clearInterval(timer)
+  }, [
+    backgroundSwitchMode,
+    backgroundSwitchInterval,
+    backgroundImageList.length,
+  ])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.shiftKey) {

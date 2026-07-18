@@ -129,8 +129,7 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
 
   // Build CSS filter value
   const cssFilter = image.filter === 'none' ? 'none' : image.filter
-  const cssBlendMode =
-    image.blendMode === 'normal' ? 'normal' : image.blendMode
+  const cssBlendMode = image.blendMode === 'normal' ? 'normal' : image.blendMode
 
   return (
     <div
@@ -155,7 +154,7 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
         style={{
           opacity: image.opacity,
           filter: cssFilter,
-          mixBlendMode: cssBlendMode,
+          mixBlendMode: cssBlendMode as React.CSSProperties['mixBlendMode'],
         }}
       />
 
@@ -181,7 +180,9 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
                 updatePlacedImageOpacity(image.id, val)
               }}
             />
-            <span className="w-8 text-right">{Math.round(image.opacity * 100)}%</span>
+            <span className="w-8 text-right">
+              {Math.round(image.opacity * 100)}%
+            </span>
           </div>
 
           {/* Rotation slider */}
@@ -211,7 +212,11 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
               }}
             >
               {BLEND_MODES.map((mode) => (
-                <option key={mode} value={mode} className="bg-gray-800 text-white">
+                <option
+                  key={mode}
+                  value={mode}
+                  className="bg-gray-800 text-white"
+                >
                   {mode}
                 </option>
               ))}
@@ -229,7 +234,11 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
               }}
             >
               {FILTER_PRESETS.map((preset) => (
-                <option key={preset.value} value={preset.value} className="bg-gray-800 text-white">
+                <option
+                  key={preset.value}
+                  value={preset.value}
+                  className="bg-gray-800 text-white"
+                >
                   {preset.label}
                 </option>
               ))}

@@ -47,7 +47,9 @@ export const AssistantText = ({ message }: { message: string }) => {
     <div
       className={`absolute bottom-0 left-1/2 z-10 flex w-full max-w-[90vw] -translate-x-1/2 justify-center px-3 ${shouldShowPresetQuestions ? 'mb-[150px] sm:mb-[182px]' : 'mb-[86px] sm:mb-[104px]'}`}
     >
-      <div className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} animate-aurora-bubble-in aurora-glass-bubble flex w-full flex-col items-start gap-1.5 rounded-[20px] px-[22px] pb-4 pt-3.5`}>
+      <div
+        className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} animate-aurora-bubble-in aurora-glass-bubble flex w-full flex-col items-start gap-1.5 rounded-[20px] px-[22px] pb-4 pt-3.5`}
+      >
         {showCharacterName && (
           <span className="rounded-full bg-primary px-2.5 py-[3px] text-[11px] font-bold tracking-[0.06em] text-white">
             {characterName}

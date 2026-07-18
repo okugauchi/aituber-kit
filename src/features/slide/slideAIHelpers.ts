@@ -7,9 +7,7 @@ import { isMultiModalAvailable } from '@/features/constants/aiModels'
  * なく、oMLX (9000) を直接呼ぶ。Gateway (8642) はエージェント処理で
  * 遅延するため、スライド判定のような軽量タスクには oMLX を使う。
  */
-async function directCustomApiRequest(
-  messages: Message[],
-): Promise<string> {
+async function directCustomApiRequest(messages: Message[]): Promise<string> {
   const url = 'http://127.0.0.1:9000/v1/chat/completions'
 
   const apiBody = JSON.stringify({
@@ -30,7 +28,11 @@ async function directCustomApiRequest(
       return '{"judge": "false", "page": ""}'
     }
     const data = await res.json()
-    const rawContent = data.choices?.[0]?.message?.content || data.content || data.text || '{"judge": "false", "page": ""}'
+    const rawContent =
+      data.choices?.[0]?.message?.content ||
+      data.content ||
+      data.text ||
+      '{"judge": "false", "page": ""}'
     // oMLX は JSON をマークダウンコードブロックで包む場合があるので抽出する
     // 最初の `{` から最後の `}` までを抽出
     const braceStart = rawContent.indexOf('{')
@@ -104,9 +106,8 @@ Based on the user's comment and the content of both the script document and supp
   }
 
   // 通常モードは既存の Vercel AI SDK 経由
-  const { getVercelAIChatResponse } = await import(
-    '@/features/chat/vercelAIChat'
-  )
+  const { getVercelAIChatResponse } =
+    await import('@/features/chat/vercelAIChat')
   const response = await getVercelAIChatResponse([
     { role: 'system', content: systemMessage },
     { role: 'user', content: queryText },

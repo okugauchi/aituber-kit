@@ -367,7 +367,9 @@ export async function getVercelAIChatResponseStream(
                       tag: 'vercel-api-error',
                     })
                     // エラーマーカーをストリームに出力
-                    controller.enqueue(ERROR_MARKER + (data.errorText || 'Unknown error') + '\n')
+                    controller.enqueue(
+                      ERROR_MARKER + (data.errorText || 'Unknown error') + '\n'
+                    )
                   }
                   // その他のイベント（start, finish, text-start, text-end等）は無視
                 } catch (error) {
