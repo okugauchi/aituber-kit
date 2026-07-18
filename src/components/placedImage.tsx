@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useDraggable } from '@/hooks/useDraggable'
 import { useResizable } from '@/hooks/useResizable'
 import useImagesStore, {
@@ -13,12 +13,49 @@ interface PlacedImageProps {
   onSizeChange?: (id: string, size: { width: number; height: number }) => void
 }
 
+const BLEND_MODES = [
+  'normal',
+  'multiply',
+  'screen',
+  'overlay',
+  'darken',
+  'lighten',
+  'color-dodge',
+  'color-burn',
+  'hard-light',
+  'soft-light',
+  'difference',
+  'exclusion',
+  'hue',
+  'saturation',
+  'color',
+  'luminosity',
+] as const
+
+const FILTER_PRESETS = [
+  { label: 'None', value: 'none' },
+  { label: 'Blur', value: 'blur(2px)' },
+  { label: 'Grayscale', value: 'grayscale(100%)' },
+  { label: 'Sepia', value: 'sepia(80%)' },
+  { label: 'Brightness', value: 'brightness(1.5)' },
+  { label: 'Contrast', value: 'contrast(1.5)' },
+  { label: 'Blur+Gray', value: 'blur(1px) grayscale(50%)' },
+] as const
+
 const PlacedImage: React.FC<PlacedImageProps> = ({
   image,
   onPositionChange,
   onSizeChange,
 }) => {
-  const { updatePlacedImagePosition, updatePlacedImageSize } = useImagesStore()
+  const {
+    updatePlacedImagePosition,
+    updatePlacedImageSize,
+    updatePlacedImageOpacity,
+    updatePlacedImageRotation,
+    updatePlacedImageBlendMode,
+    updatePlacedImageFilter,
+  } = useImagesStore()
+  const [showControls, setShowControls] = useState(false)
 
   // Debounced update functions
   const debouncedPositionUpdate = useMemo(
@@ -90,6 +127,11 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
     }
   }, [isResizing, size, image.size, handleSizeChange])
 
+  // Build CSS filter value
+  const cssFilter = image.filter === 'none' ? 'none' : image.filter
+  const cssBlendMode =
+    image.blendMode === 'normal' ? 'normal' : image.blendMode
+
   return (
     <div
       className="absolute select-none group"
@@ -100,6 +142,8 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
         zIndex: image.zIndex,
         transform: `translate(${position.x}px, ${position.y}px)`,
       }}
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
     >
       {/* Image */}
       <img
@@ -108,7 +152,91 @@ const PlacedImage: React.FC<PlacedImageProps> = ({
         className="w-full h-full object-contain"
         draggable={false}
         onMouseDown={handleMouseDown}
+        style={{
+          opacity: image.opacity,
+          filter: cssFilter,
+          mixBlendMode: cssBlendMode,
+        }}
       />
+
+      {/* Property controls */}
+      {showControls && !isDragging && !isResizing && (
+        <div
+          className="absolute -top-32 left-0 right-0 bg-gray-900/80 backdrop-blur rounded-lg p-2 space-y-1 z-50 pointer-events-auto"
+          style={{ width: 'max-content', minWidth: '160px' }}
+          onMouseEnter={() => setShowControls(true)}
+          onMouseLeave={() => setShowControls(false)}
+        >
+          {/* Opacity slider */}
+          <div className="flex items-center gap-2 text-xs text-white">
+            <label className="w-12 shrink-0">Opacity</label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(image.opacity * 100)}
+              className="flex-1 h-1 accent-blue-500"
+              onChange={(e) => {
+                const val = Number(e.target.value) / 100
+                updatePlacedImageOpacity(image.id, val)
+              }}
+            />
+            <span className="w-8 text-right">{Math.round(image.opacity * 100)}%</span>
+          </div>
+
+          {/* Rotation slider */}
+          <div className="flex items-center gap-2 text-xs text-white">
+            <label className="w-12 shrink-0">Rotate</label>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={image.rotation}
+              className="flex-1 h-1 accent-green-500"
+              onChange={(e) => {
+                updatePlacedImageRotation(image.id, Number(e.target.value))
+              }}
+            />
+            <span className="w-8 text-right">{image.rotation}°</span>
+          </div>
+
+          {/* Blend mode dropdown */}
+          <div className="flex items-center gap-2 text-xs text-white">
+            <label className="w-12 shrink-0">Blend</label>
+            <select
+              value={image.blendMode}
+              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-0.5 text-white text-xs"
+              onChange={(e) => {
+                updatePlacedImageBlendMode(image.id, e.target.value)
+              }}
+            >
+              {BLEND_MODES.map((mode) => (
+                <option key={mode} value={mode} className="bg-gray-800 text-white">
+                  {mode}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter preset dropdown */}
+          <div className="flex items-center gap-2 text-xs text-white">
+            <label className="w-12 shrink-0">Filter</label>
+            <select
+              value={image.filter}
+              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-0.5 text-white text-xs"
+              onChange={(e) => {
+                updatePlacedImageFilter(image.id, e.target.value)
+              }}
+            >
+              {FILTER_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value} className="bg-gray-800 text-white">
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Resize handles */}
       {!isDragging && (

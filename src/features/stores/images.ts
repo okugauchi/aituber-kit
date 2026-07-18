@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { IMAGE_CONSTANTS } from '@/constants/images'
 
 export interface UploadedImage {
   filename: string
@@ -21,6 +22,10 @@ export interface PlacedImage {
   }
   zIndex: number
   behindCharacter: boolean
+  opacity: number
+  rotation: number
+  blendMode: string
+  filter: string
 }
 
 export interface LayerItem {
@@ -61,6 +66,10 @@ interface ImagesState {
   ) => void
   updatePlacedImageZIndex: (id: string, zIndex: number) => void
   updateImageLayerPosition: (id: string, behindCharacter: boolean) => void
+  updatePlacedImageOpacity: (id: string, opacity: number) => void
+  updatePlacedImageRotation: (id: string, rotation: number) => void
+  updatePlacedImageBlendMode: (id: string, blendMode: string) => void
+  updatePlacedImageFilter: (id: string, filter: string) => void
   reorderPlacedImages: (startIndex: number, endIndex: number) => void
   reorderAllLayers: (startIndex: number, endIndex: number) => void
   getAllLayerItems: () => LayerItem[]
@@ -90,8 +99,8 @@ const useImagesStore = create<ImagesState>()(
       addPlacedImage: (filename, path) => {
         const { placedImages } = get()
 
-        // Check if we already have 5 images placed
-        if (placedImages.length >= 5) {
+        // Check if we already have the maximum number of images placed
+        if (placedImages.length >= IMAGE_CONSTANTS.MAX_PLACED_IMAGES) {
           return
         }
 
@@ -105,7 +114,7 @@ const useImagesStore = create<ImagesState>()(
           filename,
           path,
           position: {
-            x: 100 + placedImages.length * 50, // Offset each new image
+            x: 100 + placedImages.length * 50,
             y: 100 + placedImages.length * 50,
           },
           size: {
@@ -113,7 +122,11 @@ const useImagesStore = create<ImagesState>()(
             height: 150,
           },
           zIndex: placedImages.length,
-          behindCharacter: false, // Default to in front of character
+          behindCharacter: false,
+          opacity: 1.0,
+          rotation: 0,
+          blendMode: 'normal',
+          filter: 'none',
         }
 
         set((state) => ({
@@ -162,16 +175,44 @@ const useImagesStore = create<ImagesState>()(
           )
 
           behindImages.forEach((img, index) => {
-            img.zIndex = index + 1 // z-index 1-4 (behind character at z-5)
+            img.zIndex = index + 1
           })
 
           frontImages.forEach((img, index) => {
-            img.zIndex = index + 6 // z-index 6+ (in front of character at z-5)
+            img.zIndex = index + 6
           })
 
           return { placedImages: updatedImages }
         })
       },
+
+      updatePlacedImageOpacity: (id, opacity) =>
+        set((state) => ({
+          placedImages: state.placedImages.map((img) =>
+            img.id === id ? { ...img, opacity } : img
+          ),
+        })),
+
+      updatePlacedImageRotation: (id, rotation) =>
+        set((state) => ({
+          placedImages: state.placedImages.map((img) =>
+            img.id === id ? { ...img, rotation } : img
+          ),
+        })),
+
+      updatePlacedImageBlendMode: (id, blendMode) =>
+        set((state) => ({
+          placedImages: state.placedImages.map((img) =>
+            img.id === id ? { ...img, blendMode } : img
+          ),
+        })),
+
+      updatePlacedImageFilter: (id, filter) =>
+        set((state) => ({
+          placedImages: state.placedImages.map((img) =>
+            img.id === id ? { ...img, filter } : img
+          ),
+        })),
 
       reorderPlacedImages: (startIndex, endIndex) => {
         set((state) => {

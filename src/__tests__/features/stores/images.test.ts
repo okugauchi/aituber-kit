@@ -28,6 +28,10 @@ describe('Images Store', () => {
         position: { x: 100, y: 100 },
         size: { width: 200, height: 150 },
         behindCharacter: false,
+        opacity: 1.0,
+        rotation: 0,
+        blendMode: 'normal',
+        filter: 'none',
       })
     })
 
@@ -42,14 +46,15 @@ describe('Images Store', () => {
       expect(placedImages[1].zIndex).toBe(1)
     })
 
-    it('should not add more than 5 images', () => {
+    it('should not add more than MAX_PLACED_IMAGES images', () => {
+      const maxImages = IMAGE_CONSTANTS.MAX_PLACED_IMAGES
       const store = useImagesStore.getState()
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < maxImages + 1; i++) {
         store.addPlacedImage(`test${i}.jpg`, `/images/test${i}.jpg`)
       }
 
       const { placedImages } = useImagesStore.getState()
-      expect(placedImages).toHaveLength(5)
+      expect(placedImages).toHaveLength(maxImages)
     })
 
     it('should not add duplicate images', () => {
@@ -214,6 +219,70 @@ describe('Images Store', () => {
         .getState()
         .placedImages.find((img) => img.id === imageId)
       expect(updatedImage?.size).toEqual({ width: 400, height: 300 })
+    })
+  })
+
+  describe('updatePlacedImageOpacity', () => {
+    it('should update image opacity', () => {
+      const store = useImagesStore.getState()
+      store.addPlacedImage('test.jpg', '/images/test.jpg')
+      const { placedImages } = useImagesStore.getState()
+      const imageId = placedImages[0].id
+
+      store.updatePlacedImageOpacity(imageId, 0.5)
+
+      const updatedImage = useImagesStore
+        .getState()
+        .placedImages.find((img) => img.id === imageId)
+      expect(updatedImage?.opacity).toBe(0.5)
+    })
+  })
+
+  describe('updatePlacedImageRotation', () => {
+    it('should update image rotation', () => {
+      const store = useImagesStore.getState()
+      store.addPlacedImage('test.jpg', '/images/test.jpg')
+      const { placedImages } = useImagesStore.getState()
+      const imageId = placedImages[0].id
+
+      store.updatePlacedImageRotation(imageId, 90)
+
+      const updatedImage = useImagesStore
+        .getState()
+        .placedImages.find((img) => img.id === imageId)
+      expect(updatedImage?.rotation).toBe(90)
+    })
+  })
+
+  describe('updatePlacedImageBlendMode', () => {
+    it('should update image blend mode', () => {
+      const store = useImagesStore.getState()
+      store.addPlacedImage('test.jpg', '/images/test.jpg')
+      const { placedImages } = useImagesStore.getState()
+      const imageId = placedImages[0].id
+
+      store.updatePlacedImageBlendMode(imageId, 'multiply')
+
+      const updatedImage = useImagesStore
+        .getState()
+        .placedImages.find((img) => img.id === imageId)
+      expect(updatedImage?.blendMode).toBe('multiply')
+    })
+  })
+
+  describe('updatePlacedImageFilter', () => {
+    it('should update image filter', () => {
+      const store = useImagesStore.getState()
+      store.addPlacedImage('test.jpg', '/images/test.jpg')
+      const { placedImages } = useImagesStore.getState()
+      const imageId = placedImages[0].id
+
+      store.updatePlacedImageFilter(imageId, 'grayscale(100%)')
+
+      const updatedImage = useImagesStore
+        .getState()
+        .placedImages.find((img) => img.id === imageId)
+      expect(updatedImage?.filter).toBe('grayscale(100%)')
     })
   })
 

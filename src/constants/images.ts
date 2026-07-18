@@ -1,6 +1,6 @@
 export const IMAGE_CONSTANTS = {
   MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
-  MAX_PLACED_IMAGES: 5,
+  MAX_PLACED_IMAGES: 20,
   CHARACTER_Z_INDEX: 5,
   MAX_FILENAME_LENGTH: 50,
   VALID_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] as const,
