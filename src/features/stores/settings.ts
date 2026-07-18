@@ -166,8 +166,19 @@ interface Integrations {
   youtubeCommentInterval: number
 }
 
+export interface PositionPreset {
+  id: string
+  name: string
+  position: { x: number; y: number; z: number; scale: number }
+  rotation: { x: number; y: number; z: number }
+  lightingIntensity: number
+  fixedPosition: boolean
+}
+
 interface Character {
   characterName: string
+  positionPresets: PositionPreset[]
+  activePositionPresetId: string | null
   userDisplayName: string
   characterPreset1: string
   characterPreset2: string
@@ -545,6 +556,8 @@ const getInitialValuesFromEnv = (): SettingsState => ({
   lightingIntensity:
     parseFloat(process.env.NEXT_PUBLIC_LIGHTING_INTENSITY || '1.0') || 1.0,
   poseAdjustMode: false,
+  positionPresets: [],
+  activePositionPresetId: null,
 
   // General
   selectLanguage: (process.env.NEXT_PUBLIC_SELECT_LANGUAGE as Language) || 'ja',

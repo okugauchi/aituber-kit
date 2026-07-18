@@ -1,9 +1,11 @@
 import { logger } from '@/lib/logger'
 import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
 
 import homeStore from '@/features/stores/home'
 import settingsStore, { SettingsState } from '@/features/stores/settings'
 import toastStore from '@/features/stores/toast'
+import { generateMessageId } from '@/utils/messageUtils'
 
 interface CharacterPositionSectionProps {
   modelType: SettingsState['modelType']
@@ -15,6 +17,7 @@ export const CharacterPositionSection = ({
   fixedCharacterPosition,
 }: CharacterPositionSectionProps) => {
   const { t } = useTranslation()
+  const [presetName, setPresetName] = useState('')
 
   const handlePositionAction = (action: 'fix' | 'unfix' | 'reset') => {
     try {
@@ -137,6 +140,99 @@ export const CharacterPositionSection = ({
         >
           {t('CopyEnvVars')}
         </button>
+      </div>
+
+      {/* Position Presets */}
+      <div className="mt-6 border-t border-gray-300 pt-4">
+        <div className="text-lg font-bold mb-2">Position Presets</div>
+
+        {/* Existing presets list */}
+        <div className="space-y-1 mb-3">
+          {settingsStore.getState().positionPresets.map((preset) => (
+            <div
+              key={preset.id}
+              className="flex items-center gap-2 text-sm py-1 px-2 rounded bg-gray-800/20"
+            >
+              <span className="flex-1">{preset.name}</span>
+              <button
+                className="text-blue-400 hover:text-blue-300 text-xs"
+                onClick={() => {
+                  const { viewer, live2dViewer } = homeStore.getState()
+                  if (modelType === 'vrm' && viewer) {
+                    ;(viewer as any).saveCameraPosition()
+                  }
+                  settingsStore.setState({
+                    characterPosition: preset.position,
+                    characterRotation: preset.rotation,
+                    lightingIntensity: preset.lightingIntensity,
+                    fixedCharacterPosition: preset.fixedPosition,
+                    activePositionPresetId: preset.id,
+                  })
+                  toastStore.getState().addToast({
+                    message: `Applied preset: ${preset.name}`,
+                    type: 'success',
+                    tag: `preset-${preset.id}`,
+                  })
+                }}
+              >
+                Apply
+              </button>
+              <button
+                className="text-red-400 hover:text-red-300 text-xs"
+                onClick={() => {
+                  settingsStore.setState({
+                    positionPresets: settingsStore
+                      .getState()
+                      .positionPresets.filter((p) => p.id !== preset.id),
+                    activePositionPresetId:
+                      settingsStore.getState().activePositionPresetId ===
+                      preset.id
+                        ? null
+                        : settingsStore.getState().activePositionPresetId,
+                  })
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Save current as preset */}
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Preset name..."
+            className="flex-1 bg-transparent border border-white/30 rounded px-2 py-1 text-sm"
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+          />
+          <button
+            className="text-xs bg-primary hover:bg-primary-hover px-3 py-1 rounded transition-colors"
+            onClick={() => {
+              const settings = settingsStore.getState()
+              const newPreset = {
+                id: generateMessageId(),
+                name: presetName || `Preset ${settings.positionPresets.length + 1}`,
+                position: settings.characterPosition,
+                rotation: settings.characterRotation,
+                lightingIntensity: settings.lightingIntensity,
+                fixedPosition: settings.fixedCharacterPosition,
+              }
+              settingsStore.setState({
+                positionPresets: [...settings.positionPresets, newPreset],
+              })
+              setPresetName('')
+              toastStore.getState().addToast({
+                message: `Saved preset: ${newPreset.name}`,
+                type: 'success',
+                tag: `preset-saved-${newPreset.id}`,
+              })
+            }}
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   )
