@@ -4,6 +4,7 @@ import { loadVRMAnimation } from '@/lib/VRMAnimation/loadVRMAnimation'
 import { buildUrl } from '@/utils/buildUrl'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import settingsStore from '@/features/stores/settings'
+import homeStore from '@/features/stores/home'
 import { reportViewerError } from '@/components/common/ErrorBoundary'
 
 /**
@@ -24,6 +25,8 @@ export class Viewer {
   private _directionalLight?: THREE.DirectionalLight
   private _ambientLight?: THREE.AmbientLight
   private _loadVrmRequestId = 0
+  private _sparkRenderer: any | null = null
+  private _splatMesh: any | null = null
 
   constructor() {
     this.isReady = false
@@ -309,6 +312,34 @@ export class Viewer {
     }
     if (this._ambientLight) {
       this._ambientLight.intensity = 1.2 * intensity
+    }
+  }
+
+  // 3D Gaussian Splatting (Spark) integration
+  public async loadSplatScene(url: string): Promise<void> {
+    try {
+      const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark')
+      this.unloadSplatScene()
+
+      this._sparkRenderer = new SparkRenderer({ renderer: this._renderer })
+      this._scene.add(this._sparkRenderer)
+
+      this._splatMesh = new SplatMesh({ url })
+      this._scene.add(this._splatMesh)
+    } catch (error) {
+      reportViewerError('3dgs-viewer', 'Failed to load 3DGS scene:', error)
+      homeStore.setState({ gaussianSplatEnabled: false })
+    }
+  }
+
+  public unloadSplatScene(): void {
+    if (this._splatMesh) {
+      this._scene.remove(this._splatMesh)
+      this._splatMesh = null
+    }
+    if (this._sparkRenderer) {
+      this._scene.remove(this._sparkRenderer)
+      this._sparkRenderer = null
     }
   }
 }

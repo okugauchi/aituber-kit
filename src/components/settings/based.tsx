@@ -39,6 +39,8 @@ const Based = () => {
   const currentBackgroundIndex = homeStore((s) => s.currentBackgroundIndex)
   const backgroundSwitchMode = homeStore((s) => s.backgroundSwitchMode)
   const backgroundSwitchInterval = homeStore((s) => s.backgroundSwitchInterval)
+  const gaussianSplatEnabled = settingsStore((s) => s.gaussianSplatEnabled)
+  const gaussianSplatUrl = homeStore((s) => s.gaussianSplatUrl)
 
   useEffect(() => {
     setIsLoading(true)
@@ -334,6 +336,68 @@ const Based = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* 3D Gaussian Splatting background */}
+      <div className="border-t border-gray-300 pt-4 my-4">
+        <div className="my-2 text-lg font-bold">
+          3DGS Background
+        </div>
+        <div className="my-2 text-sm whitespace-pre-wrap">
+          Use photorealistic 3D scenes as background via Spark (3D Gaussian Splatting).
+        </div>
+
+        {/* Toggle */}
+        <div className="my-2 flex items-center gap-2">
+          <ToggleSwitch
+            enabled={gaussianSplatEnabled}
+            onChange={(v) => {
+              settingsStore.setState({ gaussianSplatEnabled: v })
+              homeStore.setState({ gaussianSplatEnabled: v })
+            }}
+          />
+          <span className="text-sm">Enable 3DGS Background</span>
+        </div>
+
+        {gaussianSplatEnabled && (
+          <div className="my-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="URL to .spz/.splat file..."
+                className="flex-1 bg-transparent border border-white/30 rounded px-2 py-1 text-sm"
+                value={gaussianSplatUrl}
+                onChange={(e) =>
+                  homeStore.setState({ gaussianSplatUrl: e.target.value })
+                }
+              />
+              <button
+                className="text-xs bg-primary hover:bg-primary-hover px-3 py-1 rounded transition-colors"
+                onClick={() => {
+                  if (gaussianSplatUrl) {
+                    const viewer = homeStore.getState().viewer
+                    viewer?.loadSplatScene(gaussianSplatUrl)
+                  }
+                }}
+              >
+                Load
+              </button>
+              <button
+                className="text-xs bg-gray-600 hover:bg-gray-500 px-3 py-1 rounded transition-colors"
+                onClick={() => {
+                  const viewer = homeStore.getState().viewer
+                  viewer?.unloadSplatScene()
+                  homeStore.setState({ gaussianSplatUrl: '' })
+                }}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="my-2 text-xs text-gray-500">
+              Supported formats: .spz, .ply, .splat, .ksplat
+            </div>
+          </div>
+        )}
       </div>
 
       {/* アシスタントテキスト表示設定 */}

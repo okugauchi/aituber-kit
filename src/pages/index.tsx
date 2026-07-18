@@ -32,6 +32,7 @@ const Home = () => {
   const captureStatus = homeStore((s) => s.captureStatus)
   const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
   const useVideoAsBackground = settingsStore((s) => s.useVideoAsBackground)
+  const gaussianSplatEnabled = settingsStore((s) => s.gaussianSplatEnabled)
   const bgUrl =
     (webcamStatus || captureStatus) && useVideoAsBackground
       ? ''
@@ -133,9 +134,11 @@ const Home = () => {
   const backgroundStyle =
     (webcamStatus || captureStatus) && useVideoAsBackground
       ? {}
-      : backgroundImageUrl === 'green'
-        ? { backgroundColor: '#00FF00' }
-        : { backgroundImage: bgUrl }
+      : gaussianSplatEnabled
+        ? {}
+        : backgroundImageUrl === 'green'
+          ? { backgroundColor: '#00FF00' }
+          : { backgroundImage: bgUrl }
 
   return (
     <div className="h-[100svh] bg-cover" style={backgroundStyle}>

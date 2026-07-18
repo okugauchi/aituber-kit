@@ -377,4 +377,28 @@ export const exclusionRules: ExclusionRule[] = [
       gameCommentaryPlaying: false,
     }),
   },
+  // Rule N: gaussianSplatEnabled ON
+  {
+    id: 'gaussianSplat-on',
+    description:
+      'gaussianSplatEnabled ON時にuseVideoAsBackgroundをOFFにする',
+    trigger: (incoming, merged, prev) =>
+      wasSet(incoming, 'gaussianSplatEnabled') &&
+      merged.gaussianSplatEnabled === true,
+    apply: () => ({
+      useVideoAsBackground: false,
+    }),
+  },
+  // Rule N+1: useVideoAsBackground ON
+  {
+    id: 'video-background-on',
+    description:
+      'useVideoAsBackground ON時にgaussianSplatEnabledをOFFにする',
+    trigger: (incoming, merged, prev) =>
+      wasSet(incoming, 'useVideoAsBackground') &&
+      merged.useVideoAsBackground === true,
+    apply: () => ({
+      gaussianSplatEnabled: false,
+    }),
+  },
 ]

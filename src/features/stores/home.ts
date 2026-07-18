@@ -42,6 +42,8 @@ export interface TransientState {
   currentBackgroundIndex: number
   backgroundSwitchMode: 'manual' | 'timer'
   backgroundSwitchInterval: number
+  gaussianSplatEnabled: boolean
+  gaussianSplatUrl: string
   modalImage: string
   triggerShutter: boolean
   webcamStatus: boolean
@@ -269,6 +271,8 @@ const homeStore = create<HomeState>()(
       currentBackgroundIndex: 0,
       backgroundSwitchMode: 'manual',
       backgroundSwitchInterval: 30,
+      gaussianSplatEnabled: false,
+      gaussianSplatUrl: '',
       modalImage: '',
       triggerShutter: false,
       webcamStatus: false,
