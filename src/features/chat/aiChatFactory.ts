@@ -14,9 +14,9 @@ const isHermesRequest = (messages: Message[]): boolean => {
   const lastUserMessage = [...messages].reverse().find(
     (m) => m.role === 'user' && typeof m.content === 'string'
   )
-  return lastUserMessage
-    ? lastUserMessage.content.toLowerCase().includes('@hermes')
-    : false
+  if (!lastUserMessage) return false
+  const content = lastUserMessage.content
+  return typeof content === 'string' && content.toLowerCase().includes('@hermes')
 }
 
 export async function getAIChatResponseStream(
