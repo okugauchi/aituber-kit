@@ -27,6 +27,8 @@ const PNGTuberComponent = (): JSX.Element => {
   const pngTuberScale = settingsStore((s) => s.pngTuberScale)
   const pngTuberOffsetX = settingsStore((s) => s.pngTuberOffsetX)
   const pngTuberOffsetY = settingsStore((s) => s.pngTuberOffsetY)
+  const pngTuberRotation = settingsStore((s) => s.pngTuberRotation)
+  const pngTuberOpacity = settingsStore((s) => s.pngTuberOpacity)
 
   // ドラッグ状態の追跡（refで管理してリスナーを安定させる）
   const [isDragging, setIsDragging] = useState(false)
@@ -222,8 +224,9 @@ const PNGTuberComponent = (): JSX.Element => {
         ref={transformContainerRef}
         className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
         style={{
-          transform: `translate(${isDragging ? tempOffset.x : pngTuberOffsetX}px, ${isDragging ? tempOffset.y : pngTuberOffsetY}px) scale(${pngTuberScale})`,
+          transform: `translate(${isDragging ? tempOffset.x : pngTuberOffsetX}px, ${isDragging ? tempOffset.y : pngTuberOffsetY}px) scale(${pngTuberScale}) rotate(${pngTuberRotation}deg)`,
           transformOrigin: 'center center',
+          opacity: pngTuberOpacity,
         }}
       >
         {/* 背景動画（クロマキー無効時のみ表示） */}

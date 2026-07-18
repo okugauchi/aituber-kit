@@ -219,6 +219,8 @@ interface Character {
   pngTuberScale: number
   pngTuberOffsetX: number
   pngTuberOffsetY: number
+  pngTuberRotation: number
+  pngTuberOpacity: number
   poseConfigs: PoseConfigItem[]
   thinkingPoseEnabled: boolean
   thinkingPoseId: string
@@ -699,6 +701,8 @@ const getInitialValuesFromEnv = (): SettingsState => ({
     parseFloat(process.env.NEXT_PUBLIC_PNGTUBER_OFFSET_X || '0') || 0,
   pngTuberOffsetY:
     parseFloat(process.env.NEXT_PUBLIC_PNGTUBER_OFFSET_Y || '0') || 0,
+  pngTuberRotation: 0,
+  pngTuberOpacity: 1.0,
   poseConfigs: [
     { id: 'think', json: '/poses/think.json' },
     { id: 'cheer', json: '/poses/cheer.json' },

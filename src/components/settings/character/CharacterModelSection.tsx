@@ -35,6 +35,8 @@ export const CharacterModelSection = ({
 }: CharacterModelSectionProps) => {
   const { t, i18n } = useTranslation()
   const { isLive2DEnabled } = useLive2DEnabled()
+  const pngTuberRotation = settingsStore((s) => s.pngTuberRotation)
+  const pngTuberOpacity = settingsStore((s) => s.pngTuberOpacity)
   const { isRestrictedMode } = useRestrictedMode()
   const [vrmFiles, setVrmFiles] = useState<string[]>([])
   const [live2dModels, setLive2dModels] = useState<
@@ -417,6 +419,49 @@ export const CharacterModelSection = ({
             )}
           </div>
 
+          {/* 回転・透明度 */}
+          <div className="my-4">
+            <div className="font-bold mb-2">Rotation & Opacity</div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-16">Rotation</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  step="1"
+                  value={pngTuberRotation}
+                  onChange={(e) =>
+                    settingsStore.setState({
+                      pngTuberRotation: parseInt(e.target.value),
+                    })
+                  }
+                  className="flex-1 input-range"
+                />
+                <span className="w-12 text-right text-xs">{pngTuberRotation}°</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-16">Opacity</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={Math.round(pngTuberOpacity * 100)}
+                  onChange={(e) =>
+                    settingsStore.setState({
+                      pngTuberOpacity: Number(e.target.value) / 100,
+                    })
+                  }
+                  className="flex-1 input-range"
+                />
+                <span className="w-12 text-right text-xs">
+                  {Math.round(pngTuberOpacity * 100)}%
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* 位置・サイズリセットボタン */}
           <div className="my-6">
             <div className="font-bold mb-2">{t('PNGTuber.PositionSize')}</div>
@@ -429,6 +474,8 @@ export const CharacterModelSection = ({
                   pngTuberScale: 1.0,
                   pngTuberOffsetX: 0,
                   pngTuberOffsetY: 0,
+                  pngTuberRotation: 0,
+                  pngTuberOpacity: 1.0,
                 })
               }}
             >
