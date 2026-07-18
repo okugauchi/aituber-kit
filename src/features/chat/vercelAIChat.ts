@@ -14,6 +14,8 @@ import type { AIChatResponseStreamOptions } from './aiChatFactory'
 // 推論/思考チャンクを通常テキストと区別するためのマーカー
 // null byteプレフィックスはLLMテキスト出力に現れないため安全
 export const THINKING_MARKER = '\x00THINK:'
+export const TOOL_MARKER = '\x00TOOL:'
+export const ERROR_MARKER = '\x00ERROR:'
 
 type VercelChatRequestData = {
   messages: Message[]
@@ -92,7 +94,8 @@ function handleApiError(errorCode: string): string {
 function getApiEndpoint(aiService: string): string {
   // isVercelLocalAIServiceを使用してapiサービスかどうかを判定
   if (isVercelLocalAIService(aiService) && aiService === 'custom-api') {
-    return '/api/ai/custom'
+    // trailingSlash: true のため、末尾スラッシュ必須
+    return '/api/ai/custom/'
   }
   return '/api/ai/vercel'
 }
@@ -351,6 +354,8 @@ export async function getVercelAIChatResponseStream(
                       tag: `vercel-tool-info-${toolName}`,
                       duration: 3000,
                     })
+                    // ツール呼び出しマーカーをストリームに出力
+                    controller.enqueue(TOOL_MARKER + toolName + '\n')
                   } else if (data.type === 'error') {
                     logger.error(
                       `Error fetching ${selectAIService} API response:`,
@@ -361,6 +366,8 @@ export async function getVercelAIChatResponseStream(
                       type: 'error',
                       tag: 'vercel-api-error',
                     })
+                    // エラーマーカーをストリームに出力
+                    controller.enqueue(ERROR_MARKER + (data.errorText || 'Unknown error') + '\n')
                   }
                   // その他のイベント（start, finish, text-start, text-end等）は無視
                 } catch (error) {

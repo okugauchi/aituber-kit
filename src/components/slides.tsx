@@ -87,6 +87,15 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
       div.marpit > svg > foreignObject > section {
         padding: 2em;
       }
+      div.marpit > svg {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+      div.marpit {
+        left: -200px !important;
+      }
     `
     const styleElement = document.createElement('style')
     styleElement.textContent = customStyle
@@ -189,6 +198,9 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
         padding: '10px 0',
         position: 'absolute',
         width: '100%',
+        transform: 'translateX(-200px)',
+        zIndex: 50,
+        pointerEvents: 'none',
       }}
     >
       <div
@@ -207,6 +219,7 @@ const Slides: React.FC<SlidesProps> = ({ markdown }) => {
           margin: '10px auto 0',
           position: 'relative',
           zIndex: 10,
+          pointerEvents: 'auto',
         }}
       >
         <SlideControls

@@ -269,6 +269,9 @@ interface General {
   multiModalAiDecisionPrompt: string
   enableMultiModal: boolean
   colorTheme: 'default' | 'cool' | 'mono' | 'ocean' | 'forest' | 'sunset'
+  uiDropShadowEnabled: boolean
+  uiDarkMode: boolean
+  bottomPaneOpacity: number
   customModel: boolean
 }
 
@@ -646,6 +649,15 @@ const getInitialValuesFromEnv = (): SettingsState => ({
       | 'ocean'
       | 'forest'
       | 'sunset') || 'default',
+  uiDropShadowEnabled:
+    process.env.NEXT_PUBLIC_UI_DROP_SHADOW_ENABLED !== 'false',
+  uiDarkMode:
+    process.env.NEXT_PUBLIC_UI_DARK_MODE !== 'false',
+  bottomPaneOpacity:
+    parseEnvInt(
+      process.env.NEXT_PUBLIC_BOTTOM_PANE_OPACITY,
+      60
+    ),
 
   // Custom model toggle
   customModel: process.env.NEXT_PUBLIC_CUSTOM_MODEL === 'true',
@@ -1225,6 +1237,9 @@ const settingsStore = create<SettingsState>()(
         multiModalAiDecisionPrompt: state.multiModalAiDecisionPrompt,
         enableMultiModal: state.enableMultiModal,
         colorTheme: state.colorTheme,
+        uiDropShadowEnabled: state.uiDropShadowEnabled,
+        uiDarkMode: state.uiDarkMode,
+        bottomPaneOpacity: state.bottomPaneOpacity,
         customModel: state.customModel,
         memoryEnabled: state.memoryEnabled,
         memorySimilarityThreshold: state.memorySimilarityThreshold,

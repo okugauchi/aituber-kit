@@ -53,7 +53,7 @@ export const Toast = ({
 
   return (
     <div
-      className={`aurora-glass-popover pointer-events-auto cursor-pointer rounded-2xl p-4 text-sm text-text1 flex items-center justify-between mb-2 transition-opacity duration-300 ${
+      className={`aurora-glass-popover pointer-events-auto cursor-pointer rounded-2xl p-4 text-sm text-[var(--aurora-text-strong)] flex items-center justify-between mb-2 transition-opacity duration-300 ${
         closing ? 'opacity-0' : 'opacity-100'
       }`}
     >

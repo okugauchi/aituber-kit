@@ -106,7 +106,9 @@ const SlideEditorPage: React.FC = () => {
         styleElement.setAttribute('data-marp-css', 'true')
         document.head.appendChild(styleElement)
 
-        const customStyle = `div.marpit > svg > foreignObject > section { padding: 2em; }`
+        const customStyle = `div.marpit > svg > foreignObject > section { padding: 2em; }
+          div.marpit > svg { width: 100% !important; height: 100% !important; overflow: hidden; box-sizing: border-box; }
+          div.marpit { left: -200px !important; }`
         customStyleElement = document.createElement('style')
         customStyleElement.textContent = customStyle
         customStyleElement.setAttribute('data-custom-css', 'true')

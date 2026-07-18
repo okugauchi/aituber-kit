@@ -214,6 +214,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   labelClassName?: string
   iconColor?: string
   backgroundColor?: string
+  title?: string
 }
 
 export const IconButton = ({
@@ -224,6 +225,7 @@ export const IconButton = ({
   labelClassName = '',
   iconColor,
   backgroundColor = 'bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled',
+  title,
   ...rest
 }: Props) => {
   const resolvedName = String(
@@ -241,6 +243,7 @@ export const IconButton = ({
   return (
     <button
       {...rest}
+      title={title}
       className={`${backgroundColor} rounded-2xl text-sm p-2 min-w-[44px] min-h-[44px] justify-center text-center inline-flex items-center
         ${iconColor || 'text-theme'}
         ${rest.className}

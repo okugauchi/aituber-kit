@@ -1,4 +1,5 @@
 import { generateMessageId } from '@/utils/messageUtils'
+import { THINKING_MARKER, TOOL_MARKER, ERROR_MARKER } from '@/features/chat/vercelAIChat'
 import { getFirstSpeechCommaMinChars, SpeechSegmenter } from './speechSegmenter'
 import { NormalizedMessageLogWriter } from './messageLogWriter'
 import { createSpeechDispatcher } from './speechDispatcher'
@@ -24,6 +25,12 @@ export const speakMessageHandler = async (receivedMessage: string) => {
     ),
   })
 
+  // マーカー除去（direct_send 通知にマーカーが含まれても発話が壊れないようにする）
+  const stripped = receivedMessage
+    .replaceAll(THINKING_MARKER, '')
+    .replaceAll(TOOL_MARKER, '')
+    .replaceAll(ERROR_MARKER, '')
+
   const handleEvent = (event: SegmenterEvent) => {
     writer.handleEvent(event)
     if (event.kind === 'speech') {
@@ -31,7 +38,7 @@ export const speakMessageHandler = async (receivedMessage: string) => {
     }
   }
 
-  for (const event of segmenter.push(receivedMessage)) {
+  for (const event of segmenter.push(stripped)) {
     handleEvent(event)
   }
   for (const event of segmenter.flush()) {

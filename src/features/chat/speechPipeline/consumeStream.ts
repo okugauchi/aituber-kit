@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger'
-import { THINKING_MARKER } from '@/features/chat/vercelAIChat'
+import { THINKING_MARKER, TOOL_MARKER, ERROR_MARKER } from '@/features/chat/vercelAIChat'
 import { SpeechSegmenter } from './speechSegmenter'
 import { SegmenterEvent } from './types'
 
@@ -29,6 +29,12 @@ export const consumeStream = async (
       if (value) {
         if (value.startsWith(THINKING_MARKER)) {
           handlers.onThinking(value.substring(THINKING_MARKER.length))
+        } else if (value.startsWith(TOOL_MARKER)) {
+          // ツール呼び出しマーカーはスキップ（トーストで既に通知済み）
+          logger.log(`Tool marker: ${value.substring(TOOL_MARKER.length)}`)
+        } else if (value.startsWith(ERROR_MARKER)) {
+          // エラーマーカーはスキップ（トーストで既に通知済み）
+          logger.log(`Error marker: ${value.substring(ERROR_MARKER.length)}`)
         } else {
           handlers.onTextChunk?.(value)
           for (const event of segmenter.push(value)) {

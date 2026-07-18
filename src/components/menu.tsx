@@ -57,6 +57,8 @@ export const Menu = () => {
   const showCapture = menuStore((s) => s.showCapture)
   const slidePlaying = slideStore((s) => s.isPlaying)
   const showAssistantText = settingsStore((s) => s.showAssistantText)
+  const selectedSlideDocs = slideStore((s) => s.selectedSlideDocs)
+  const [slideFolders, setSlideFolders] = useState<string[]>([])
 
   // デモ端末モード関連
   const { isKioskMode, isTemporaryUnlocked, canAccessSettings } = useKioskMode()
@@ -94,7 +96,6 @@ export const Menu = () => {
   // モバイルデバイス検出
   const isMobile = useIsMobile()
 
-  const selectedSlideDocs = slideStore((state) => state.selectedSlideDocs)
   const { t } = useTranslation()
 
   const [markdownContent, setMarkdownContent] = useState('')
@@ -120,6 +121,14 @@ export const Menu = () => {
   const handleTouchCancel = () => {
     setTouchStartTime(null)
   }
+
+  // スライドフォルダ一覧取得
+  useEffect(() => {
+    fetch('/api/getSlideFolders')
+      .then((r) => r.json())
+      .then((data) => setSlideFolders(data))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!selectedSlideDocs) return
@@ -249,9 +258,9 @@ export const Menu = () => {
         </div>
       )}
 
-      <div className="absolute z-15 m-3 sm:m-6">
+      <div className={`absolute m-3 sm:m-6 ${slideVisible ? 'z-[60]' : 'z-15'}`}>
         <div
-          className="aurora-glass-dock relative mb-10 grid grid-flow-col gap-0.5 rounded-[18px] p-1.5"
+          className="aurora-glass-dock relative mb-10 grid grid-flow-col gap-2 rounded-[18px] p-1.5"
           style={{ width: 'max-content' }}
         >
           {effectiveShowControlPanel && (
@@ -263,6 +272,7 @@ export const Menu = () => {
                     isProcessing={false}
                     onClick={() => setShowSettings(true)}
                     aria-label={t('Settings')}
+                    title={t('SettingsButtonTitle')}
                     data-testid="open-settings-button"
                     backgroundColor="bg-transparent hover:bg-primary/10 active:bg-primary/15 disabled:bg-transparent"
                     iconColor="text-text1"
@@ -284,6 +294,7 @@ export const Menu = () => {
                   isProcessing={false}
                   onClick={() => setChatLogMode((prev) => (prev + 1) % 3)}
                   aria-label={t('ChatLog')}
+                  title={t('ChatLogButtonTitle')}
                   backgroundColor="bg-transparent hover:bg-black/5 active:bg-black/10 disabled:bg-transparent"
                   iconColor="text-text1"
                   className="!rounded-[13px] transition-colors duration-200"
@@ -304,30 +315,49 @@ export const Menu = () => {
                   className="!rounded-[13px] transition-colors duration-200"
                 />
               </div>
+              {/* スライド選択プルダウン — スライドモードかつ表示状態の時のみ */}
+              {slideMode && slideVisible && slideFolders.length > 0 && (
+                <div className="order-4 flex items-center">
+                  <select
+                    className="px-2 py-[14px] ml-1 bg-transparent hover:bg-black/5 rounded-lg text-sm font-bold text-theme-default min-w-[140px]"
+                    value={selectedSlideDocs || ''}
+                    onChange={(e) => {
+                      slideStore.setState({
+                        selectedSlideDocs: e.target.value,
+                        isPlaying: false,
+                        currentSlide: 0,
+                      })
+                    }}
+                    aria-label={t('SelectedSlideDocs')}
+                  >
+                    <option value="">{t('PleaseSelectSlide')}</option>
+                    {slideFolders.map((folder) => (
+                      <option key={folder} value={folder}>
+                        {folder}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {showToolMenu && (
                 <div
-                  className="aurora-glass-popover absolute left-0 top-full z-20 mt-2 grid w-max min-w-[180px] max-w-[calc(100vw-24px)] gap-0.5 rounded-[18px] p-2 sm:min-w-[220px]"
+                  className={`aurora-glass-popover absolute left-0 top-full mt-2 grid w-max min-w-[180px] max-w-[calc(100vw-24px)] gap-0.5 rounded-[18px] p-2 sm:min-w-[220px] ${slideVisible ? 'z-[60]' : 'z-20'}`}
                   data-testid="main-tools-menu"
                 >
                   <ToolMenuButton
                     iconName="screen-share"
-                    label={
-                      showCapture
-                        ? (t(
-                            'StopScreenShare',
-                            'Stop screen sharing'
-                          ) as string)
-                        : t('ScreenShare')
-                    }
+                    label={showCapture ? (t('StopScreenShare', 'Stop screen sharing') as string) : t('ScreenShare')}
                     active={showCapture}
-                    onClick={toggleCapture}
+                    onClick={() => { toggleCapture(); setShowToolMenu(false) }}
+                    title={t('CaptureButtonTitle')}
                     data-testid="capture-toggle-button"
                   />
                   <ToolMenuButton
                     iconName="24/Camera"
                     label={t('Camera')}
                     active={showWebcam}
-                    onClick={toggleWebcam}
+                    onClick={() => { toggleWebcam(); setShowToolMenu(false) }}
+                    title={t('WebcamButtonTitle')}
                   />
                   {isMultiModalAvailable(
                     selectAIService as AIService,
@@ -339,7 +369,8 @@ export const Menu = () => {
                       <ToolMenuButton
                         iconName="24/AddImage"
                         label={t('SelectImage')}
-                        onClick={() => imageFileInputRef.current?.click()}
+                        onClick={() => { imageFileInputRef.current?.click(); setShowToolMenu(false) }}
+                        title={t('AddImageButtonTitle')}
                       />
                       <input
                         type="file"
@@ -363,33 +394,26 @@ export const Menu = () => {
                   {youtubeMode && (
                     <ToolMenuButton
                       iconName={youtubePlaying ? '24/PauseAlt' : '24/Video'}
-                      label={
-                        youtubePlaying ? t('PauseYoutube') : t('StartYoutube')
-                      }
+                      label={youtubePlaying ? t('PauseYoutube') : t('StartYoutube')}
                       active={youtubePlaying}
-                      onClick={() =>
+                      onClick={() => {
                         settingsStore.setState({
                           youtubePlaying: !youtubePlaying,
                         })
-                      }
+                        setShowToolMenu(false)
+                      }}
+                      title={t('YoutubeButtonTitle')}
                       aria-pressed={youtubePlaying}
                       data-testid="youtube-play-toggle-button"
                     />
                   )}
                   {gameCommentaryEnabled && (
                     <ToolMenuButton
-                      iconName={
-                        gameCommentaryPlaying
-                          ? '24/PauseAlt'
-                          : 'game-controller'
-                      }
-                      label={
-                        gameCommentaryPlaying
-                          ? t('PauseGameCommentary')
-                          : t('StartGameCommentary')
-                      }
+                      iconName={gameCommentaryPlaying ? '24/PauseAlt' : 'game-controller'}
+                      label={gameCommentaryPlaying ? t('PauseGameCommentary') : t('StartGameCommentary')}
                       active={gameCommentaryPlaying}
-                      onClick={toggleGameCommentary}
+                      onClick={() => { toggleGameCommentary(); setShowToolMenu(false) }}
+                      title={t('PresetTabTitle')}
                       aria-pressed={gameCommentaryPlaying}
                       data-testid="game-commentary-play-toggle-button"
                     />
@@ -399,10 +423,12 @@ export const Menu = () => {
                       iconName="24/FrameEffect"
                       label={slideVisible ? t('HideSlide') : t('ShowSlide')}
                       active={slideVisible}
-                      onClick={() =>
+                      onClick={() => {
                         menuStore.setState({ slideVisible: !slideVisible })
-                      }
+                        setShowToolMenu(false)
+                      }}
                       disabled={slidePlaying}
+                      title={t('SlideButtonTitle')}
                       aria-pressed={slideVisible}
                       data-testid="slide-visibility-toggle-button"
                     />

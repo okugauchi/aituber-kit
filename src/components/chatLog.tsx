@@ -3,9 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EMOTIONS } from '@/features/messages/messages'
 
-import homeStore from '@/features/stores/home'
+import homeStore, { setRestoringChatLog } from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import { messageSelectors } from '@/features/messages/messageSelectors'
+import { TextButton } from './textButton'
+import { resetSessionId } from '@/utils/sessionId'
 
 const useAutoScrollRef = (dependency: unknown) => {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -251,8 +253,20 @@ const GlassChatLog = () => {
           : {}),
       }}
     >
-      <div className="border-b border-black/5 px-[18px] pb-2.5 pt-3.5 text-[13px] font-bold text-[var(--aurora-text-soft)]">
-        {t('ChatLog')}
+      <div className="border-b border-black/5 px-[18px] pb-2.5 pt-3.5 flex items-center justify-between">
+        <div className="text-[13px] font-bold text-[var(--aurora-text-soft)]">
+          {t('ChatLog')}
+        </div>
+        <button
+          className="px-3 py-1 text-[11px] font-bold text-[var(--aurora-text-soft)] bg-primary/10 hover:bg-primary/20 active:bg-primary/30 rounded-full transition-colors"
+          onClick={async () => {
+            homeStore.setState({ chatLog: [] })
+            settingsStore.setState({ difyConversationId: '' })
+            resetSessionId()
+          }}
+        >
+          {t('ConversationHistoryReset')}
+        </button>
       </div>
       <div className="scroll-hidden flex flex-1 flex-col gap-2.5 overflow-y-auto p-3.5">
         {messages.map((msg, i) => {
@@ -332,12 +346,14 @@ const GlassChat = ({
 }) => {
   const { t } = useTranslation()
   const showThinkingText = settingsStore((s) => s.showThinkingText)
+  const uiDropShadowEnabled = settingsStore((s) => s.uiDropShadowEnabled)
+  const uiDarkMode = settingsStore((s) => s.uiDarkMode)
   const [isLocalExpanded, setIsLocalExpanded] = useState(false)
   const isThinkingExpanded = showThinkingText || isLocalExpanded
   const emotionPattern = new RegExp(`\\[(${EMOTIONS.join('|')})\\]\\s*`, 'gi')
   const processedMessage = message
     .replace(emotionPattern, '')
-    .replace(/\[motion:[^\]]*\]\s*/gi, '')
+    .replace(/\\[motion:[^\\]]*\\]\\s*/gi, '')
 
   const isUser = role === 'user'
   const senderName = isUser
@@ -368,11 +384,17 @@ const GlassChat = ({
         </span>
       )}
       <div
-        className={`w-fit max-w-full px-3.5 py-[9px] text-[13px] leading-[1.6] ${
+        className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} w-fit max-w-full px-3.5 py-[9px] text-[13px] leading-[1.6] ${
           isUser
             ? 'rounded-[16px_16px_4px_16px] bg-primary text-white'
-            : 'rounded-[16px_16px_16px_4px] bg-white/80 text-[var(--aurora-text-medium)]'
+            : 'rounded-[16px_16px_16px_4px] text-[var(--aurora-text-medium)]'
         }`}
+        style={!isUser && uiDarkMode ? {
+          background: 'rgba(17, 19, 28, 0.58)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+        } : !isUser ? {
+          background: 'rgba(255, 255, 255, 0.8)',
+        } : undefined}
       >
         {thinking && !isUser && (
           <div className="mb-2">
@@ -427,6 +449,7 @@ const GlassChatImage = ({
 }
 
 const ClassicChatLog = () => {
+  const { t } = useTranslation()
   const chatLogRef = useRef<HTMLDivElement>(null)
 
   const characterName = settingsStore((s) => s.characterName)
@@ -467,7 +490,22 @@ const ClassicChatLog = () => {
           : {}),
       }}
     >
-      <div className="scroll-hidden max-h-full overflow-y-auto px-2 pb-16 pt-24 sm:px-4">
+      <div className="border-b border-black/5 px-2 py-2 flex items-center justify-between">
+        <div className="text-[13px] font-bold text-[var(--aurora-text-soft)]">
+          {t('ChatLog')}
+        </div>
+        <button
+          className="px-3 py-1 text-[11px] font-bold text-[var(--aurora-text-soft)] bg-primary/10 hover:bg-primary/20 active:bg-primary/30 rounded-full transition-colors"
+          onClick={async () => {
+            homeStore.setState({ chatLog: [] })
+            settingsStore.setState({ difyConversationId: '' })
+            resetSessionId()
+          }}
+        >
+          {t('ConversationHistoryReset')}
+        </button>
+      </div>
+      <div className="scroll-hidden max-h-full overflow-y-auto px-2 pb-16 pt-2 sm:px-4">
         {messages.map((msg, i) => {
           return (
             <div key={i} ref={messages.length - 1 === i ? chatScrollRef : null}>
@@ -534,12 +572,13 @@ const ClassicChat = ({
 }) => {
   const { t } = useTranslation()
   const showThinkingText = settingsStore((s) => s.showThinkingText)
+  const uiDropShadowEnabled = settingsStore((s) => s.uiDropShadowEnabled)
   const [isLocalExpanded, setIsLocalExpanded] = useState(false)
   const isThinkingExpanded = showThinkingText || isLocalExpanded
   const emotionPattern = new RegExp(`\\[(${EMOTIONS.join('|')})\\]\\s*`, 'gi')
   const processedMessage = message
     .replace(emotionPattern, '')
-    .replace(/\[motion:[^\]]*\]\s*/gi, '')
+    .replace(/\\[motion:[^\\]]*\\]\\s*/gi, '')
 
   const isUser = role === 'user'
   const roleBadge = isUser
@@ -559,7 +598,7 @@ const ClassicChat = ({
           <code className="font-mono text-xs sm:text-sm">{message}</code>
         </pre>
       ) : (
-        <div className="classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base">
+        <div className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} classic-chat-card rounded-xl border border-white/45 bg-white/75 px-3 py-3 text-sm shadow-[0_12px_32px_rgba(70,46,82,0.14)] backdrop-blur-xl dark:border-white/15 dark:bg-black/50 sm:px-4 sm:text-base`}>
           <div className="mb-2 flex items-center gap-2">
             <span
               className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-bold ${roleBadge}`}

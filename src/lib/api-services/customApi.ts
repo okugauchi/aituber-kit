@@ -216,8 +216,11 @@ export async function handleCustomApi(
     : messages
 
   // messagesをデフォルトでbodyに含める
+  // stream: true を常に強制 — handleCustomApi は上流に常にストリーミング要求を送る
+  // これにより上流 API が非ストリーミング応答を返すのを防ぐ
   const apiBody = JSON.stringify({
     ...parsedBody,
+    stream: true,
     messages: processedMessages,
   })
 
@@ -225,7 +228,7 @@ export async function handleCustomApi(
     method: 'POST',
     headers: apiHeaders,
     body: apiBody,
-    signal: AbortSignal.timeout(180000), // 3分でタイムアウト
+    signal: AbortSignal.timeout(600000), // 10分でタイムアウト（ds4-server 長時間思考対応）
   }
 
   let apiResponse = await fetch(customApiUrl, requestInit)

@@ -124,11 +124,7 @@ export const handleSendChatFn =
       }
     } else {
       let systemPrompt = ss.systemPrompt
-      if (ss.slideMode) {
-        if (sls.isPlaying) {
-          return
-        }
-
+      if (ss.slideMode && sls.isPlaying) {
         try {
           let scripts = JSON.stringify(
             require(
@@ -164,6 +160,15 @@ export const handleSendChatFn =
       }
 
       homeStore.setState({ chatProcessing: true })
+
+      // 思考中プレアンブル発話 — @hermes を含むメッセージのみ（Gateway 経由の応答待ち間を埋める）
+      // @hermes なし → oMLX/Gemma への高速ルーティングのためプレアンブル不要
+      if (/@hermes/i.test(newMessage)) {
+        const preambleText = i18next.t('ThinkingPreamble', 'わかりました。これからじっくり考えますので、しばらくお待ちください。')
+        import('./speechPipeline/speakMessageHandler').then(({ speakMessageHandler }) => {
+          speakMessageHandler(preambleText)
+        }).catch(() => {})
+      }
 
       // マルチモーダル対応チェック
       if (
