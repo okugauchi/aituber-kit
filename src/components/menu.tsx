@@ -57,6 +57,7 @@ export const Menu = () => {
   const showCapture = menuStore((s) => s.showCapture)
   const slidePlaying = slideStore((s) => s.isPlaying)
   const showAssistantText = settingsStore((s) => s.showAssistantText)
+  const gaussianSplatEnabled = settingsStore((s) => s.gaussianSplatEnabled)
   const selectedSlideDocs = slideStore((s) => s.selectedSlideDocs)
   const [slideFolders, setSlideFolders] = useState<string[]>([])
 
@@ -464,6 +465,27 @@ export const Menu = () => {
                       data-testid="slide-visibility-toggle-button"
                     />
                   )}
+                  <ToolMenuButton
+                    iconName={gaussianSplatEnabled ? '24/Show' : '24/Hide'}
+                    label={
+                      gaussianSplatEnabled ? 'Disable 3DGS' : 'Enable 3DGS'
+                    }
+                    active={gaussianSplatEnabled}
+                    onClick={() => {
+                      const next = !gaussianSplatEnabled
+                      settingsStore.setState({ gaussianSplatEnabled: next })
+                      homeStore.setState({ gaussianSplatEnabled: next })
+                      if (!next) {
+                        homeStore.getState().viewer?.unloadSplatScene()
+                      } else {
+                        const url = homeStore.getState().gaussianSplatUrl
+                        if (url)
+                          homeStore.getState().viewer?.loadSplatScene(url)
+                      }
+                      setShowToolMenu(false)
+                    }}
+                    title="Toggle 3DGS Background"
+                  />
                 </div>
               )}
             </>

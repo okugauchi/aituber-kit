@@ -26,9 +26,15 @@ function VrmViewerInner() {
     if (canvas) {
       const { viewer } = homeStore.getState()
       const { selectedVrmPath } = settingsStore.getState()
+      const { gaussianSplatEnabled, gaussianSplatUrl } = homeStore.getState()
       viewer.onModelLoadingChange = setIsModelLoading
       viewer.setup(canvas)
       viewer.loadVrm(selectedVrmPath)
+
+      // Auto-load 3DGS splat scene on startup if enabled and URL is set
+      if (gaussianSplatEnabled && gaussianSplatUrl) {
+        viewer.loadSplatScene(gaussianSplatUrl)
+      }
 
       // Drag and DropでVRMを差し替え
       canvas.addEventListener('dragover', function (event) {

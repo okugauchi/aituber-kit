@@ -438,7 +438,9 @@ export const CharacterModelSection = ({
                   }
                   className="flex-1 input-range"
                 />
-                <span className="w-12 text-right text-xs">{pngTuberRotation}°</span>
+                <span className="w-12 text-right text-xs">
+                  {pngTuberRotation}°
+                </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <span className="w-16">Opacity</span>

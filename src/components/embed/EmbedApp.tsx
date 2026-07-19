@@ -88,6 +88,8 @@ export const EmbedApp = ({ embedId }: Props) => {
   const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
   const chatLog = homeStore((s) => s.chatLog)
   const useVideoAsBackground = settingsStore((s) => s.useVideoAsBackground)
+  const gaussianSplatEnabled = settingsStore((s) => s.gaussianSplatEnabled)
+  const gaussianSplatLoading = homeStore((s) => s.gaussianSplatLoading)
   const modelType = settingsStore((s) => s.modelType)
   const showAssistantText = settingsStore((s) => s.showAssistantText)
   const { isLive2DEnabled } = useLive2DEnabled()
@@ -116,10 +118,19 @@ export const EmbedApp = ({ embedId }: Props) => {
     () =>
       (webcamStatus || captureStatus) && useVideoAsBackground
         ? {}
-        : backgroundImageUrl === 'green'
-          ? { backgroundColor: '#00FF00' }
-          : { backgroundImage: `url(${buildUrl(backgroundImageUrl)})` },
-    [webcamStatus, captureStatus, useVideoAsBackground, backgroundImageUrl]
+        : gaussianSplatEnabled || gaussianSplatLoading
+          ? {}
+          : backgroundImageUrl === 'green'
+            ? { backgroundColor: '#00FF00' }
+            : { backgroundImage: `url(${buildUrl(backgroundImageUrl)})` },
+    [
+      webcamStatus,
+      captureStatus,
+      useVideoAsBackground,
+      gaussianSplatEnabled,
+      gaussianSplatLoading,
+      backgroundImageUrl,
+    ]
   )
 
   if (!isReady) {

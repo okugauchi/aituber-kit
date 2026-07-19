@@ -34,6 +34,12 @@ const Based = () => {
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [splatFiles, setSplatFiles] = useState<
+    { name: string; size: number; url: string }[] | null
+  >(null)
+  const [hdriFiles, setHdriFiles] = useState<
+    { name: string; size: number; url: string }[] | null
+  >(null)
   const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
   const backgroundImageList = homeStore((s) => s.backgroundImageList)
   const currentBackgroundIndex = homeStore((s) => s.currentBackgroundIndex)
@@ -41,6 +47,20 @@ const Based = () => {
   const backgroundSwitchInterval = homeStore((s) => s.backgroundSwitchInterval)
   const gaussianSplatEnabled = settingsStore((s) => s.gaussianSplatEnabled)
   const gaussianSplatUrl = homeStore((s) => s.gaussianSplatUrl)
+  const gaussianSplatLoading = homeStore((s) => s.gaussianSplatLoading)
+  const gaussianSplatProgress = homeStore((s) => s.gaussianSplatProgress)
+  const gaussianSplatError = homeStore((s) => s.gaussianSplatError)
+  const gaussianSplatOpacity = homeStore((s) => s.gaussianSplatOpacity)
+  const gaussianSplatScale = homeStore((s) => s.gaussianSplatScale)
+  const gaussianSplatHdriUrl = homeStore((s) => s.gaussianSplatHdriUrl)
+  const gaussianSplatHdriLoading = homeStore((s) => s.gaussianSplatHdriLoading)
+  const gaussianSplatHdriError = homeStore((s) => s.gaussianSplatHdriError)
+  const gaussianSplatRotationOffset = homeStore(
+    (s) => s.gaussianSplatRotationOffset
+  )
+  const gaussianSplatControlsVisible = homeStore(
+    (s) => s.gaussianSplatControlsVisible
+  )
 
   useEffect(() => {
     setIsLoading(true)
@@ -56,6 +76,28 @@ const Based = () => {
       })
       .finally(() => {
         setIsLoading(false)
+      })
+
+    // Fetch local splat files for the file picker
+    fetch('/api/get-splat-list')
+      .then((res) => res.json())
+      .then((files: { name: string; size: number; url: string }[]) => {
+        setSplatFiles(files)
+      })
+      .catch((error) => {
+        logger.error('Error fetching splat list:', error)
+        setSplatFiles([])
+      })
+
+    // Fetch local HDRI files for the dropdown
+    fetch('/api/get-hdri-list')
+      .then((res) => res.json())
+      .then((files: { name: string; size: number; url: string }[]) => {
+        setHdriFiles(files)
+      })
+      .catch((error) => {
+        logger.error('Error fetching HDRI list:', error)
+        setHdriFiles([])
       })
   }, [t])
 
@@ -340,11 +382,10 @@ const Based = () => {
 
       {/* 3D Gaussian Splatting background */}
       <div className="border-t border-gray-300 pt-4 my-4">
-        <div className="my-2 text-lg font-bold">
-          3DGS Background
-        </div>
+        <div className="my-2 text-lg font-bold">3DGS Background</div>
         <div className="my-2 text-sm whitespace-pre-wrap">
-          Use photorealistic 3D scenes as background via Spark (3D Gaussian Splatting).
+          Use photorealistic 3D scenes as background via Spark (3D Gaussian
+          Splatting).
         </div>
 
         {/* Toggle */}
@@ -354,22 +395,38 @@ const Based = () => {
             onChange={(v) => {
               settingsStore.setState({ gaussianSplatEnabled: v })
               homeStore.setState({ gaussianSplatEnabled: v })
+              if (!v) {
+                const viewer = homeStore.getState().viewer
+                viewer?.unloadSplatScene()
+              }
             }}
           />
           <span className="text-sm">Enable 3DGS Background</span>
         </div>
 
         {gaussianSplatEnabled && (
-          <div className="my-2">
+          <div className="my-2 space-y-2">
+            {/* URL input + local file picker */}
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="URL to .spz/.splat file..."
+                placeholder="URL to .spz/.splat/.sog file..."
                 className="flex-1 bg-transparent border border-white/30 rounded px-2 py-1 text-sm"
                 value={gaussianSplatUrl}
                 onChange={(e) =>
                   homeStore.setState({ gaussianSplatUrl: e.target.value })
                 }
+                onBlur={() => {
+                  const { viewer, gaussianSplatUrl: url } = homeStore.getState()
+                  if (url) viewer?.loadSplatScene(url)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const { viewer, gaussianSplatUrl: url } =
+                      homeStore.getState()
+                    if (url) viewer?.loadSplatScene(url)
+                  }
+                }}
               />
               <button
                 className="text-xs bg-primary hover:bg-primary-hover px-3 py-1 rounded transition-colors"
@@ -393,8 +450,250 @@ const Based = () => {
                 Clear
               </button>
             </div>
-            <div className="my-2 text-xs text-gray-500">
-              Supported formats: .spz, .ply, .splat, .ksplat
+
+            {/* Local file picker */}
+            {splatFiles && splatFiles.length > 0 && (
+              <div className="flex items-center gap-2">
+                <select
+                  className="flex-1 bg-transparent border border-white/30 rounded px-2 py-1 text-sm text-white"
+                  onChange={(e) => {
+                    const url = e.target.value
+                    if (url) {
+                      homeStore.setState({ gaussianSplatUrl: url })
+                      const viewer = homeStore.getState().viewer
+                      viewer?.loadSplatScene(url)
+                    }
+                  }}
+                >
+                  <option value="">-- Select local splat --</option>
+                  {splatFiles.map((f) => {
+                    const sizeMB = (f.size / 1024 / 1024).toFixed(1)
+                    return (
+                      <option key={f.url} value={f.url}>
+                        {f.name} ({sizeMB} MB)
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+            )}
+
+            {/* Progress bar */}
+            {gaussianSplatLoading && (
+              <div className="my-2">
+                <div className="flex items-center gap-2 text-xs text-yellow-400 mb-1">
+                  <span className="inline-block w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  Loading 3DGS scene... {gaussianSplatProgress}%
+                </div>
+                <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-yellow-400 rounded-full transition-all duration-200"
+                    style={{ width: `${gaussianSplatProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Error display */}
+            {gaussianSplatError && (
+              <div className="text-xs text-red-400 bg-red-900/20 rounded px-2 py-1">
+                Error: {gaussianSplatError}
+                <button
+                  className="ml-2 text-blue-400 hover:text-blue-300 underline"
+                  onClick={() => {
+                    const { viewer, gaussianSplatUrl: url } =
+                      homeStore.getState()
+                    if (url) viewer?.loadSplatScene(url)
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Opacity control */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 w-16">Opacity</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                className="flex-1"
+                value={gaussianSplatOpacity}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value)
+                  homeStore.setState({ gaussianSplatOpacity: val })
+                  const viewer = homeStore.getState().viewer
+                  viewer?.setSplatOpacity(val)
+                }}
+              />
+              <span className="text-xs text-gray-400 w-10 text-right">
+                {Math.round(gaussianSplatOpacity * 100)}%
+              </span>
+            </div>
+
+            {/* Scale control (real-world capture scale) */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 w-16">Scale</span>
+              <input
+                type="range"
+                min="0.01"
+                max="5"
+                step="0.05"
+                className="flex-1"
+                value={gaussianSplatScale}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value)
+                  homeStore.setState({ gaussianSplatScale: val })
+                  const viewer = homeStore.getState().viewer
+                  viewer?.setSplatScale(val)
+                }}
+              />
+              <span className="text-xs text-gray-400 w-10 text-right">
+                {gaussianSplatScale.toFixed(2)}×
+              </span>
+            </div>
+
+            <div className="text-xs text-gray-500">
+              Supported formats: .spz, .ply, .splat, .ksplat, .sog
+            </div>
+
+            {/* HDRI / equirectangular background */}
+            <div className="border-t border-white/10 pt-2">
+              <div className="text-xs text-gray-400 mb-1">HDRI Background</div>
+              <div className="flex items-center gap-2">
+                <select
+                  className="flex-1 bg-transparent border border-white/30 rounded px-2 py-1 text-sm text-white"
+                  value={gaussianSplatHdriUrl}
+                  onChange={(e) => {
+                    const url = e.target.value
+                    homeStore.setState({ gaussianSplatHdriUrl: url })
+                    if (url) {
+                      const viewer = homeStore.getState().viewer
+                      viewer?.loadSplatHdri(url)
+                    }
+                  }}
+                >
+                  <option value="">-- Select HDRI --</option>
+                  {hdriFiles &&
+                    hdriFiles.map((f) => {
+                      const sizeMB = (f.size / 1024 / 1024).toFixed(1)
+                      return (
+                        <option key={f.url} value={f.url}>
+                          {f.name} ({sizeMB} MB)
+                        </option>
+                      )
+                    })}
+                </select>
+                <button
+                  className="text-xs bg-gray-600 hover:bg-gray-500 px-3 py-1 rounded transition-colors"
+                  onClick={() => {
+                    const viewer = homeStore.getState().viewer
+                    viewer?.unloadSplatHdri()
+                    homeStore.setState({ gaussianSplatHdriUrl: '' })
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+              {gaussianSplatHdriLoading && (
+                <div className="text-xs text-yellow-400 mt-1">
+                  Loading HDRI...
+                </div>
+              )}
+              {gaussianSplatHdriError && (
+                <div className="text-xs text-red-400 mt-1">
+                  Error: {gaussianSplatHdriError}
+                </div>
+              )}
+              <div className="text-xs text-gray-500 mt-1">
+                Supported: .hdr, .exr, .jpg, .png (equirectangular maps)
+              </div>
+            </div>
+
+            {/* Rotation offset (axis correction) */}
+            <div className="border-t border-white/10 pt-2">
+              <div className="text-xs text-gray-400 mb-1">
+                Rotation Offset (degrees)
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 w-6">R</span>
+                <input
+                  type="number"
+                  className="w-16 bg-transparent border border-white/30 rounded px-1 py-1 text-xs text-center"
+                  value={Math.round(
+                    (gaussianSplatRotationOffset[0] * 180) / Math.PI
+                  )}
+                  onChange={(e) => {
+                    const deg = parseFloat(e.target.value) || 0
+                    const rad = (deg * Math.PI) / 180
+                    const newOffset: [number, number, number] = [
+                      rad,
+                      gaussianSplatRotationOffset[1],
+                      gaussianSplatRotationOffset[2],
+                    ]
+                    homeStore.setState({
+                      gaussianSplatRotationOffset: newOffset,
+                    })
+                  }}
+                />
+                <span className="text-xs text-gray-500 w-6">P</span>
+                <input
+                  type="number"
+                  className="w-16 bg-transparent border border-white/30 rounded px-1 py-1 text-xs text-center"
+                  value={Math.round(
+                    (gaussianSplatRotationOffset[1] * 180) / Math.PI
+                  )}
+                  onChange={(e) => {
+                    const deg = parseFloat(e.target.value) || 0
+                    const rad = (deg * Math.PI) / 180
+                    const newOffset: [number, number, number] = [
+                      gaussianSplatRotationOffset[0],
+                      rad,
+                      gaussianSplatRotationOffset[2],
+                    ]
+                    homeStore.setState({
+                      gaussianSplatRotationOffset: newOffset,
+                    })
+                  }}
+                />
+                <span className="text-xs text-gray-500 w-6">Y</span>
+                <input
+                  type="number"
+                  className="w-16 bg-transparent border border-white/30 rounded px-1 py-1 text-xs text-center"
+                  value={Math.round(
+                    (gaussianSplatRotationOffset[2] * 180) / Math.PI
+                  )}
+                  onChange={(e) => {
+                    const deg = parseFloat(e.target.value) || 0
+                    const rad = (deg * Math.PI) / 180
+                    const newOffset: [number, number, number] = [
+                      gaussianSplatRotationOffset[0],
+                      gaussianSplatRotationOffset[1],
+                      rad,
+                    ]
+                    homeStore.setState({
+                      gaussianSplatRotationOffset: newOffset,
+                    })
+                  }}
+                />
+                <button
+                  className="text-xs bg-blue-800/40 hover:bg-blue-700/60 px-2 py-1 rounded transition-colors"
+                  onClick={() => {
+                    const viewer = homeStore.getState().viewer
+                    viewer?.loadSplatScene(
+                      homeStore.getState().gaussianSplatUrl
+                    )
+                  }}
+                >
+                  Reload
+                </button>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Set initial rotation to match scene axis. Reload the scene after
+                changing.
+              </div>
             </div>
           </div>
         )}

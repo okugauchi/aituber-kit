@@ -380,8 +380,7 @@ export const exclusionRules: ExclusionRule[] = [
   // Rule N: gaussianSplatEnabled ON
   {
     id: 'gaussianSplat-on',
-    description:
-      'gaussianSplatEnabled ON時にuseVideoAsBackgroundをOFFにする',
+    description: 'gaussianSplatEnabled ON時にuseVideoAsBackgroundをOFFにする',
     trigger: (incoming, merged, prev) =>
       wasSet(incoming, 'gaussianSplatEnabled') &&
       merged.gaussianSplatEnabled === true,
@@ -392,8 +391,7 @@ export const exclusionRules: ExclusionRule[] = [
   // Rule N+1: useVideoAsBackground ON
   {
     id: 'video-background-on',
-    description:
-      'useVideoAsBackground ON時にgaussianSplatEnabledをOFFにする',
+    description: 'useVideoAsBackground ON時にgaussianSplatEnabledをOFFにする',
     trigger: (incoming, merged, prev) =>
       wasSet(incoming, 'useVideoAsBackground') &&
       merged.useVideoAsBackground === true,

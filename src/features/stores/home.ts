@@ -44,6 +44,17 @@ export interface TransientState {
   backgroundSwitchInterval: number
   gaussianSplatEnabled: boolean
   gaussianSplatUrl: string
+  gaussianSplatLoading: boolean
+  gaussianSplatProgress: number
+  gaussianSplatError: string | null
+  gaussianSplatOpacity: number
+  gaussianSplatScale: number
+  gaussianSplatHdriUrl: string
+  gaussianSplatHdriLoading: boolean
+  gaussianSplatHdriError: string | null
+  gaussianSplatHdriRotation: number
+  gaussianSplatRotationOffset: [number, number, number]
+  gaussianSplatControlsVisible: boolean
   modalImage: string
   triggerShutter: boolean
   webcamStatus: boolean
@@ -273,6 +284,17 @@ const homeStore = create<HomeState>()(
       backgroundSwitchInterval: 30,
       gaussianSplatEnabled: false,
       gaussianSplatUrl: '',
+      gaussianSplatLoading: false,
+      gaussianSplatProgress: 0,
+      gaussianSplatError: null,
+      gaussianSplatOpacity: 1.0,
+      gaussianSplatScale: 1.0,
+      gaussianSplatHdriUrl: '',
+      gaussianSplatHdriLoading: false,
+      gaussianSplatHdriError: null,
+      gaussianSplatHdriRotation: 0,
+      gaussianSplatRotationOffset: [0, 0, 0],
+      gaussianSplatControlsVisible: true,
       modalImage: '',
       triggerShutter: false,
       webcamStatus: false,

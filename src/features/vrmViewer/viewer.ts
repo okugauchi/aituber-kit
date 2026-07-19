@@ -27,6 +27,14 @@ export class Viewer {
   private _loadVrmRequestId = 0
   private _sparkRenderer: any | null = null
   private _splatMesh: any | null = null
+  /** Saved initial splat state for reset-to-initial-position */
+  private _initialSplatState: {
+    position: THREE.Vector3
+    scale: THREE.Vector3
+    quaternion: THREE.Quaternion
+  } | null = null
+  /** HDRI background texture loaded via RGBELoader */
+  private _hdriTexture: THREE.Texture | null = null
 
   constructor() {
     this.isReady = false
@@ -53,6 +61,28 @@ export class Viewer {
     // animate
     this._clock = new THREE.Clock()
     this._clock.start()
+  }
+
+  /** Get the VRM avatar's foot reference position (center between left/right feet on ground plane).
+   *  Falls back to origin (0,0,0) if VRM foot bones are unavailable. */
+  private _getFootReferencePosition(): THREE.Vector3 {
+    if (this.model?.vrm?.humanoid) {
+      const leftFoot = this.model.vrm.humanoid.getNormalizedBoneNode('leftFoot')
+      const rightFoot =
+        this.model.vrm.humanoid.getNormalizedBoneNode('rightFoot')
+      if (leftFoot && rightFoot) {
+        const leftPos = new THREE.Vector3()
+        const rightPos = new THREE.Vector3()
+        leftFoot.getWorldPosition(leftPos)
+        rightFoot.getWorldPosition(rightPos)
+        return new THREE.Vector3(
+          (leftPos.x + rightPos.x) / 2,
+          0, // feet are at ground level (y=0)
+          (leftPos.z + rightPos.z) / 2
+        )
+      }
+    }
+    return new THREE.Vector3(0, 0, 0)
   }
 
   public loadVrm(url: string): Promise<void> {
@@ -316,20 +346,353 @@ export class Viewer {
   }
 
   // 3D Gaussian Splatting (Spark) integration
-  public async loadSplatScene(url: string): Promise<void> {
+  public async loadSplatScene(url: string, opacity?: number): Promise<void> {
+    const renderer = this._renderer
+    if (!renderer) {
+      const msg = 'Renderer not initialized — call setup() first'
+      homeStore.setState({
+        gaussianSplatError: msg,
+        gaussianSplatLoading: false,
+      })
+      return
+    }
     try {
+      homeStore.setState({
+        gaussianSplatLoading: true,
+        gaussianSplatProgress: 0,
+        gaussianSplatError: null,
+      })
       const { SparkRenderer, SplatMesh } = await import('@sparkjsdev/spark')
       this.unloadSplatScene()
 
-      this._sparkRenderer = new SparkRenderer({ renderer: this._renderer })
+      this._sparkRenderer = new SparkRenderer({ renderer })
       this._scene.add(this._sparkRenderer)
 
-      this._splatMesh = new SplatMesh({ url })
-      this._scene.add(this._splatMesh)
+      const mesh = new SplatMesh({
+        url,
+        onProgress: (event: ProgressEvent) => {
+          if (event.total > 0) {
+            const pct = Math.min(
+              99,
+              Math.round((event.loaded / event.total) * 100)
+            )
+            homeStore.setState({ gaussianSplatProgress: pct })
+          }
+        },
+        onLoad: () => {
+          homeStore.setState({
+            gaussianSplatLoading: false,
+            gaussianSplatProgress: 100,
+          })
+          // Place splat scene grounded at VRM avatar's feet reference position
+          if (this._camera) {
+            const bbox = mesh.getBoundingBox()
+            const bboxSize = new THREE.Vector3()
+            bbox.getSize(bboxSize)
+            const maxDim = Math.max(bboxSize.x, bboxSize.y, bboxSize.z)
+            // Use VRM foot reference position (feet center on ground plane)
+            const footRef = this._getFootReferencePosition()
+            const fx = footRef.x
+            const fz = footRef.z
+            if (maxDim > 0) {
+              // Use store scale (default 1.0 = real-world capture scale)
+              const scale = homeStore.getState().gaussianSplatScale ?? 1.0
+              mesh.scale.set(scale, scale, scale)
+              // Apply rotation offset for axis correction (e.g., House.sog needs roll 180°)
+              mesh.quaternion.set(0, 0, 0, 1)
+              const rotOffset = homeStore.getState()
+                .gaussianSplatRotationOffset ?? [0, 0, 0]
+              if (
+                rotOffset[0] !== 0 ||
+                rotOffset[1] !== 0 ||
+                rotOffset[2] !== 0
+              ) {
+                const qRoll = new THREE.Quaternion().setFromAxisAngle(
+                  new THREE.Vector3(0, 0, 1),
+                  rotOffset[0]
+                )
+                const qPitch = new THREE.Quaternion().setFromAxisAngle(
+                  new THREE.Vector3(1, 0, 0),
+                  rotOffset[1]
+                )
+                const qYaw = new THREE.Quaternion().setFromAxisAngle(
+                  new THREE.Vector3(0, 1, 0),
+                  rotOffset[2]
+                )
+                mesh.quaternion.multiply(qRoll)
+                mesh.quaternion.multiply(qPitch)
+                mesh.quaternion.multiply(qYaw)
+              }
+              // Ground-align: bottom of bounding box at y=0
+              const bboxMin = new THREE.Vector3()
+              bboxMin.copy(bbox.min)
+              const bboxCenter = new THREE.Vector3()
+              bbox.getCenter(bboxCenter)
+              mesh.position.set(
+                fx - bboxCenter.x * scale,
+                -bboxMin.y * scale, // bottom of bbox → y=0
+                fz - bboxCenter.z * scale
+              )
+              // Save initial state for reset
+              this._initialSplatState = {
+                position: mesh.position.clone(),
+                scale: mesh.scale.clone(),
+                quaternion: mesh.quaternion.clone(),
+              }
+            }
+          }
+          // Smooth fade-in: start at 0, animate to target opacity
+          mesh.opacity = 0
+          const target = opacity ?? 1.0
+          const startTime = performance.now()
+          const duration = 600 // ms
+          const fade = () => {
+            const elapsed = performance.now() - startTime
+            const t = Math.min(1, elapsed / duration)
+            // Ease-out cubic
+            const ease = 1 - Math.pow(1 - t, 3)
+            mesh.opacity = ease * target
+            if (t < 1) requestAnimationFrame(fade)
+          }
+          requestAnimationFrame(fade)
+        },
+      })
+      mesh.opacity = 0 // Start invisible, fade in on load
+      this._splatMesh = mesh
+      this._scene.add(mesh)
     } catch (error) {
+      homeStore.setState({ gaussianSplatLoading: false })
+      const msg =
+        error instanceof Error
+          ? error.message
+          : 'Unknown error loading 3DGS scene'
+      homeStore.setState({ gaussianSplatError: msg })
       reportViewerError('3dgs-viewer', 'Failed to load 3DGS scene:', error)
-      homeStore.setState({ gaussianSplatEnabled: false })
     }
+  }
+
+  public setSplatOpacity(opacity: number): void {
+    if (this._splatMesh) {
+      this._splatMesh.opacity = opacity
+    }
+  }
+
+  /** Set uniform scale on the splat mesh (1.0 = real-world capture scale). */
+  public setSplatScale(scale: number): void {
+    if (this._splatMesh) {
+      this._splatMesh.scale.set(scale, scale, scale)
+    }
+  }
+
+  /** Rotate the HDRI background horizontally using scene.backgroundRotation.
+   *  Three.js applies this as a mat3 rotation to the cube-map direction
+   *  in the background shader, so it works regardless of how the texture
+   *  was converted internally.
+   *  @param degrees  — angle in degrees, -180 to +180. 0 = default. */
+  public setSplatHdriRotation(degrees: number): void {
+    // Y-axis rotation for horizontal panorama rotation
+    this._scene.backgroundRotation.set(0, (degrees * Math.PI) / 180, 0)
+  }
+
+  /** Move the splat mesh independently of the VRM camera.
+   *  Step size is proportional to current scale so movement feels consistent. */
+  public moveSplat(dx: number, dy: number, dz: number): void {
+    if (this._splatMesh) {
+      const step = this._splatMesh.scale.x * 0.05
+      this._splatMesh.position.x += dx * step
+      this._splatMesh.position.y += dy * step
+      this._splatMesh.position.z += dz * step
+    }
+  }
+
+  /** Zoom the splat mesh (scale) independently of the VRM camera */
+  public zoomSplat(factor: number): void {
+    if (this._splatMesh) {
+      const s = this._splatMesh.scale.x * factor
+      this._splatMesh.scale.set(s, s, s)
+    }
+  }
+
+  /**
+   * Rotate the splat mesh around its local axes independently of the VRM camera.
+   * @param roll  — rotation around local Z axis (tilt left/right), in radians
+   * @param pitch — rotation around local X axis (tilt forward/backward), in radians
+   * @param yaw   — rotation around local Y axis (turn left/right), in radians
+   */
+  public rotateSplat(roll: number, pitch: number, yaw: number): void {
+    if (this._splatMesh) {
+      // Use quaternion multiplication for proper Euler composition
+      const q = new THREE.Quaternion()
+      const qRoll = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        roll
+      )
+      const qPitch = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        pitch
+      )
+      const qYaw = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        yaw
+      )
+      // Apply in Z-X-Y order (roll, pitch, yaw) relative to current orientation
+      q.multiply(qRoll)
+      q.multiply(qPitch)
+      q.multiply(qYaw)
+      this._splatMesh.quaternion.multiply(q)
+    }
+  }
+
+  /** Fit splat scene centered in viewport (VRM camera target). Resets rotation. */
+  public fitSplatToViewport(): void {
+    if (this._splatMesh && this._camera) {
+      const bbox = this._splatMesh.getBoundingBox()
+      const bboxSize = new THREE.Vector3()
+      bbox.getSize(bboxSize)
+      const maxDim = Math.max(bboxSize.x, bboxSize.y, bboxSize.z)
+
+      if (maxDim > 0) {
+        const target = this._cameraControls?.target
+        const tx = target?.x ?? 0
+        const ty = target?.y ?? 1.3
+        const tz = target?.z ?? 0
+
+        const fov = this._camera.fov * (Math.PI / 180)
+        const camDist = this._camera.position.distanceTo(
+          target || new THREE.Vector3(tx, ty, tz)
+        )
+        const visibleHeight = 2 * camDist * Math.tan(fov / 2)
+        const visibleWidth = visibleHeight * this._camera.aspect
+        const visibleMax = Math.max(visibleWidth, visibleHeight)
+        const scale = (visibleMax / maxDim) * 0.9
+
+        this._splatMesh.scale.set(scale, scale, scale)
+        this._splatMesh.quaternion.set(0, 0, 0, 1)
+        const center = new THREE.Vector3()
+        bbox.getCenter(center)
+        this._splatMesh.position.set(
+          tx - center.x * scale,
+          ty - center.y * scale,
+          tz - center.z * scale
+        )
+      }
+    }
+  }
+
+  /** Reset splat to its initial position (grounded at VRM avatar's feet reference).
+   *  Uses the saved initial state if available, otherwise recomputes from foot reference. */
+  public resetSplatToInitialPosition(): void {
+    if (!this._splatMesh) return
+
+    // If we have a saved initial state, use it directly for exact restoration
+    if (this._initialSplatState) {
+      this._splatMesh.position.copy(this._initialSplatState.position)
+      this._splatMesh.scale.copy(this._initialSplatState.scale)
+      this._splatMesh.quaternion.copy(this._initialSplatState.quaternion)
+      return
+    }
+
+    // Fallback: recompute from foot reference (same logic as onLoad)
+    if (this._camera) {
+      const bbox = this._splatMesh.getBoundingBox()
+      const bboxSize = new THREE.Vector3()
+      bbox.getSize(bboxSize)
+      const maxDim = Math.max(bboxSize.x, bboxSize.y, bboxSize.z)
+
+      if (maxDim > 0) {
+        const footRef = this._getFootReferencePosition()
+        const fx = footRef.x
+        const fz = footRef.z
+
+        const fov = this._camera.fov * (Math.PI / 180)
+        const camDist = this._camera.position.distanceTo(
+          this._cameraControls?.target || new THREE.Vector3(fx, 1.3, fz)
+        )
+        const visibleHeight = 2 * camDist * Math.tan(fov / 2)
+        const visibleWidth = visibleHeight * this._camera.aspect
+        const scale = (visibleWidth / maxDim) * 0.9
+
+        this._splatMesh.scale.set(scale, scale, scale)
+        this._splatMesh.quaternion.set(0, 0, 0, 1)
+        const bboxMin = new THREE.Vector3()
+        bboxMin.copy(bbox.min)
+        const bboxCenter = new THREE.Vector3()
+        bbox.getCenter(bboxCenter)
+        this._splatMesh.position.set(
+          fx - bboxCenter.x * scale,
+          -bboxMin.y * scale, // bottom of bbox → y=0
+          fz - bboxCenter.z * scale
+        )
+      }
+    }
+  }
+
+  /** Alias kept for backward compatibility */
+  public resetSplatToGround(): void {
+    this.resetSplatToInitialPosition()
+  }
+
+  /** Alias kept for backward compatibility — delegates to fitSplatToViewport */
+  public resetSplatPosition(): void {
+    this.fitSplatToViewport()
+  }
+
+  /** Load an equirectangular image as the scene background for immersive 3DGS backdrop.
+   *  Uses RGBELoader for .hdr/.exr, TextureLoader for .jpg/.png/.jpeg.
+   *  Pass a URL to the file. */
+  public async loadSplatHdri(url: string): Promise<void> {
+    homeStore.setState({
+      gaussianSplatHdriLoading: true,
+      gaussianSplatHdriError: null,
+    })
+    try {
+      const ext = url.toLowerCase().split('?')[0].split('#')[0]
+      const isHdr = ext.endsWith('.hdr') || ext.endsWith('.exr')
+
+      let texture: THREE.Texture
+      if (isHdr) {
+        const { RGBELoader } =
+          await import('three/examples/jsm/loaders/RGBELoader.js')
+        const loader = new RGBELoader()
+        texture = await loader.loadAsync(url)
+      } else {
+        const { TextureLoader } = await import('three')
+        const loader = new TextureLoader()
+        texture = await loader.loadAsync(url)
+      }
+      texture.mapping = THREE.EquirectangularReflectionMapping
+      // Dispose previous HDRI if present
+      this.unloadSplatHdri()
+      this._hdriTexture = texture
+      this._scene.background = texture
+      this._scene.environment = texture
+      // Apply stored rotation to the background
+      const initRot = homeStore.getState().gaussianSplatHdriRotation ?? 0
+      this.setSplatHdriRotation(initRot)
+      homeStore.setState({ gaussianSplatHdriLoading: false })
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : 'Unknown error loading HDRI'
+      homeStore.setState({
+        gaussianSplatHdriLoading: false,
+        gaussianSplatHdriError: msg,
+      })
+      reportViewerError('3dgs-viewer', 'Failed to load HDRI:', error)
+    }
+  }
+
+  /** Remove the HDRI background texture and restore the original scene background. */
+  public unloadSplatHdri(): void {
+    if (this._hdriTexture) {
+      this._hdriTexture.dispose()
+      this._hdriTexture = null
+    }
+    this._scene.background = null
+    this._scene.environment = null
+    homeStore.setState({
+      gaussianSplatHdriUrl: '',
+      gaussianSplatHdriError: null,
+    })
   }
 
   public unloadSplatScene(): void {
@@ -341,5 +704,10 @@ export class Viewer {
       this._scene.remove(this._sparkRenderer)
       this._sparkRenderer = null
     }
+    this.unloadSplatHdri()
+    homeStore.setState({
+      gaussianSplatLoading: false,
+      gaussianSplatError: null,
+    })
   }
 }

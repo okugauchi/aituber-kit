@@ -53,26 +53,28 @@ export const Toast = ({
 
   return (
     <div
-      className={`aurora-glass-popover pointer-events-auto cursor-pointer rounded-2xl p-4 text-sm text-[var(--aurora-text-strong)] flex items-center justify-between mb-2 transition-opacity duration-300 ${
+      className={`aurora-glass-popover pointer-events-auto cursor-pointer rounded-2xl p-3 text-xs text-[var(--aurora-text-strong)] flex items-center justify-between mb-2 transition-opacity duration-300 ${
         closing ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      <div className="flex items-center">
+      <div className="flex items-center gap-1.5 min-w-0">
         <IconButton
           iconName={getIconName()}
           isProcessing={false}
           onClick={onClose}
           iconColor={getIconColor()}
-          className="!p-2 !bg-transparent !hover:bg-black/10"
+          className="!p-1 !bg-transparent !hover:bg-black/10 !min-w-[28px] !min-h-[28px]"
         />
-        <span className="mr-2">{t(message)}</span>
+        <span className="leading-tight break-words whitespace-pre-wrap">
+          {t(message)}
+        </span>
       </div>
       <IconButton
         iconName="24/Close"
         isProcessing={false}
         onClick={onClose}
         iconColor="text-error"
-        className="!p-2 !bg-transparent !hover:bg-black/10"
+        className="!p-1 !bg-transparent !hover:bg-black/10 !min-w-[28px] !min-h-[28px] shrink-0"
       />
     </div>
   )

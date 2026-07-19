@@ -213,7 +213,8 @@ export const CharacterPositionSection = ({
               const settings = settingsStore.getState()
               const newPreset = {
                 id: generateMessageId(),
-                name: presetName || `Preset ${settings.positionPresets.length + 1}`,
+                name:
+                  presetName || `Preset ${settings.positionPresets.length + 1}`,
                 position: settings.characterPosition,
                 rotation: settings.characterRotation,
                 lightingIntensity: settings.lightingIntensity,

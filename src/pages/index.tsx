@@ -13,6 +13,7 @@ import { Toasts } from '@/components/toasts'
 import { WebSocketManager } from '@/components/websocketManager'
 import CharacterPresetMenu from '@/components/characterPresetMenu'
 import ImageOverlay from '@/components/ImageOverlay'
+import SplatControls from '@/components/splatControls'
 import PresenceManager from '@/components/presenceManager'
 import IdleManager from '@/components/idleManager'
 import GameCommentaryManager from '@/components/gameCommentaryManager'
@@ -33,6 +34,7 @@ const Home = () => {
   const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
   const useVideoAsBackground = settingsStore((s) => s.useVideoAsBackground)
   const gaussianSplatEnabled = settingsStore((s) => s.gaussianSplatEnabled)
+  const gaussianSplatLoading = homeStore((s) => s.gaussianSplatLoading)
   const bgUrl =
     (webcamStatus || captureStatus) && useVideoAsBackground
       ? ''
@@ -131,10 +133,106 @@ const Home = () => {
     }
   }, [characterPresets, t])
 
+  // Keyboard controls for 3DGS splat movement (independent of VRM camera)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't capture when typing in input fields
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement
+      ) {
+        return
+      }
+
+      const gsEnabled = settingsStore.getState().gaussianSplatEnabled
+      if (!gsEnabled) return
+
+      const viewer = homeStore.getState().viewer
+      if (!viewer) return
+
+      // Rotation increment in radians (~2.9 degrees per press)
+      const ROT = 0.05
+
+      // Arrow keys for movement — Shift=10×, Shift+Option=100×
+      let mult = 1
+      if (event.shiftKey) mult = 10
+      if (event.shiftKey && event.altKey) mult = 100
+
+      switch (event.key) {
+        case 'ArrowUp':
+          event.preventDefault()
+          viewer.moveSplat(0, 1 * mult, 0)
+          break
+        case 'ArrowDown':
+          event.preventDefault()
+          viewer.moveSplat(0, -1 * mult, 0)
+          break
+        case 'ArrowLeft':
+          event.preventDefault()
+          viewer.moveSplat(-1 * mult, 0, 0)
+          break
+        case 'ArrowRight':
+          event.preventDefault()
+          viewer.moveSplat(1 * mult, 0, 0)
+          break
+        case '+':
+        case '=':
+          viewer.zoomSplat(1.1)
+          break
+        case '-':
+          viewer.zoomSplat(0.9)
+          break
+        // Rotation
+        case 'q':
+        case 'Q':
+          viewer.rotateSplat(-ROT, 0, 0) // Roll counter-clockwise
+          break
+        case 'e':
+        case 'E':
+          viewer.rotateSplat(ROT, 0, 0) // Roll clockwise
+          break
+        case 'w':
+        case 'W':
+          viewer.rotateSplat(0, ROT, 0) // Pitch up
+          break
+        case 's':
+        case 'S':
+          viewer.rotateSplat(0, -ROT, 0) // Pitch down
+          break
+        case 'a':
+        case 'A':
+          viewer.rotateSplat(0, 0, -ROT) // Yaw left
+          break
+        case 'd':
+        case 'D':
+          viewer.rotateSplat(0, 0, ROT) // Yaw right
+          break
+        case 'r':
+        case 'R':
+          viewer.fitSplatToViewport()
+          break
+        case 'g':
+        case 'G':
+          viewer.resetSplatToInitialPosition()
+          break
+        case 'h':
+        case 'H':
+          event.preventDefault()
+          const current = homeStore.getState().gaussianSplatControlsVisible
+          homeStore.setState({ gaussianSplatControlsVisible: !current })
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const backgroundStyle =
     (webcamStatus || captureStatus) && useVideoAsBackground
       ? {}
-      : gaussianSplatEnabled
+      : gaussianSplatEnabled || gaussianSplatLoading
         ? {}
         : backgroundImageUrl === 'green'
           ? { backgroundColor: '#00FF00' }
@@ -161,12 +259,40 @@ const Home = () => {
       <MemoryServiceInitializer />
       <CharacterPresetMenu />
       <ImageOverlay />
+      <SplatControls />
+      {/* Show-controls button when pane is hidden */}
+      <ShowSplatControlsButton />
       <PresenceManager />
       <div className="absolute top-4 left-4 z-30">
         <IdleManager />
         <GameCommentaryManager />
       </div>
       <KioskOverlay />
+    </div>
+  )
+}
+
+/** Small floating button to show the 3DGS controls pane when it is hidden. */
+function ShowSplatControlsButton() {
+  const gsEnabled = settingsStore((s) => s.gaussianSplatEnabled)
+  const controlsVisible = homeStore((s) => s.gaussianSplatControlsVisible)
+
+  if (!gsEnabled || controlsVisible) return null
+
+  return (
+    <div className="absolute bottom-6 right-6 z-30">
+      <button
+        className="w-10 h-10 rounded-full bg-gray-900/70 backdrop-blur-sm border border-white/10
+                   flex items-center justify-center text-white text-sm font-bold
+                   hover:bg-gray-700/80 active:bg-gray-600/80 transition-colors duration-150"
+        onClick={() =>
+          homeStore.setState({ gaussianSplatControlsVisible: true })
+        }
+        title="Show 3DGS controls (H key)"
+        aria-label="Show 3DGS controls"
+      >
+        🎮
+      </button>
     </div>
   )
 }
