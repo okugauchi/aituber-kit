@@ -101,6 +101,44 @@ const Based = () => {
       })
   }, [t])
 
+  const handleSplatUpload = async (file: File) => {
+    setIsUploading(true)
+    setUploadError(null)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const response = await fetch('/api/upload-splat', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error(`${t('UploadFailed')}: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      // Update splat URL to the uploaded file
+      homeStore.setState({ gaussianSplatUrl: data.path })
+      const viewer = homeStore.getState().viewer
+      viewer?.loadSplatScene(data.path)
+
+      // Refresh splat file list
+      fetch('/api/get-splat-list')
+        .then((res) => res.json())
+        .then((files: { name: string; size: number; url: string }[]) => {
+          setSplatFiles(files)
+        })
+        .catch(() => {})
+    } catch (error) {
+      logger.error('Error uploading splat:', error)
+      setUploadError(t('SplatUploadError'))
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   const handleBackgroundUpload = async (file: File) => {
     // ファイルタイプの検証
     if (!file.type.startsWith('image/')) {
@@ -451,7 +489,7 @@ const Based = () => {
               </button>
             </div>
 
-            {/* Local file picker */}
+            {/* Local file picker + upload */}
             {splatFiles && splatFiles.length > 0 && (
               <div className="flex items-center gap-2">
                 <select
@@ -477,6 +515,111 @@ const Based = () => {
                 </select>
               </div>
             )}
+            {/* Upload splat button */}
+            <div className="my-2">
+              <TextButton
+                onClick={() => {
+                  const { fileInput } = menuStore.getState()
+                  if (fileInput) {
+                    fileInput.accept = '.spz,.ply,.splat,.ksplat,.sog'
+                    fileInput.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0]
+                      if (file) {
+                        handleSplatUpload(file)
+                      }
+                    }
+                    fileInput.click()
+                  }
+                }}
+                disabled={isUploading}
+              >
+                {isUploading ? t('Uploading') : 'Upload 3DGS File'}
+              </TextButton>
+            </div>
+
+            {/* Multi-scene preset list */}
+            <div className="border-t border-white/10 pt-2 mt-2">
+              <div className="text-xs text-gray-400 mb-1">Scene Presets</div>
+              <div className="my-1 space-y-1">
+                {(() => {
+                  const list = homeStore.getState().gaussianSplatList
+                  const currentIdx =
+                    homeStore.getState().gaussianSplatCurrentIndex
+                  return list.length === 0 ? (
+                    <div className="text-xs text-gray-500 italic">
+                      No presets saved. Click "Add current" below to save the
+                      current scene.
+                    </div>
+                  ) : (
+                    list.map((url, idx) => (
+                      <div
+                        key={`splat-${idx}`}
+                        className={`flex items-center gap-2 text-xs py-1 px-2 rounded ${
+                          idx === currentIdx
+                            ? 'bg-blue-500/20 border border-blue-500'
+                            : 'bg-gray-800/20'
+                        }`}
+                      >
+                        <span className="flex-1 truncate">{url}</span>
+                        {idx === currentIdx && (
+                          <span className="text-blue-300 text-xs">
+                            (active)
+                          </span>
+                        )}
+                        <button
+                          className="text-blue-400 hover:text-blue-300 text-xs"
+                          onClick={() => {
+                            homeStore.setState({
+                              gaussianSplatUrl: url,
+                              gaussianSplatCurrentIndex: idx,
+                            })
+                            const viewer = homeStore.getState().viewer
+                            viewer?.loadSplatScene(url)
+                          }}
+                        >
+                          Load
+                        </button>
+                        <button
+                          className="text-red-400 hover:text-red-300 text-xs ml-1"
+                          onClick={() => {
+                            const newList = list.filter((_, i) => i !== idx)
+                            homeStore.setState({
+                              gaussianSplatList: newList,
+                              gaussianSplatCurrentIndex:
+                                idx === currentIdx
+                                  ? -1
+                                  : Math.min(currentIdx, newList.length - 1),
+                            })
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))
+                  )
+                })()}
+              </div>
+              {/* Add current scene to presets */}
+              <div className="my-1">
+                <TextButton
+                  onClick={() => {
+                    const url = homeStore.getState().gaussianSplatUrl
+                    if (!url) return
+                    const list = homeStore.getState().gaussianSplatList
+                    if (!list.includes(url)) {
+                      const newList = [...list, url]
+                      homeStore.setState({
+                        gaussianSplatList: newList,
+                        gaussianSplatCurrentIndex: newList.length - 1,
+                      })
+                    }
+                  }}
+                  disabled={!homeStore.getState().gaussianSplatUrl}
+                >
+                  Add current to presets
+                </TextButton>
+              </div>
+            </div>
 
             {/* Progress bar */}
             {gaussianSplatLoading && (

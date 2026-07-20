@@ -44,6 +44,10 @@ export interface TransientState {
   backgroundSwitchInterval: number
   gaussianSplatEnabled: boolean
   gaussianSplatUrl: string
+  /** List of available splat scene URLs for multi-scene preset switching */
+  gaussianSplatList: string[]
+  /** Current index in gaussianSplatList (for preset switching) */
+  gaussianSplatCurrentIndex: number
   gaussianSplatLoading: boolean
   gaussianSplatProgress: number
   gaussianSplatError: string | null
@@ -284,6 +288,8 @@ const homeStore = create<HomeState>()(
       backgroundSwitchInterval: 30,
       gaussianSplatEnabled: false,
       gaussianSplatUrl: '',
+      gaussianSplatList: [],
+      gaussianSplatCurrentIndex: -1,
       gaussianSplatLoading: false,
       gaussianSplatProgress: 0,
       gaussianSplatError: null,

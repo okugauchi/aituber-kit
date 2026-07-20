@@ -460,6 +460,14 @@ export const routePolicies = {
     secret: { kind: 'none' },
     restrictedBehavior: 'deny',
   },
+  '/api/upload-splat': {
+    path: '/api/upload-splat',
+    featureName: 'upload-splat',
+    methods: ['POST'],
+    resources: ['fs-write'],
+    secret: { kind: 'none' },
+    restrictedBehavior: 'deny',
+  },
   '/api/upload-image': {
     path: '/api/upload-image',
     featureName: 'upload-image',
