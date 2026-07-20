@@ -233,6 +233,12 @@ export class Viewer {
     }
   }
 
+  /** Callback fired every frame with the VRM character's screen-space position
+   *  (normalized -1..1 coordinates, or pixel coordinates). Used by CSS Anchor
+   *  Positioning bridge in vrmViewer.tsx. */
+  public onCharacterScreenPosition?:
+    ((x: number, y: number) => void) | null
+
   public update = () => {
     requestAnimationFrame(this.update)
     const delta = this._clock.getDelta()
@@ -244,6 +250,31 @@ export class Viewer {
     if (this._renderer && this._camera) {
       this._renderer.render(this._scene, this._camera)
     }
+
+    // Fire screen-space position callback for CSS Anchor Positioning bridge
+    if (this.onCharacterScreenPosition && this._camera && this.model?.vrm) {
+      const headNode = this.model.vrm.humanoid.getNormalizedBoneNode('head')
+      if (headNode) {
+        const worldPos = new THREE.Vector3()
+        headNode.getWorldPosition(worldPos)
+        const screenPos = worldPos.clone().project(this._camera)
+        // Normalized coordinates: -1..1, flip Y for CSS
+        this.onCharacterScreenPosition(screenPos.x, 1 - screenPos.y)
+      }
+    }
+  }
+
+  /** Get the VRM character's head position projected to screen-space.
+   *  Returns null if VRM or camera is not ready. Used externally for CSS
+   *  Anchor Positioning. */
+  public getCharacterScreenPosition(): { x: number; y: number } | null {
+    if (!this._camera || !this.model?.vrm) return null
+    const headNode = this.model.vrm.humanoid.getNormalizedBoneNode('head')
+    if (!headNode) return null
+    const worldPos = new THREE.Vector3()
+    headNode.getWorldPosition(worldPos)
+    const screenPos = worldPos.clone().project(this._camera)
+    return { x: screenPos.x, y: 1 - screenPos.y }
   }
 
   /**

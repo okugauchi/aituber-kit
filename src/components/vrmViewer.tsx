@@ -1,5 +1,6 @@
 import { logger } from '@/lib/logger'
 import { useCallback, useEffect, useState } from 'react'
+import * as THREE from 'three'
 
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
@@ -10,6 +11,44 @@ import ErrorBoundary from '@/components/common/ErrorBoundary'
 
 function VrmViewerInner() {
   const [isModelLoading, setIsModelLoading] = useState(false)
+
+  // CSS Anchor Positioning bridge: update a hidden anchor element every frame
+  // so the assistant speech bubble can use `anchor()` positioning.
+  useEffect(() => {
+    const { viewer } = homeStore.getState()
+    if (!viewer) return
+
+    // Create a hidden anchor element that tracks the VRM character's screen position
+    const anchor = document.createElement('div')
+    anchor.id = 'character-anchor'
+    anchor.style.cssText =
+      'position:fixed; left:0; top:0; width:1px; height:1px; pointer-events:none; z-index:-1; anchor-name:--character'
+    document.body.appendChild(anchor)
+
+    viewer.onCharacterScreenPosition = (x, y) => {
+      // Map normalized -1..1 coordinates to CSS viewport percent
+      const vw = ((x + 1) / 2) * 100
+      const vh = y * 100 // y is already flipped (1 - normalizedY)
+      anchor.style.left = vw + 'vw'
+      anchor.style.top = vh + 'vw'
+      // Also set CSS custom properties for anchor() fallback
+      document.documentElement.style.setProperty(
+        '--character-x-pct',
+        vw.toString()
+      )
+      document.documentElement.style.setProperty(
+        '--character-y-pct',
+        vh.toString()
+      )
+    }
+
+    return () => {
+      viewer.onCharacterScreenPosition = null
+      document.body.removeChild(anchor)
+      document.documentElement.style.removeProperty('--character-x-pct')
+      document.documentElement.style.removeProperty('--character-y-pct')
+    }
+  }, [])
 
   useEffect(() => {
     const { viewer } = homeStore.getState()

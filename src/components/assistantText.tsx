@@ -2,10 +2,10 @@ import settingsStore from '@/features/stores/settings'
 import { EMOTIONS } from '@/features/messages/messages'
 
 const escapeRegExp = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')
 
 const emotionPattern = new RegExp(
-  `\\[(${EMOTIONS.map(escapeRegExp).join('|')})\\]`,
+  `\\\\[(${EMOTIONS.map(escapeRegExp).join('|')})\\\\]`,
   'gi'
 )
 
@@ -22,7 +22,7 @@ export const AssistantText = ({ message }: { message: string }) => {
     showPresetQuestions && presetQuestions.length > 0
   const sanitizedMessage = message
     .replace(emotionPattern, '')
-    .replace(/\[motion:[^\]]*\]/gi, '')
+    .replace(/\\[motion:[^\\]]*\\]/gi, '')
 
   if (assistantTextStyle === 'borderless') {
     return (
@@ -46,6 +46,24 @@ export const AssistantText = ({ message }: { message: string }) => {
   return (
     <div
       className={`absolute bottom-0 left-1/2 z-10 flex w-full max-w-[90vw] -translate-x-1/2 justify-center px-3 ${shouldShowPresetQuestions ? 'mb-[150px] sm:mb-[182px]' : 'mb-[86px] sm:mb-[104px]'}`}
+      // CSS Anchor Positioning: when the #character-anchor element exists
+      // (created by vrmViewer.tsx), the bubble follows the VRM character's
+      // screen position. Falls back to standard positioning otherwise.
+      style={
+        {
+          // Use anchor() if supported (Baseline 2026: Chrome 125+, Firefox 132+, Safari 18.2+)
+          // The anchor element #character-anchor tracks the VRM head position
+          // in viewport-percent coordinates every frame.
+          position: 'fixed' as const,
+          left: 'anchor(--character left)' as unknown as '50%',
+          bottom: 'anchor(--character top)' as unknown as undefined,
+          transform: 'translateX(-50%)' as unknown as undefined,
+        } as React.CSSProperties & {
+          left?: string
+          bottom?: string
+          transform?: string
+        }
+      }
     >
       <div
         className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} animate-aurora-bubble-in aurora-glass-bubble flex w-full flex-col items-start gap-1.5 rounded-[20px] px-[22px] pb-4 pt-3.5`}
