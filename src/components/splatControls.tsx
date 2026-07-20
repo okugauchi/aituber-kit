@@ -1,6 +1,49 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
+import { logger } from '@/lib/logger'
+
+/** Per-splat-file persisted state stored in localStorage */
+interface SplatPersistState {
+  position: [number, number, number]
+  scale: number
+  quaternion: [number, number, number, number]
+  opacity: number
+  rotationOffset: [number, number, number]
+  hdriUrl: string
+  hdriRotation: number
+}
+
+/** Build a localStorage key for a given splat file name. */
+function splatStorageKey(splatName: string): string {
+  return `3dgs-state-${splatName}`
+}
+
+/** Read persisted state from localStorage for a given splat file. */
+function loadSplatPersist(splatName: string): SplatPersistState | null {
+  try {
+    const raw = localStorage.getItem(splatStorageKey(splatName))
+    if (!raw) return null
+    return JSON.parse(raw) as SplatPersistState
+  } catch {
+    return null
+  }
+}
+
+/** Write persisted state to localStorage for a given splat file. */
+function saveSplatPersist(splatName: string, state: SplatPersistState): void {
+  try {
+    localStorage.setItem(splatStorageKey(splatName), JSON.stringify(state))
+  } catch (e) {
+    logger.error('Failed to persist 3DGS state:', e)
+  }
+}
+
+/** Extract the filename from a splat URL (e.g., '/splats/House.sog' → 'House.sog'). */
+function splatNameFromUrl(url: string): string {
+  const parts = url.split('/')
+  return parts[parts.length - 1] || 'default'
+}
 
 /**
  * Floating overlay with movement/zoom/rotation controls for the 3DGS splat scene,
@@ -22,9 +65,124 @@ export default function SplatControls() {
   const gaussianSplatControlsVisible = homeStore(
     (s) => s.gaussianSplatControlsVisible
   )
-  const hdriRotation = homeStore((s) => s.gaussianSplatHdriRotation)
+  const gaussianSplatUrl = homeStore((s) => s.gaussianSplatUrl)
+  const gaussianSplatOpacity = homeStore((s) => s.gaussianSplatOpacity)
+  const gaussianSplatScale = homeStore((s) => s.gaussianSplatScale)
+  const gaussianSplatHdriUrl = homeStore((s) => s.gaussianSplatHdriUrl)
+  const gaussianSplatHdriRotation = homeStore(
+    (s) => s.gaussianSplatHdriRotation
+  )
+  const gaussianSplatRotationOffset = homeStore(
+    (s) => s.gaussianSplatRotationOffset
+  )
 
   const [multiplier, setMultiplier] = useState(1)
+  const [splatFiles, setSplatFiles] = useState<
+    { name: string; size: number; url: string }[] | null
+  >(null)
+  const [hdriFiles, setHdriFiles] = useState<
+    { name: string; size: number; url: string }[] | null
+  >(null)
+
+  // Fetch local splat and HDRI file lists on mount
+  useEffect(() => {
+    fetch('/api/get-splat-list')
+      .then((res) => res.json())
+      .then((files: { name: string; size: number; url: string }[]) => {
+        setSplatFiles(files)
+      })
+      .catch((error) => {
+        logger.error('Error fetching splat list:', error)
+        setSplatFiles([])
+      })
+
+    fetch('/api/get-hdri-list')
+      .then((res) => res.json())
+      .then((files: { name: string; size: number; url: string }[]) => {
+        setHdriFiles(files)
+      })
+      .catch((error) => {
+        logger.error('Error fetching HDRI list:', error)
+        setHdriFiles([])
+      })
+  }, [])
+
+  // ── localStorage persistence ───────────────────────────────────────
+  // Determine the current splat file name for localStorage keys.
+  const currentSplatName = gaussianSplatUrl
+    ? splatNameFromUrl(gaussianSplatUrl)
+    : null
+
+  // Save current state to localStorage whenever relevant values change.
+  useEffect(() => {
+    if (!currentSplatName) return
+    saveSplatPersist(currentSplatName, {
+      position: [0, 0, 0],
+      scale: gaussianSplatScale,
+      quaternion: [1, 0, 0, 0],
+      opacity: gaussianSplatOpacity,
+      rotationOffset: gaussianSplatRotationOffset,
+      hdriUrl: gaussianSplatHdriUrl,
+      hdriRotation: gaussianSplatHdriRotation,
+    })
+  }, [
+    currentSplatName,
+    gaussianSplatScale,
+    gaussianSplatOpacity,
+    gaussianSplatRotationOffset,
+    gaussianSplatHdriUrl,
+    gaussianSplatHdriRotation,
+  ])
+
+  // Track previous loading state to detect when loading finishes.
+  const prevLoadingRef = useRef(gaussianSplatLoading)
+  useEffect(() => {
+    prevLoadingRef.current = gaussianSplatLoading
+  })
+
+  // When loading finishes (transitioned from true to false), restore
+  // saved mesh position/scale/quaternion from localStorage.
+  useEffect(() => {
+    if (prevLoadingRef.current && !gaussianSplatLoading && currentSplatName) {
+      const saved = loadSplatPersist(currentSplatName)
+      if (saved) {
+        const viewer = homeStore.getState().viewer
+        if (viewer) {
+          viewer.setSplatScale(saved.scale)
+          viewer.setSplatOpacity(saved.opacity)
+
+          // Restore HDRI if previously set
+          if (saved.hdriUrl && saved.hdriUrl !== gaussianSplatHdriUrl) {
+            homeStore.setState({ gaussianSplatHdriUrl: saved.hdriUrl })
+            viewer.loadSplatHdri(saved.hdriUrl)
+          }
+          viewer.setSplatHdriRotation(saved.hdriRotation)
+          homeStore.setState({ gaussianSplatHdriRotation: saved.hdriRotation })
+          homeStore.setState({
+            gaussianSplatRotationOffset: saved.rotationOffset,
+          })
+
+          // Apply position and quaternion after a brief delay to ensure mesh is ready
+          setTimeout(() => {
+            const mesh = (viewer as any)['_splatMesh']
+            if (mesh) {
+              mesh.position.set(
+                saved.position[0],
+                saved.position[1],
+                saved.position[2]
+              )
+              mesh.quaternion.set(
+                saved.quaternion[0],
+                saved.quaternion[1],
+                saved.quaternion[2],
+                saved.quaternion[3]
+              )
+            }
+          }, 100)
+        }
+      }
+    }
+  }, [gaussianSplatLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!gaussianSplatEnabled || gaussianSplatLoading || gaussianSplatError) {
     return null
@@ -83,6 +241,69 @@ export default function SplatControls() {
             ✕
           </button>
         </div>
+
+        {/* ─────── LOCAL SPLAT FILE PICKER ─────── */}
+        {splatFiles && splatFiles.length > 0 && (
+          <div className="flex items-center gap-1 w-full">
+            <select
+              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-1 text-[9px] text-white"
+              value={gaussianSplatUrl}
+              onChange={(e) => {
+                const url = e.target.value
+                if (url) {
+                  // Save current state before switching splat files
+                  if (currentSplatName) {
+                    const viewer = homeStore.getState().viewer
+                    const mesh = (viewer as any)?.['_splatMesh']
+                    if (mesh) {
+                      saveSplatPersist(currentSplatName, {
+                        position: [
+                          mesh.position.x,
+                          mesh.position.y,
+                          mesh.position.z,
+                        ],
+                        scale: gaussianSplatScale,
+                        quaternion: [
+                          mesh.quaternion.w,
+                          mesh.quaternion.x,
+                          mesh.quaternion.y,
+                          mesh.quaternion.z,
+                        ],
+                        opacity: gaussianSplatOpacity,
+                        rotationOffset: gaussianSplatRotationOffset,
+                        hdriUrl: gaussianSplatHdriUrl,
+                        hdriRotation: gaussianSplatHdriRotation,
+                      })
+                    }
+                  }
+                  homeStore.setState({ gaussianSplatUrl: url })
+                  const viewer = homeStore.getState().viewer
+                  viewer?.loadSplatScene(url)
+                }
+              }}
+            >
+              <option value="">-- Select local splat --</option>
+              {splatFiles.map((f) => {
+                const sizeMB = (f.size / 1024 / 1024).toFixed(1)
+                return (
+                  <option key={f.url} value={f.url}>
+                    {f.name} ({sizeMB} MB)
+                  </option>
+                )
+              })}
+            </select>
+            <button
+              className="text-[9px] bg-gray-600 hover:bg-gray-500 px-1.5 py-1 rounded transition-colors whitespace-nowrap"
+              onClick={() => {
+                const viewer = homeStore.getState().viewer
+                viewer?.unloadSplatScene()
+                homeStore.setState({ gaussianSplatUrl: '' })
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* === MOVEMENT (3-axis) === */}
         {/* 4×3 grid with explicit row/col placement */}
@@ -330,6 +551,44 @@ export default function SplatControls() {
           </button>
         </div>
 
+        {/* ─────── HDRI BACKGROUND SELECTOR ─────── */}
+        {hdriFiles && hdriFiles.length > 0 && (
+          <div className="flex items-center gap-1 w-full">
+            <select
+              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-1 text-[9px] text-white"
+              value={gaussianSplatHdriUrl}
+              onChange={(e) => {
+                const url = e.target.value
+                homeStore.setState({ gaussianSplatHdriUrl: url })
+                if (url) {
+                  const viewer = homeStore.getState().viewer
+                  viewer?.loadSplatHdri(url)
+                }
+              }}
+            >
+              <option value="">-- Select HDRI --</option>
+              {hdriFiles.map((f) => {
+                const sizeMB = (f.size / 1024 / 1024).toFixed(1)
+                return (
+                  <option key={f.url} value={f.url}>
+                    {f.name} ({sizeMB} MB)
+                  </option>
+                )
+              })}
+            </select>
+            <button
+              className="text-[9px] bg-gray-600 hover:bg-gray-500 px-1.5 py-1 rounded transition-colors whitespace-nowrap"
+              onClick={() => {
+                const viewer = homeStore.getState().viewer
+                viewer?.unloadSplatHdri()
+                homeStore.setState({ gaussianSplatHdriUrl: '' })
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
         {/* === HDRI ROTATION === */}
         <div className="flex flex-col gap-1 w-full">
           <div className="text-[9px] text-gray-400 tracking-wider uppercase">
@@ -345,7 +604,7 @@ export default function SplatControls() {
               min={-180}
               max={180}
               step={1}
-              value={hdriRotation}
+              value={gaussianSplatHdriRotation}
               onChange={(e) => {
                 const deg = parseInt(e.target.value, 10)
                 homeStore.setState({ gaussianSplatHdriRotation: deg })
@@ -354,7 +613,7 @@ export default function SplatControls() {
               }}
             />
             <span className="text-[10px] text-cyan-300 w-10 text-right font-mono tabular-nums">
-              {hdriRotation}°
+              {gaussianSplatHdriRotation}°
             </span>
           </div>
         </div>

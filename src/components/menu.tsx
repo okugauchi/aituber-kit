@@ -468,7 +468,7 @@ export const Menu = () => {
                   <ToolMenuButton
                     iconName={gaussianSplatEnabled ? '24/Show' : '24/Hide'}
                     label={
-                      gaussianSplatEnabled ? 'Disable 3DGS' : 'Enable 3DGS'
+                      gaussianSplatEnabled ? '3D背景無効化' : '3D背景有効化'
                     }
                     active={gaussianSplatEnabled}
                     onClick={() => {
