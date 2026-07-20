@@ -59,6 +59,8 @@ export interface TransientState {
   gaussianSplatHdriRotation: number
   gaussianSplatRotationOffset: [number, number, number]
   gaussianSplatControlsVisible: boolean
+  /** HTMLMesh instances for 3D UI rendering (html-in-canvas / hybrid mode) */
+  ui3dMeshes: any[]
   modalImage: string
   triggerShutter: boolean
   webcamStatus: boolean
@@ -301,6 +303,7 @@ const homeStore = create<HomeState>()(
       gaussianSplatHdriRotation: 0,
       gaussianSplatRotationOffset: [0, 0, 0],
       gaussianSplatControlsVisible: true,
+      ui3dMeshes: [],
       modalImage: '',
       triggerShutter: false,
       webcamStatus: false,

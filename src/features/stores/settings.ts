@@ -286,6 +286,7 @@ interface General {
   uiDropShadowEnabled: boolean
   uiDarkMode: boolean
   bottomPaneOpacity: number
+  ui3dMode: 'css-overlay' | 'html-in-canvas' | 'hybrid'
   customModel: boolean
 }
 
@@ -673,6 +674,7 @@ const getInitialValuesFromEnv = (): SettingsState => ({
     process.env.NEXT_PUBLIC_BOTTOM_PANE_OPACITY,
     60
   ),
+  ui3dMode: (process.env.NEXT_PUBLIC_UI_3D_MODE as 'css-overlay' | 'html-in-canvas' | 'hybrid') || 'css-overlay',
 
   // Custom model toggle
   customModel: process.env.NEXT_PUBLIC_CUSTOM_MODEL === 'true',
@@ -1257,6 +1259,7 @@ const settingsStore = create<SettingsState>()(
         uiDropShadowEnabled: state.uiDropShadowEnabled,
         uiDarkMode: state.uiDarkMode,
         bottomPaneOpacity: state.bottomPaneOpacity,
+        ui3dMode: state.ui3dMode,
         customModel: state.customModel,
         memoryEnabled: state.memoryEnabled,
         memorySimilarityThreshold: state.memorySimilarityThreshold,

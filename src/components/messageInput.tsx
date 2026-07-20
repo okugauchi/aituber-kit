@@ -416,7 +416,7 @@ export const MessageInput = ({
   )
 
   return (
-    <div className="absolute bottom-0 z-20 w-screen">
+    <div data-ui3d-id="messageInput" className="absolute bottom-0 z-20 w-screen">
       {showPermissionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="theme-surface-elevated max-w-[calc(100vw-2rem)] rounded-xl border p-4 text-theme-default shadow-xl sm:max-w-md sm:p-6">

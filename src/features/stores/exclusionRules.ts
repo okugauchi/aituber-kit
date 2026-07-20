@@ -399,4 +399,18 @@ export const exclusionRules: ExclusionRule[] = [
       gaussianSplatEnabled: false,
     }),
   },
+  // Rule N+2: ui3dMode=html-in-canvas → gaussianSplatEnabled ON
+  {
+    id: 'ui3dMode-html-in-canvas',
+    description:
+      'ui3dMode=html-in-canvas時にgaussianSplatEnabledをONにする（3D空間内UIの意義）',
+    trigger: (incoming, merged, prev) =>
+      wasSet(incoming, 'ui3dMode') &&
+      merged.ui3dMode === 'html-in-canvas',
+    apply: () => ({
+      gaussianSplatEnabled: true,
+    }),
+  },
+  // Rule N+3: ui3dMode=css-overlay → gaussianSplatEnabled は変更しない
+  // （ユーザーが手動で設定した状態を尊重）
 ]

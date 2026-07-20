@@ -27,6 +27,7 @@ export const AssistantText = ({ message }: { message: string }) => {
   if (assistantTextStyle === 'borderless') {
     return (
       <div
+        data-ui3d-id="assistantText"
         className={`aurora-scrim pointer-events-none absolute bottom-0 left-0 z-10 w-full px-4 pt-16 ${shouldShowPresetQuestions ? 'pb-[150px] sm:pb-[182px]' : 'pb-[86px] sm:pb-[104px]'}`}
       >
         <div className="animate-aurora-bubble-in mx-auto flex w-full max-w-[90vw] flex-col items-center gap-1.5">
@@ -45,6 +46,7 @@ export const AssistantText = ({ message }: { message: string }) => {
 
   return (
     <div
+      data-ui3d-id="assistantText"
       className={`absolute bottom-0 left-1/2 z-10 flex w-full max-w-[90vw] -translate-x-1/2 justify-center px-3 ${shouldShowPresetQuestions ? 'mb-[150px] sm:mb-[182px]' : 'mb-[86px] sm:mb-[104px]'}`}
       // CSS Anchor Positioning: when the #character-anchor element exists
       // (created by vrmViewer.tsx), the bubble follows the VRM character's

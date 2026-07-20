@@ -3,6 +3,7 @@ import { Model } from './model'
 import { loadVRMAnimation } from '@/lib/VRMAnimation/loadVRMAnimation'
 import { buildUrl } from '@/utils/buildUrl'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { HTMLMesh } from 'three/examples/jsm/interactive/HTMLMesh.js'
 import settingsStore from '@/features/stores/settings'
 import homeStore from '@/features/stores/home'
 import { reportViewerError } from '@/components/common/ErrorBoundary'
@@ -35,6 +36,10 @@ export class Viewer {
   } | null = null
   /** HDRI background texture loaded via RGBELoader */
   private _hdriTexture: THREE.Texture | null = null
+  /** HTMLMesh instances for 3D UI rendering (html-in-canvas / hybrid mode) */
+  private _ui3dMeshes: HTMLMesh[] = []
+  /** Current ui3dMode to avoid redundant rebuilds */
+  private _currentUi3dMode: string | null = null
 
   constructor() {
     this.isReady = false
@@ -740,5 +745,88 @@ export class Viewer {
       gaussianSplatLoading: false,
       gaussianSplatError: null,
     })
+  }
+
+  // ─── HTML-in-Canvas / 3D UI Integration ───
+
+  /**
+   * Create an HTMLMesh from a DOM element and add it to the scene.
+   * The mesh renders the element as a canvas texture in the 3D scene.
+   * Returns the created mesh, or null if renderer is not ready.
+   */
+  public addUi3dMesh(domElement: HTMLElement, options?: {
+    position?: THREE.Vector3
+    scale?: number
+    rotation?: THREE.Euler
+  }): HTMLMesh | null {
+    if (!this._renderer) return null
+    const mesh = new HTMLMesh(domElement)
+    if (options?.position) mesh.position.copy(options.position)
+    if (options?.scale) mesh.scale.set(options.scale, options.scale, options.scale)
+    if (options?.rotation) mesh.rotation.copy(options.rotation)
+    this._scene.add(mesh)
+    this._ui3dMeshes.push(mesh)
+    return mesh
+  }
+
+  /** Remove a specific HTMLMesh instance from the scene. */
+  public removeUi3dMesh(mesh: HTMLMesh): void {
+    const idx = this._ui3dMeshes.indexOf(mesh)
+    if (idx >= 0) {
+      this._ui3dMeshes.splice(idx, 1)
+    }
+    this._scene.remove(mesh)
+    mesh.dispose()
+  }
+
+  /** Remove all HTMLMesh instances (called on mode switch or teardown). */
+  public clearAllUi3dMeshes(): void {
+    for (const mesh of this._ui3dMeshes) {
+      this._scene.remove(mesh)
+      mesh.dispose()
+    }
+    this._ui3dMeshes = []
+    this._currentUi3dMode = null
+  }
+
+  /**
+   * Build or rebuild 3D UI meshes based on the current ui3dMode.
+   * Called from vrmViewer.tsx when mode changes.
+   * @param mode  — 'css-overlay' | 'html-in-canvas' | 'hybrid'
+   * @param elements — map of element id → { dom, position, scale, rotation }
+   */
+  public syncUi3dMode(
+    mode: 'css-overlay' | 'html-in-canvas' | 'hybrid',
+    elements: Record<string, {
+      dom: HTMLElement
+      position: THREE.Vector3
+      scale?: number
+      rotation?: THREE.Euler
+    }>
+  ): void {
+    // If mode didn't change and meshes already exist, skip
+    if (mode === this._currentUi3dMode && this._ui3dMeshes.length > 0) return
+
+    this.clearAllUi3dMeshes()
+
+    if (mode === 'css-overlay') {
+      this._currentUi3dMode = mode
+      return // No 3D UI meshes in CSS-overlay mode
+    }
+
+    // For html-in-canvas or hybrid, create meshes for each element
+    for (const [id, cfg] of Object.entries(elements)) {
+      const mesh = this.addUi3dMesh(cfg.dom, {
+        position: cfg.position,
+        scale: cfg.scale,
+        rotation: cfg.rotation,
+      })
+      if (mesh) {
+        // Store element id on the mesh for future reference
+        ;(mesh as any).__ui3dId = id
+      }
+    }
+
+    this._currentUi3dMode = mode
   }
 }

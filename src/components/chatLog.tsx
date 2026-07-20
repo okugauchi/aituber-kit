@@ -243,6 +243,7 @@ const GlassChatLog = () => {
   return (
     <div
       ref={chatLogRef}
+      data-ui3d-id="chatLog"
       className={`aurora-glass-panel absolute bottom-[128px] top-[94px] z-10 flex max-w-[calc(100vw-40px)] flex-col overflow-hidden rounded-[22px] ${chatLogEdgeOffset == null ? defaultOffsetClasses : ''}`}
       style={{
         width: `${chatLogWidth}px`,
@@ -486,6 +487,7 @@ const ClassicChatLog = () => {
   return (
     <div
       ref={chatLogRef}
+      data-ui3d-id="chatLog"
       className={`absolute z-10 h-[100svh] max-w-[calc(100vw-40px)] pb-16 ${chatLogEdgeOffset == null ? defaultOffsetClasses : ''}`}
       style={{
         width: `${chatLogWidth}px`,
