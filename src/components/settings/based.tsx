@@ -1062,28 +1062,6 @@ const Based = () => {
           </div>
         </div>
 
-        {/* 3D UI モード */}
-        <div className="my-4">
-          <div className="my-4 text-xl font-bold">{t('Ui3dMode')}</div>
-          <div className="my-2 text-sm whitespace-pre-wrap">
-            {t('Ui3dModeDescription')}
-          </div>
-          <div className="my-2">
-            <select
-              className="text-sm px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800"
-              value={settingsStore((s) => s.ui3dMode)}
-              onChange={(e) =>
-                settingsStore.setState({
-                  ui3dMode: e.target.value as 'css-overlay' | 'html-in-canvas' | 'hybrid',
-                })
-              }
-            >
-              <option value="css-overlay">{t('Ui3dModeCssOverlay')}</option>
-              <option value="html-in-canvas">{t('Ui3dModeHtmlInCanvas')}</option>
-              <option value="hybrid">{t('Ui3dModeHybrid')}</option>
-            </select>
-          </div>
-        </div>
       </div>
     </>
   )

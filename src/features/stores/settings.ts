@@ -286,7 +286,7 @@ interface General {
   uiDropShadowEnabled: boolean
   uiDarkMode: boolean
   bottomPaneOpacity: number
-  ui3dMode: 'css-overlay' | 'html-in-canvas' | 'hybrid'
+  ui3dMode: 'css-overlay' | 'html-in-canvas'
   customModel: boolean
 }
 
@@ -674,7 +674,9 @@ const getInitialValuesFromEnv = (): SettingsState => ({
     process.env.NEXT_PUBLIC_BOTTOM_PANE_OPACITY,
     60
   ),
-  ui3dMode: (process.env.NEXT_PUBLIC_UI_3D_MODE as 'css-overlay' | 'html-in-canvas' | 'hybrid') || 'css-overlay',
+  ui3dMode: (['css-overlay', 'html-in-canvas'].includes(process.env.NEXT_PUBLIC_UI_3D_MODE ?? '')
+    ? (process.env.NEXT_PUBLIC_UI_3D_MODE as 'css-overlay' | 'html-in-canvas')
+    : 'css-overlay'),
 
   // Custom model toggle
   customModel: process.env.NEXT_PUBLIC_CUSTOM_MODEL === 'true',

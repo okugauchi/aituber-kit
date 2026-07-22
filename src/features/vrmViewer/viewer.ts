@@ -252,6 +252,9 @@ export class Viewer {
       this.model.update(delta)
     }
 
+    // Reposition HUD-style UI meshes to track the camera
+    this._updateAllUi3dMeshPositions()
+
     if (this._renderer && this._camera) {
       this._renderer.render(this._scene, this._camera)
     }
@@ -749,44 +752,191 @@ export class Viewer {
 
   // ─── HTML-in-Canvas / 3D UI Integration ───
 
+  /** Per-mesh camera-space offset stored for HUD tracking in the animation loop. */
+  private _ui3dOffsets: Map<HTMLMesh, THREE.Vector3> = new Map()
+  /** Per-mesh avatar-space offset (relative to VRM head bone) for avatar-attached meshes. */
+  private _ui3dAvatarOffsets: Map<HTMLMesh, THREE.Vector3> = new Map()
+  /** Z-axis offset for avatar-attached assistant text, adjustable via 3DGS controller. */
+  private _ui3dAssistantTextZOffset: number = 0.3
+
   /**
    * Create an HTMLMesh from a DOM element and add it to the scene.
    * The mesh renders the element as a canvas texture in the 3D scene.
+   * When `cameraOffset` is provided, the mesh is repositioned every frame
+   * to stay at that camera-relative position (HUD style).
    * Returns the created mesh, or null if renderer is not ready.
    */
   public addUi3dMesh(domElement: HTMLElement, options?: {
     position?: THREE.Vector3
     scale?: number
     rotation?: THREE.Euler
+    /** Camera-space offset — mesh tracks the camera every frame */
+    cameraOffset?: THREE.Vector3
+    /** Avatar-space offset — mesh tracks the VRM head bone every frame */
+    avatarOffset?: THREE.Vector3
   }): HTMLMesh | null {
     if (!this._renderer) return null
+
     const mesh = new HTMLMesh(domElement)
     if (options?.position) mesh.position.copy(options.position)
     if (options?.scale) mesh.scale.set(options.scale, options.scale, options.scale)
     if (options?.rotation) mesh.rotation.copy(options.rotation)
+
     this._scene.add(mesh)
+
+    if (options?.cameraOffset) {
+      this._ui3dOffsets.set(mesh, options.cameraOffset.clone())
+      // Initial position relative to camera
+      this._updateUi3dMeshPosition(mesh)
+    }
+
+    if (options?.avatarOffset) {
+      this._ui3dAvatarOffsets.set(mesh, options.avatarOffset.clone())
+    }
+
     this._ui3dMeshes.push(mesh)
     return mesh
   }
 
-  /** Remove a specific HTMLMesh instance from the scene. */
+  /** Reposition a UI mesh to stay at its camera-space offset. */
+  private _updateUi3dMeshPosition(mesh: HTMLMesh): void {
+    const offset = this._ui3dOffsets.get(mesh)
+    if (!offset || !this._camera) return
+
+    // Convert camera-space offset to world-space: the mesh position =
+    // camera position + (offset rotated by camera quaternion)
+    const worldPos = new THREE.Vector3()
+    // Camera-space: -z is forward, so offset.z is negative = in front
+    worldPos.copy(offset)
+    // Rotate offset by camera's orientation
+    worldPos.applyQuaternion(this._camera.quaternion)
+    // Add camera position
+    worldPos.add(this._camera.position)
+    mesh.position.copy(worldPos)
+    // Orient mesh to face the camera
+    mesh.lookAt(this._camera.position)
+  }
+
+  /** Update all HUD-style UI mesh positions every frame. */
+  private _updateAllUi3dMeshPositions(): void {
+    if (!this._camera) return
+    for (const mesh of this._ui3dMeshes) {
+      if (this._ui3dOffsets.has(mesh)) {
+        this._updateUi3dMeshPosition(mesh)
+      } else if (this._ui3dAvatarOffsets.has(mesh)) {
+        this._updateAvatarAttachedMeshPosition(mesh)
+      }
+    }
+  }
+
+  /** Reposition a mesh relative to the VRM avatar's head bone each frame.
+   *  The mesh stays above the head and faces the camera so the text is always
+   *  readable regardless of the avatar's facing direction. */
+  private _updateAvatarAttachedMeshPosition(mesh: HTMLMesh): void {
+    const offset = this._ui3dAvatarOffsets.get(mesh)
+    if (!offset || !this.model?.vrm) return
+
+    const headNode = this.model.vrm.humanoid.getNormalizedBoneNode('head')
+    if (!headNode) return
+
+    const headPos = new THREE.Vector3()
+    headNode.getWorldPosition(headPos)
+
+    // Position above the head with the Z-offset (adjustable via controller)
+    mesh.position.set(
+      headPos.x + offset.x,
+      headPos.y + offset.y,
+      headPos.z + offset.z + this._ui3dAssistantTextZOffset
+    )
+
+    // Face the camera so the bubble text is always readable
+    if (this._camera) {
+      mesh.lookAt(this._camera.position)
+    }
+
+    // Scale to keep readable size regardless of distance
+    const dist = this._camera?.position.distanceTo(headPos) ?? 1.5
+    const scale = 0.002 * dist
+    mesh.scale.set(scale, scale, scale)
+  }
+
+  /** Set the Z-axis offset for avatar-attached assistant text. */
+  public setAssistantTextZOffset(offset: number): void {
+    this._ui3dAssistantTextZOffset = offset
+  }
+
+  // ─── OrbitControls focus management for HTMLMesh inputs ───
+
+  /** Track whether OrbitControls are currently disabled due to input focus. */
+  private _orbitControlsDisabledForInput: boolean = false
+
+  /**
+   * When a UI mesh's DOM element receives focus (user clicks into a text input),
+   * disable OrbitControls so camera doesn't pan/zoom while typing.
+   * Re-enable on blur.
+   */
+  private _setupInputFocusHandlers(mesh: HTMLMesh): void {
+    const domEl = (mesh as any).dom
+    if (!domEl) return
+
+    const onFocus = () => {
+      if (this._cameraControls && !this._orbitControlsDisabledForInput) {
+        this._cameraControls.enabled = false
+        this._orbitControlsDisabledForInput = true
+      }
+    }
+
+    const onBlur = () => {
+      if (this._cameraControls && this._orbitControlsDisabledForInput) {
+        this._cameraControls.enabled = true
+        this._orbitControlsDisabledForInput = false
+      }
+    }
+
+    domEl.addEventListener('focus', onFocus, true)
+    domEl.addEventListener('blur', onBlur, true)
+
+    // Store cleanup function on the mesh
+    ;(mesh as any).__focusCleanup = () => {
+      domEl.removeEventListener('focus', onFocus, true)
+      domEl.removeEventListener('blur', onBlur, true)
+    }
+  }
+
+  // (input focus handlers are called directly from syncUi3dMode)
+
+  /** Remove a specific HTMLMesh instance from the scene (or camera). */
   public removeUi3dMesh(mesh: HTMLMesh): void {
     const idx = this._ui3dMeshes.indexOf(mesh)
     if (idx >= 0) {
       this._ui3dMeshes.splice(idx, 1)
     }
-    this._scene.remove(mesh)
+    // Clean up focus/blur handlers
+    const cleanup = (mesh as any).__focusCleanup
+    if (cleanup) cleanup()
+    // Mesh may be attached to scene or camera
+    if (mesh.parent) mesh.parent.remove(mesh)
     mesh.dispose()
   }
 
   /** Remove all HTMLMesh instances (called on mode switch or teardown). */
   public clearAllUi3dMeshes(): void {
     for (const mesh of this._ui3dMeshes) {
-      this._scene.remove(mesh)
+      // Clean up focus/blur handlers
+      const cleanup = (mesh as any).__focusCleanup
+      if (cleanup) cleanup()
+      if (mesh.parent) mesh.parent.remove(mesh)
       mesh.dispose()
     }
     this._ui3dMeshes = []
+    this._ui3dOffsets.clear()
+    this._ui3dAvatarOffsets.clear()
     this._currentUi3dMode = null
+    // Re-enable OrbitControls if they were disabled for input focus
+    if (this._orbitControlsDisabledForInput && this._cameraControls) {
+      this._cameraControls.enabled = true
+      this._orbitControlsDisabledForInput = false
+    }
   }
 
   /**
@@ -814,16 +964,25 @@ export class Viewer {
       return // No 3D UI meshes in CSS-overlay mode
     }
 
-    // For html-in-canvas or hybrid, create meshes for each element
+    // For html-in-canvas or hybrid, create meshes
+    // - chatLog and messageInput: camera-space HUD (track camera every frame)
+    // - assistantText: avatar-space (attached to VRM head, faces same direction)
     for (const [id, cfg] of Object.entries(elements)) {
+      const isAvatarAttached = id === 'assistantText'
       const mesh = this.addUi3dMesh(cfg.dom, {
         position: cfg.position,
         scale: cfg.scale,
         rotation: cfg.rotation,
+        cameraOffset: isAvatarAttached ? undefined : cfg.position,
+        avatarOffset: isAvatarAttached
+          ? cfg.position
+          : undefined,
       })
       if (mesh) {
         // Store element id on the mesh for future reference
         ;(mesh as any).__ui3dId = id
+        // Set up focus handlers so OrbitControls are disabled when typing
+        this._setupInputFocusHandlers(mesh)
       }
     }
 

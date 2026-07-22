@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import { logger } from '@/lib/logger'
+import { ToggleSwitch } from '@/components/toggleSwitch'
 
 /** Per-splat-file persisted state stored in localStorage */
 interface SplatPersistState {
@@ -75,6 +76,8 @@ export default function SplatControls() {
   const gaussianSplatRotationOffset = homeStore(
     (s) => s.gaussianSplatRotationOffset
   )
+  const ui3dMode = settingsStore((s) => s.ui3dMode)
+  const assistantTextStyle = settingsStore((s) => s.assistantTextStyle)
 
   const [multiplier, setMultiplier] = useState(1)
   const [splatFiles, setSplatFiles] = useState<
@@ -240,6 +243,25 @@ export default function SplatControls() {
           >
             ✕
           </button>
+        </div>
+
+        {/* ─────── 3D UI MODE TOGGLE ─────── */}
+        <div className="flex items-center justify-between w-full px-1 py-1 rounded bg-gray-800/40">
+          <span className="text-[9px] text-gray-300 leading-tight mr-1">
+            {ui3dMode === 'html-in-canvas'
+              ? 'HTML-in-Canvas'
+              : 'CSS Overlay'}
+          </span>
+          <div className="flex items-center gap-1">
+            <ToggleSwitch
+              enabled={ui3dMode === 'html-in-canvas'}
+              onChange={(v) => {
+                settingsStore.setState({
+                  ui3dMode: v ? 'html-in-canvas' : 'css-overlay',
+                })
+              }}
+            />
+          </div>
         </div>
 
         {/* ─────── LOCAL SPLAT FILE PICKER ─────── */}
@@ -638,6 +660,25 @@ export default function SplatControls() {
           >
             初期位置にリセット
           </button>
+        </div>
+
+        {/* ─────── ASSISTANT TEXT STYLE ─────── */}
+        <div className="flex items-center justify-between w-full px-1 py-1 rounded bg-gray-800/40">
+          <span className="text-[9px] text-gray-300 leading-tight mr-1">
+            Bubble Style
+          </span>
+          <select
+            className="bg-transparent border border-white/30 rounded px-1 py-1 text-[9px] text-white"
+            value={assistantTextStyle}
+            onChange={(e) => {
+              settingsStore.setState({
+                assistantTextStyle: e.target.value as 'bubble' | 'borderless',
+              })
+            }}
+          >
+            <option value="bubble">Bubble (Glass)</option>
+            <option value="borderless">Borderless</option>
+          </select>
         </div>
 
         {/* Keyboard hint */}

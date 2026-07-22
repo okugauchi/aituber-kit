@@ -48,34 +48,35 @@ export const AssistantText = ({ message }: { message: string }) => {
     <div
       data-ui3d-id="assistantText"
       className={`absolute bottom-0 left-1/2 z-10 flex w-full max-w-[90vw] -translate-x-1/2 justify-center px-3 ${shouldShowPresetQuestions ? 'mb-[150px] sm:mb-[182px]' : 'mb-[86px] sm:mb-[104px]'}`}
-      // CSS Anchor Positioning: when the #character-anchor element exists
-      // (created by vrmViewer.tsx), the bubble follows the VRM character's
-      // screen position. Falls back to standard positioning otherwise.
-      style={
-        {
-          // Use anchor() if supported (Baseline 2026: Chrome 125+, Firefox 132+, Safari 18.2+)
-          // The anchor element #character-anchor tracks the VRM head position
-          // in viewport-percent coordinates every frame.
-          position: 'fixed' as const,
-          left: 'anchor(--character left)' as unknown as '50%',
-          bottom: 'anchor(--character top)' as unknown as undefined,
-          transform: 'translateX(-50%)' as unknown as undefined,
-        } as React.CSSProperties & {
-          left?: string
-          bottom?: string
-          transform?: string
-        }
-      }
+      // Position is managed by vrmViewer.tsx via onCharacterScreenPosition
+      // which directly sets inline styles on the bubble element.
     >
       <div
-        className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} animate-aurora-bubble-in aurora-glass-bubble flex w-full flex-col items-start gap-1.5 rounded-[20px] px-[22px] pb-4 pt-3.5`}
+        className={`${uiDropShadowEnabled ? 'ui-shadow' : ''} animate-aurora-bubble-in aurora-glass-capsule flex w-full flex-col items-start gap-1.5 rounded-[31px] px-[22px] pb-4 pt-3.5 border border-white/70`}
+        style={{
+          background: 'rgba(17, 19, 28, 0.85)',
+          backdropFilter: uiDropShadowEnabled ? 'blur(12px)' : 'none',
+          WebkitBackdropFilter: uiDropShadowEnabled ? 'blur(12px)' : 'none',
+        }}
       >
         {showCharacterName && (
           <span className="rounded-full bg-primary px-2.5 py-[3px] text-[11px] font-bold tracking-[0.06em] text-white">
             {characterName}
           </span>
         )}
-        <div className="text-base font-medium leading-[1.75] text-[var(--aurora-text-strong)]">
+        <div
+          className="text-base font-medium leading-[1.75] text-white"
+          style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 4,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            minHeight: '3.5em',
+            maxHeight: '7em',
+            lineHeight: '1.75em',
+          }}
+        >
           {sanitizedMessage}
         </div>
       </div>
