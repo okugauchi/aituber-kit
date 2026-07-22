@@ -92,12 +92,20 @@ async function sendCommand(
 
 async function sendSpeak(text: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/api/messages/`, {
+    // Get clientId from settings store (fall back to 'default')
+    const clientId =
+      typeof window !== 'undefined'
+        ? settingsStore.getState().clientId || 'default'
+        : 'default'
+    const url = new URL(`${API_BASE}/api/messages/`)
+    url.searchParams.set('clientId', clientId)
+    url.searchParams.set('type', 'direct_send')
+
+    const res = await fetch(url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [text],
-        type: 'direct_send',
       }),
     })
     return res.ok
