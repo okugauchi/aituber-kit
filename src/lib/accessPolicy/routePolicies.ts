@@ -210,6 +210,14 @@ export const routePolicies = {
     secret: { kind: 'none' },
     restrictedBehavior: 'in-route',
   },
+  '/api/command': {
+    path: '/api/command',
+    featureName: 'command',
+    methods: ['POST'],
+    resources: ['server-secret'],
+    secret: { kind: 'none' },
+    restrictedBehavior: 'in-route',
+  },
   '/api/get-pose-list': {
     path: '/api/get-pose-list',
     featureName: 'get-pose-list',

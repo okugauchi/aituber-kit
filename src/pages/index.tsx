@@ -23,6 +23,7 @@ import settingsStore from '@/features/stores/settings'
 import '@/lib/i18n'
 import { buildUrl } from '@/utils/buildUrl'
 import { YoutubeManager } from '@/components/youtubeManager'
+import CommandExecutor from '@/components/commandExecutor'
 import { MemoryServiceInitializer } from '@/components/memoryServiceInitializer'
 import toastStore from '@/features/stores/toast'
 import { usePresetLoader } from '@/features/presets/usePresetLoader'
@@ -256,6 +257,7 @@ const Home = () => {
       <Toasts />
       <WebSocketManager />
       <YoutubeManager />
+      <CommandExecutor />
       <MemoryServiceInitializer />
       <CharacterPresetMenu />
       <ImageOverlay />

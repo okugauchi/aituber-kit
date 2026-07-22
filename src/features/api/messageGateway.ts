@@ -2,9 +2,23 @@ import { logger } from '@/lib/logger'
 
 export type MessageType = 'direct_send' | 'ai_generate' | 'user_input'
 
-export type ApiCommandType = 'stop'
+export type ApiCommandType = 'stop' | 'pose' | 'splat' | 'setting' | 'chat-reset'
 
 export type ApiStopMode = 'speech' | 'queue' | 'all'
+
+export interface QueuedCommand {
+  id: string
+  timestamp: number
+  command: ApiCommandType
+  mode?: ApiStopMode
+  reason?: string
+  /** Pose command: { poseId: string } */
+  pose?: { poseId: string }
+  /** Splat command: { action: string; args?: Record<string, unknown> } */
+  splat?: { action: string; args?: Record<string, unknown> }
+  /** Setting command: { key: string; value: unknown } */
+  setting?: { key: string; value: unknown }
+}
 
 export interface QueuedMessage {
   id: string
@@ -18,14 +32,6 @@ export interface QueuedMessage {
   priority?: 'normal' | 'high'
   interrupt?: boolean
   source?: 'legacy' | 'v1'
-}
-
-export interface QueuedCommand {
-  id: string
-  timestamp: number
-  command: ApiCommandType
-  mode: ApiStopMode
-  reason?: string
 }
 
 export interface ClientStatus {
@@ -264,6 +270,51 @@ export const enqueueStopCommand = (
   emitApiEvent(clientId, 'stop_requested', { commandId: command.id, mode })
 
   return command
+}
+
+/**
+ * Enqueue a generic command (pose, splat, setting, chat-reset) for the client-side
+ * command executor to pick up.
+ */
+export const enqueueCommand = ({
+  clientId,
+  command,
+  mode,
+  reason,
+  pose,
+  splat,
+  setting,
+}: {
+  clientId: string
+  command: ApiCommandType
+  mode?: ApiStopMode
+  reason?: string
+  pose?: { poseId: string }
+  splat?: { action: string; args?: Record<string, unknown> }
+  setting?: { key: string; value: unknown }
+}): QueuedCommand => {
+  cleanupClientQueues()
+
+  const queue = getOrCreateQueue(clientId)
+  const cmd: QueuedCommand = {
+    id: createId('cmd'),
+    timestamp: Date.now(),
+    command,
+    mode,
+    reason,
+    pose,
+    splat,
+    setting,
+  }
+
+  queue.commands.push(cmd)
+  queue.lastAccessed = cmd.timestamp
+  emitApiEvent(clientId, 'commands_fetched', {
+    commandId: cmd.id,
+    commandType: command,
+  })
+
+  return cmd
 }
 
 export const dequeueCommands = (clientId: string): QueuedCommand[] => {
