@@ -92,13 +92,12 @@ async function sendCommand(
 
 async function sendSpeak(text: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/speak/`, {
+    const res = await fetch(`${API_BASE}/api/messages/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text,
-        interrupt: false,
-        priority: 'normal',
+        messages: [text],
+        type: 'direct_send',
       }),
     })
     return res.ok
