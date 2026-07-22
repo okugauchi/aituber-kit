@@ -26,7 +26,10 @@ export default function CommandExecutor() {
           `/api/command/?clientId=${encodeURIComponent(clientId)}`
         )
         if (!res.ok) {
-          // Silently skip on non-ok responses (server not ready, etc.)
+          const body = await res.text().catch(() => '(no body)')
+          logger.warn(
+            `CommandExecutor: GET /api/command failed (${res.status}): ${body}`
+          )
           return
         }
         const data = await res.json()

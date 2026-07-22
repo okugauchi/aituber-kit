@@ -78,11 +78,23 @@ async function sendCommand(
   extra: Record<string, unknown> = {}
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/api/command`, {
+    // Get clientId from settings store to match the main page's clientId
+    const clientId =
+      typeof window !== 'undefined'
+        ? settingsStore.getState().clientId || 'default'
+        : 'default'
+    // Use trailing slash to avoid 308 redirect (trailingSlash: true in next.config)
+    const res = await fetch(`${API_BASE}/api/command/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command, ...extra }),
+      body: JSON.stringify({ command, clientId, ...extra }),
     })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '(no body)')
+      console.error(
+        `EJ Controller: /api/command POST failed (${res.status}): ${body}`
+      )
+    }
     return res.ok
   } catch (e) {
     console.error('EJ Controller: API call failed', e)
