@@ -1,14 +1,16 @@
 /**
  * CommandExecutor component.
  *
- * Polls the message gateway for queued commands (pose, splat, setting, chat-reset)
- * and executes them against the local stores and viewer.
+ * Polls the /api/command endpoint (GET) for queued commands (pose, splat,
+ * setting, chat-reset) and executes them against the local stores and viewer.
+ *
+ * This component runs on the main AITuberKit page and picks up commands
+ * enqueued by the EJ Controller page (or any other client).
  */
 import { useEffect, useRef } from 'react'
 import { logger } from '@/lib/logger'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
-import { dequeueCommands } from '@/features/api/messageGateway'
 import { resetSessionId } from '@/utils/sessionId'
 import toastStore from '@/features/stores/toast'
 import { getMemoryService } from '@/features/memory/memoryService'
@@ -16,20 +18,31 @@ import { getMemoryService } from '@/features/memory/memoryService'
 const POLL_INTERVAL_MS = 1000
 
 export default function CommandExecutor() {
-  const viewerRef = useRef<ReturnType<typeof homeStore.getState>['viewer'] | null>(null)
-
   useEffect(() => {
     const interval = setInterval(async () => {
-      const clientId = settingsStore.getState().clientId || 'default'
-      const commands = dequeueCommands(clientId)
-      if (commands.length === 0) return
-
-      for (const cmd of commands) {
-        try {
-          await executeCommand(cmd)
-        } catch (error) {
-          logger.error('Failed to execute command:', error, cmd)
+      try {
+        const clientId = settingsStore.getState().clientId || 'default'
+        const res = await fetch(
+          `/api/command/?clientId=${encodeURIComponent(clientId)}`
+        )
+        if (!res.ok) {
+          // Silently skip on non-ok responses (server not ready, etc.)
+          return
         }
+        const data = await res.json()
+        const commands = data.commands || []
+        if (commands.length === 0) return
+
+        for (const cmd of commands) {
+          try {
+            await executeCommand(cmd)
+          } catch (error) {
+            logger.error('Failed to execute command:', error, cmd)
+          }
+        }
+      } catch (error) {
+        // Network errors during polling are expected (server restart, etc.)
+        logger.warn('CommandExecutor poll error:', error)
       }
     }, POLL_INTERVAL_MS)
 
@@ -50,11 +63,6 @@ async function executeCommand(cmd: {
   const settings = settingsStore.getState()
 
   switch (cmd.command) {
-    case 'stop': {
-      // Stop is handled by the existing messageReceiver polling — ignore here
-      break
-    }
-
     case 'pose': {
       if (!cmd.pose?.poseId) break
       const poseId = cmd.pose.poseId
@@ -180,9 +188,6 @@ async function executeCommand(cmd: {
           const url = homeStore.getState().gaussianSplatUrl
           if (url) viewer?.loadSplatScene(url)
         }
-      }
-      if (key === 'ui3dMode') {
-        // ui3dMode change is handled by the main page's viewer component
       }
       break
     }

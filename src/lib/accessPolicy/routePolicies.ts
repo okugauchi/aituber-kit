@@ -213,7 +213,7 @@ export const routePolicies = {
   '/api/command': {
     path: '/api/command',
     featureName: 'command',
-    methods: ['POST'],
+    methods: ['GET', 'POST'],
     resources: ['server-secret'],
     secret: { kind: 'none' },
     restrictedBehavior: 'in-route',
