@@ -5,17 +5,28 @@
  * window or device on the same LAN. All controls send HTTP requests to the
  * AITuberKit server API.
  *
+ * Layout: left column (speech, poses, settings) + right column (3DGS controls)
+ * Fits within a 1080×720 viewport.
+ *
  * Features:
  * - One-shot speech buttons with preset texts (editable, addable, deletable)
  * - Pose execution buttons for all configured poses
  * - All UI controls equivalent to the main screen (excluding Settings button)
- * - All 3DGS controller (splatControl) UI controls
+ * - All 3DGS controller (splatControl) UI controls with x50 multiplier
  * - Conversation history reset button
  */
 import { useEffect, useState, useCallback } from 'react'
 import homeStore from '@/features/stores/home'
 import settingsStore from '@/features/stores/settings'
 import { ToggleSwitch } from '@/components/toggleSwitch'
+
+// ─── Constants ────────────────────────────────────────────────────────
+
+/** Splat movement/zoom/rotation multiplier (x50) */
+const SPLAT_MULT = 50
+
+/** Fine rotation increment (radians) — multiplied by SPLAT_MULT */
+const ROT = 0.05
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -78,12 +89,10 @@ async function sendCommand(
   extra: Record<string, unknown> = {}
 ): Promise<boolean> {
   try {
-    // Get clientId from settings store to match the main page's clientId
     const clientId =
       typeof window !== 'undefined'
         ? settingsStore.getState().clientId || 'default'
         : 'default'
-    // Use trailing slash to avoid 308 redirect (trailingSlash: true in next.config)
     const res = await fetch(`${API_BASE}/api/command/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,7 +113,6 @@ async function sendCommand(
 
 async function sendSpeak(text: string): Promise<boolean> {
   try {
-    // Get clientId from settings store (fall back to 'default')
     const clientId =
       typeof window !== 'undefined'
         ? settingsStore.getState().clientId || 'default'
@@ -116,9 +124,7 @@ async function sendSpeak(text: string): Promise<boolean> {
     const res = await fetch(url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [text],
-      }),
+      body: JSON.stringify({ messages: [text] }),
     })
     return res.ok
   } catch (e) {
@@ -132,25 +138,20 @@ async function sendSpeak(text: string): Promise<boolean> {
 export default function EjController() {
   // ── State ────────────────────────────────────────────────────────────
 
-  // Speech presets
   const [speechPresets, setSpeechPresets] = useState<SpeechPreset[]>(() => {
-    // Start with env presets, add one default blank
     return ENV_PRESETS.length > 0 ? ENV_PRESETS : [{ id: 'preset-0', text: '' }]
   })
   const [newPresetText, setNewPresetText] = useState('')
 
-  // Pose list
   const [poseList, setPoseList] = useState<
     { id: string; json?: string; sequence?: string[] }[]
   >([])
 
-  // Splat file list
   const [splatFiles, setSplatFiles] = useState<SplatFile[]>([])
   const [hdriFiles, setHdriFiles] = useState<HdriFile[]>([])
   const [currentSplatUrl, setCurrentSplatUrl] = useState('')
   const [currentHdriUrl, setCurrentHdriUrl] = useState('')
 
-  // Settings from store (read-only snapshot via API)
   const [showAssistantText, setShowAssistantText] = useState(true)
   const [assistantTextStyle, setAssistantTextStyle] =
     useState<AssistantTextStyle>('bubble')
@@ -170,12 +171,12 @@ export default function EjController() {
   const [uiDropShadowEnabled, setUiDropShadowEnabled] = useState(false)
   const [uiDarkMode, setUiDarkMode] = useState(false)
 
-  // ── Fetch pose list on mount ────────────────────────────────────────
+  // ── Fetch on mount ──────────────────────────────────────────────────
+
   useEffect(() => {
     fetch(`${API_BASE}/api/get-pose-list`)
       .then((r) => r.json())
       .then((files: { name: string; path: string }[]) => {
-        // Use poseConfigs from settings for IDs
         const configs = settingsStore.getState().poseConfigs
         if (configs.length > 0) {
           setPoseList(
@@ -186,7 +187,6 @@ export default function EjController() {
             }))
           )
         } else {
-          // Fall back to file names
           setPoseList(
             files.map((f) => ({
               id: f.name,
@@ -234,7 +234,6 @@ export default function EjController() {
 
   const toggleSetting = (key: string, value: unknown) => {
     sendCommand('setting', { settingKey: key, settingValue: value })
-    // Also update local state for immediate UI feedback
     switch (key) {
       case 'showAssistantText':
         setShowAssistantText(value as boolean)
@@ -284,20 +283,35 @@ export default function EjController() {
     }
   }
 
-  // ── Splat control helpers ───────────────────────────────────────────
+  // ── Splat control helpers (all use SPLAT_MULT) ──────────────────────
 
   const splatMove = (dx: number, dy: number, dz: number = 0) => {
-    sendCommand('splat', { splatAction: 'move', splatArgs: { dx, dy, dz } })
+    sendCommand('splat', {
+      splatAction: 'move',
+      splatArgs: {
+        dx: dx * SPLAT_MULT,
+        dy: dy * SPLAT_MULT,
+        dz: dz * SPLAT_MULT,
+      },
+    })
   }
 
-  const splatZoom = (factor: number) => {
-    sendCommand('splat', { splatAction: 'zoom', splatArgs: { factor } })
+  const splatZoom = (direction: number) => {
+    // direction: +1 = zoom in, -1 = zoom out
+    sendCommand('splat', {
+      splatAction: 'zoom',
+      splatArgs: { factor: 1 + direction * 0.02 * SPLAT_MULT },
+    })
   }
 
   const splatRotate = (roll: number, pitch: number, yaw: number) => {
     sendCommand('splat', {
       splatAction: 'rotate',
-      splatArgs: { roll, pitch, yaw },
+      splatArgs: {
+        roll: roll * SPLAT_MULT,
+        pitch: pitch * SPLAT_MULT,
+        yaw: yaw * SPLAT_MULT,
+      },
     })
   }
 
@@ -354,442 +368,440 @@ export default function EjController() {
     sendCommand('stop', { mode: 'all', reason: 'ej_controller' })
   }
 
+  // ── HDRI slider state ───────────────────────────────────────────────
+
+  const [hdriDeg, setHdriDeg] = useState(0)
+
   // ── Render ──────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4">
+    <div className="h-[calc(100vh-2rem)] max-h-[720px] bg-gray-950 text-white p-4 overflow-hidden">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">🎮 EJ Controller</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Remote control panel for AITuberKit
-        </p>
+      <div className="mb-3 shrink-0">
+        <h1 className="text-lg font-bold tracking-tight">🎮 EJ Controller</h1>
+        <p className="text-xs text-gray-400">Remote control for AITuberKit</p>
       </div>
 
-      {/* ─────── SECTION: One-Shot Speech ─────── */}
-      <Section title="💬 One-Shot Speech">
-        {/* Preset list */}
-        <div className="space-y-2 mb-3">
-          {speechPresets.map((preset) => (
-            <div key={preset.id} className="flex items-center gap-2">
+      {/* ─────── TWO-COLUMN LAYOUT ─────── */}
+      <div className="flex gap-4 h-[calc(100%-3rem)]">
+        {/* ─── LEFT COLUMN ─── */}
+        <div className="flex-1 flex flex-col gap-3 min-w-0 overflow-y-auto pr-1">
+          {/* Speech */}
+          <Section title="💬 One-Shot Speech">
+            <div className="space-y-1.5 mb-2">
+              {speechPresets.map((preset) => (
+                <div key={preset.id} className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-500"
+                    value={preset.text}
+                    onChange={(e) =>
+                      updatePresetText(preset.id, e.target.value)
+                    }
+                    placeholder="Enter speech text..."
+                  />
+                  <button
+                    className="px-2 py-1.5 bg-blue-700 hover:bg-blue-600 rounded text-xs font-medium transition-colors"
+                    onClick={() => sendSpeak(preset.text)}
+                    disabled={!preset.text.trim()}
+                  >
+                    ▶ Speak
+                  </button>
+                  <button
+                    className="px-1.5 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs transition-colors"
+                    onClick={() => deletePreset(preset.id)}
+                    title="Delete preset"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new preset — Enter key does NOT trigger Add */}
+            <div className="flex items-center gap-1.5">
               <input
                 type="text"
-                className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
-                value={preset.text}
-                onChange={(e) => updatePresetText(preset.id, e.target.value)}
-                placeholder="Enter speech text..."
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-500"
+                value={newPresetText}
+                onChange={(e) => setNewPresetText(e.target.value)}
+                placeholder="New preset text..."
               />
               <button
-                className="px-3 py-2 bg-blue-700 hover:bg-blue-600 rounded text-sm font-medium transition-colors"
-                onClick={() => sendSpeak(preset.text)}
-                disabled={!preset.text.trim()}
+                className="px-2 py-1.5 bg-green-800 hover:bg-green-700 rounded text-xs font-medium transition-colors disabled:opacity-40"
+                onClick={addPreset}
+                disabled={!newPresetText.trim()}
               >
-                ▶ Speak
+                + Add
               </button>
+            </div>
+
+            <div className="mt-2">
               <button
-                className="px-2 py-2 bg-red-800 hover:bg-red-700 rounded text-xs transition-colors"
-                onClick={() => deletePreset(preset.id)}
-                title="Delete preset"
+                className="px-3 py-1.5 bg-red-700 hover:bg-red-600 rounded text-xs font-bold transition-colors"
+                onClick={stopSpeech}
               >
-                ✕
+                ⏹ Stop Speech
               </button>
             </div>
-          ))}
-        </div>
+          </Section>
 
-        {/* Add new preset */}
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500"
-            value={newPresetText}
-            onChange={(e) => setNewPresetText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addPreset()}
-            placeholder="New preset text..."
-          />
-          <button
-            className="px-3 py-2 bg-green-800 hover:bg-green-700 rounded text-sm font-medium transition-colors disabled:opacity-40"
-            onClick={addPreset}
-            disabled={!newPresetText.trim()}
-          >
-            + Add
-          </button>
-        </div>
-
-        {/* Stop button */}
-        <div className="mt-3">
-          <button
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-sm font-bold transition-colors"
-            onClick={stopSpeech}
-          >
-            ⏹ Stop Speech
-          </button>
-        </div>
-      </Section>
-
-      {/* ─────── SECTION: Pose Execution ─────── */}
-      <Section title="🧘 Pose Execution">
-        {poseList.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">
-            No poses configured. Add poses via character settings.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {poseList.map((pose) => (
+          {/* Pose Execution */}
+          <Section title="🧘 Pose Execution">
+            {poseList.length === 0 ? (
+              <p className="text-xs text-gray-500 italic">
+                No poses configured.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {poseList.map((pose) => (
+                  <button
+                    key={pose.id}
+                    className="px-2 py-1 bg-indigo-800 hover:bg-indigo-700 rounded text-xs font-medium transition-colors"
+                    onClick={() => applyPose(pose.id)}
+                  >
+                    {pose.id}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-1.5">
               <button
-                key={pose.id}
-                className="px-3 py-2 bg-indigo-800 hover:bg-indigo-700 rounded text-sm font-medium transition-colors"
-                onClick={() => applyPose(pose.id)}
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
+                onClick={() => sendCommand('pose', { poseId: '__reset__' })}
               >
-                {pose.id}
+                🔄 Reset to Idle
               </button>
-            ))}
-          </div>
-        )}
-        <div className="mt-2">
-          <button
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors"
-            onClick={() => sendCommand('pose', { poseId: '__reset__' })}
-          >
-            🔄 Reset to Idle
-          </button>
-        </div>
-      </Section>
-
-      {/* ─────── SECTION: Settings Controls ─────── */}
-      <Section title="⚙️ Settings Controls">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Toggle switches */}
-          <SettingToggle
-            label="Assistant Text"
-            enabled={showAssistantText}
-            onChange={(v) => toggleSetting('showAssistantText', v)}
-          />
-          <SettingToggle
-            label="Character Name"
-            enabled={showCharacterName}
-            onChange={(v) => toggleSetting('showCharacterName', v)}
-          />
-          <SettingToggle
-            label="Control Panel"
-            enabled={showControlPanel}
-            onChange={(v) => toggleSetting('showControlPanel', v)}
-          />
-          <SettingToggle
-            label="3DGS Background"
-            enabled={gaussianSplatEnabled}
-            onChange={(v) => toggleSetting('gaussianSplatEnabled', v)}
-          />
-          <SettingToggle
-            label="Preset Questions"
-            enabled={showPresetQuestions}
-            onChange={(v) => toggleSetting('showPresetQuestions', v)}
-          />
-          <SettingToggle
-            label="Message Receiver"
-            enabled={messageReceiverEnabled}
-            onChange={(v) => toggleSetting('messageReceiverEnabled', v)}
-          />
-          <SettingToggle
-            label="Video as Background"
-            enabled={useVideoAsBackground}
-            onChange={(v) => toggleSetting('useVideoAsBackground', v)}
-          />
-          <SettingToggle
-            label="Drop Shadow"
-            enabled={uiDropShadowEnabled}
-            onChange={(v) => toggleSetting('uiDropShadowEnabled', v)}
-          />
-          <SettingToggle
-            label="Dark Mode"
-            enabled={uiDarkMode}
-            onChange={(v) => toggleSetting('uiDarkMode', v)}
-          />
-
-          {/* Select menus */}
-          <SettingSelect
-            label="Assistant Text Style"
-            value={assistantTextStyle}
-            options={[
-              { value: 'bubble', label: 'Bubble (Glass)' },
-              { value: 'borderless', label: 'Borderless' },
-            ]}
-            onChange={(v) => toggleSetting('assistantTextStyle', v)}
-          />
-          <SettingSelect
-            label="Chat Log Style"
-            value={chatLogStyle}
-            options={[
-              { value: 'glass', label: 'Glass' },
-              { value: 'classic', label: 'Classic' },
-            ]}
-            onChange={(v) => toggleSetting('chatLogStyle', v)}
-          />
-          <SettingSelect
-            label="Chat Log Position"
-            value={chatLogPosition}
-            options={[
-              { value: 'right', label: 'Right' },
-              { value: 'left', label: 'Left' },
-            ]}
-            onChange={(v) => toggleSetting('chatLogPosition', v)}
-          />
-          <SettingSelect
-            label="3D UI Mode"
-            value={ui3dMode}
-            options={[
-              { value: 'css-overlay', label: 'CSS Overlay' },
-              { value: 'html-in-canvas', label: 'HTML-in-Canvas' },
-            ]}
-            onChange={(v) => toggleSetting('ui3dMode', v)}
-          />
-          <SettingSelect
-            label="Background Switch"
-            value={backgroundSwitchMode}
-            options={[
-              { value: 'manual', label: 'Manual' },
-              { value: 'timer', label: 'Timer' },
-            ]}
-            onChange={(v) => toggleSetting('backgroundSwitchMode', v)}
-          />
-        </div>
-
-        {/* Conversation History Reset */}
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <button
-            className="px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-sm font-bold transition-colors"
-            onClick={resetChat}
-          >
-            🗑 Reset Conversation History
-          </button>
-        </div>
-      </Section>
-
-      {/* ─────── SECTION: 3DGS Controls ─────── */}
-      <Section title="🎯 3DGS Controls">
-        {/* Splat file selector */}
-        {splatFiles.length > 0 && (
-          <div className="flex items-center gap-2 mb-3">
-            <select
-              className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              value={currentSplatUrl}
-              onChange={(e) => splatLoad(e.target.value)}
-            >
-              <option value="">-- Select splat --</option>
-              {splatFiles.map((f) => {
-                const sizeMB = (f.size / 1024 / 1024).toFixed(1)
-                return (
-                  <option key={f.url} value={f.url}>
-                    {f.name} ({sizeMB} MB)
-                  </option>
-                )
-              })}
-            </select>
-            <button
-              className="px-2 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
-              onClick={splatUnload}
-            >
-              Clear
-            </button>
-          </div>
-        )}
-
-        {/* HDRI file selector */}
-        {hdriFiles.length > 0 && (
-          <div className="flex items-center gap-2 mb-3">
-            <select
-              className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-              value={currentHdriUrl}
-              onChange={(e) => hdriLoad(e.target.value)}
-            >
-              <option value="">-- Select HDRI --</option>
-              {hdriFiles.map((f) => {
-                const sizeMB = (f.size / 1024 / 1024).toFixed(1)
-                return (
-                  <option key={f.url} value={f.url}>
-                    {f.name} ({sizeMB} MB)
-                  </option>
-                )
-              })}
-            </select>
-            <button
-              className="px-2 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
-              onClick={hdriUnload}
-            >
-              Clear
-            </button>
-          </div>
-        )}
-
-        {/* Movement controls */}
-        <div className="mb-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            Movement
-          </div>
-          <div className="grid grid-cols-3 gap-1 max-w-[200px]">
-            {/* Row 1: Y+ up (col 2) */}
-            <div className="col-start-2">
-              <SplatBtn icon="↑" onClick={() => splatMove(0, 1, 0)} />
             </div>
-            {/* Row 2: X- left, fit, X+ right */}
-            <div className="col-start-1">
-              <SplatBtn icon="←" onClick={() => splatMove(-1, 0, 0)} />
-            </div>
-            <div className="col-start-2 flex items-center justify-center">
-              <SplatBtn icon="◉" onClick={splatFit} label="Fit" />
-            </div>
-            <div className="col-start-3">
-              <SplatBtn icon="→" onClick={() => splatMove(1, 0, 0)} />
-            </div>
-            {/* Row 3: Y- down */}
-            <div className="col-start-2">
-              <SplatBtn icon="↓" onClick={() => splatMove(0, -1, 0)} />
-            </div>
-            {/* Row 4: Z-axis */}
-            <div className="col-start-1">
-              <SplatBtn
-                icon="↕"
-                onClick={() => splatMove(0, 0, -1)}
-                label="Back"
+          </Section>
+
+          {/* Settings Controls */}
+          <Section title="⚙️ Settings">
+            <div className="grid grid-cols-2 gap-1.5">
+              <SettingToggle
+                label="Assistant Text"
+                enabled={showAssistantText}
+                onChange={(v) => toggleSetting('showAssistantText', v)}
+              />
+              <SettingToggle
+                label="Character Name"
+                enabled={showCharacterName}
+                onChange={(v) => toggleSetting('showCharacterName', v)}
+              />
+              <SettingToggle
+                label="Control Panel"
+                enabled={showControlPanel}
+                onChange={(v) => toggleSetting('showControlPanel', v)}
+              />
+              <SettingToggle
+                label="3DGS"
+                enabled={gaussianSplatEnabled}
+                onChange={(v) => toggleSetting('gaussianSplatEnabled', v)}
+              />
+              <SettingToggle
+                label="Preset Qs"
+                enabled={showPresetQuestions}
+                onChange={(v) => toggleSetting('showPresetQuestions', v)}
+              />
+              <SettingToggle
+                label="Msg Receiver"
+                enabled={messageReceiverEnabled}
+                onChange={(v) => toggleSetting('messageReceiverEnabled', v)}
+              />
+              <SettingToggle
+                label="Video BG"
+                enabled={useVideoAsBackground}
+                onChange={(v) => toggleSetting('useVideoAsBackground', v)}
+              />
+              <SettingToggle
+                label="Drop Shadow"
+                enabled={uiDropShadowEnabled}
+                onChange={(v) => toggleSetting('uiDropShadowEnabled', v)}
+              />
+              <SettingToggle
+                label="Dark Mode"
+                enabled={uiDarkMode}
+                onChange={(v) => toggleSetting('uiDarkMode', v)}
               />
             </div>
-            <div className="col-start-3">
-              <SplatBtn
-                icon="↕"
-                onClick={() => splatMove(0, 0, 1)}
-                label="Forward"
+            <div className="grid grid-cols-2 gap-1.5 mt-2">
+              <SettingSelect
+                label="Text Style"
+                value={assistantTextStyle}
+                options={[
+                  { value: 'bubble', label: 'Bubble' },
+                  { value: 'borderless', label: 'Borderless' },
+                ]}
+                onChange={(v) => toggleSetting('assistantTextStyle', v)}
+              />
+              <SettingSelect
+                label="Log Style"
+                value={chatLogStyle}
+                options={[
+                  { value: 'glass', label: 'Glass' },
+                  { value: 'classic', label: 'Classic' },
+                ]}
+                onChange={(v) => toggleSetting('chatLogStyle', v)}
+              />
+              <SettingSelect
+                label="Log Position"
+                value={chatLogPosition}
+                options={[
+                  { value: 'right', label: 'Right' },
+                  { value: 'left', label: 'Left' },
+                ]}
+                onChange={(v) => toggleSetting('chatLogPosition', v)}
+              />
+              <SettingSelect
+                label="3D UI Mode"
+                value={ui3dMode}
+                options={[
+                  { value: 'css-overlay', label: 'CSS Overlay' },
+                  { value: 'html-in-canvas', label: 'HTML-in-Canvas' },
+                ]}
+                onChange={(v) => toggleSetting('ui3dMode', v)}
+              />
+              <SettingSelect
+                label="BG Switch"
+                value={backgroundSwitchMode}
+                options={[
+                  { value: 'manual', label: 'Manual' },
+                  { value: 'timer', label: 'Timer' },
+                ]}
+                onChange={(v) => toggleSetting('backgroundSwitchMode', v)}
               />
             </div>
-          </div>
-        </div>
 
-        {/* Zoom */}
-        <div className="mb-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            Zoom
-          </div>
-          <div className="flex gap-2">
-            <SplatBtn icon="−" onClick={() => splatZoom(0.9)} label="Out" />
-            <SplatBtn icon="+" onClick={() => splatZoom(1.1)} label="In" />
-          </div>
-        </div>
-
-        {/* Rotation */}
-        <div className="mb-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            Rotation
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-4">R</span>
-              <SplatBtn icon="⟳" onClick={() => splatRotate(0.05, 0, 0)} />
-              <SplatBtn icon="⟲" onClick={() => splatRotate(-0.05, 0, 0)} />
+            {/* Reset conversation */}
+            <div className="mt-2 pt-2 border-t border-gray-700">
+              <button
+                className="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold transition-colors"
+                onClick={resetChat}
+              >
+                🗑 Reset Chat
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-4">P</span>
-              <SplatBtn icon="↑" onClick={() => splatRotate(0, 0.05, 0)} />
-              <SplatBtn icon="↓" onClick={() => splatRotate(0, -0.05, 0)} />
+          </Section>
+        </div>
+
+        {/* ─── RIGHT COLUMN: 3DGS Controls ─── */}
+        <div className="w-[340px] shrink-0 overflow-y-auto">
+          <Section title="🎯 3DGS Controls">
+            {/* Splat file selector */}
+            {splatFiles.length > 0 && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <select
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+                  value={currentSplatUrl}
+                  onChange={(e) => splatLoad(e.target.value)}
+                >
+                  <option value="">-- Select splat --</option>
+                  {splatFiles.map((f) => {
+                    const sizeMB = (f.size / 1024 / 1024).toFixed(1)
+                    return (
+                      <option key={f.url} value={f.url}>
+                        {f.name} ({sizeMB} MB)
+                      </option>
+                    )
+                  })}
+                </select>
+                <button
+                  className="px-1.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
+                  onClick={splatUnload}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {/* HDRI file selector */}
+            {hdriFiles.length > 0 && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <select
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+                  value={currentHdriUrl}
+                  onChange={(e) => hdriLoad(e.target.value)}
+                >
+                  <option value="">-- Select HDRI --</option>
+                  {hdriFiles.map((f) => {
+                    const sizeMB = (f.size / 1024 / 1024).toFixed(1)
+                    return (
+                      <option key={f.url} value={f.url}>
+                        {f.name} ({sizeMB} MB)
+                      </option>
+                    )
+                  })}
+                </select>
+                <button
+                  className="px-1.5 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
+                  onClick={hdriUnload}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {/* ─────── MOVEMENT (3-axis grid with row-start) ─────── */}
+            <div className="mb-2">
+              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+                Movement (×{SPLAT_MULT})
+              </div>
+              <div className="grid grid-cols-3 gap-1 w-[132px]">
+                {/* Row 1: Y+ up (col 2) */}
+                <div className="col-start-2 row-start-1">
+                  <SplatBtn icon="↑" onClick={() => splatMove(0, 1, 0)} />
+                </div>
+                {/* Row 2: X- left (col 1), center / fit (col 2), X+ right (col 3) */}
+                <div className="col-start-1 row-start-2">
+                  <SplatBtn icon="←" onClick={() => splatMove(-1, 0, 0)} />
+                </div>
+                <div className="col-start-2 row-start-2 flex items-center justify-center">
+                  <SplatBtn icon="◉" onClick={splatFit} label="Fit" />
+                </div>
+                <div className="col-start-3 row-start-2">
+                  <SplatBtn icon="→" onClick={() => splatMove(1, 0, 0)} />
+                </div>
+                {/* Row 3: Y- down (col 2) */}
+                <div className="col-start-2 row-start-3">
+                  <SplatBtn icon="↓" onClick={() => splatMove(0, -1, 0)} />
+                </div>
+                {/* Row 4: Z-axis back (col 1), forward (col 3) */}
+                <div className="col-start-1 row-start-4">
+                  <SplatBtn
+                    icon="↕"
+                    onClick={() => splatMove(0, 0, -1)}
+                    label="Back"
+                  />
+                </div>
+                <div className="col-start-3 row-start-4">
+                  <SplatBtn
+                    icon="↕"
+                    onClick={() => splatMove(0, 0, 1)}
+                    label="Forward"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-4">Y</span>
-              <SplatBtn icon="↺" onClick={() => splatRotate(0, 0, -0.05)} />
-              <SplatBtn icon="↻" onClick={() => splatRotate(0, 0, 0.05)} />
+
+            {/* ─────── ZOOM ─────── */}
+            <div className="mb-2">
+              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+                Zoom (×{SPLAT_MULT})
+              </div>
+              <div className="flex gap-1.5">
+                <SplatBtn icon="−" onClick={() => splatZoom(-1)} label="Out" />
+                <SplatBtn icon="+" onClick={() => splatZoom(1)} label="In" />
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Preset rotation */}
-        <div className="mb-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            Preset Rotation
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(-Math.PI / 2, 0, 0)}
-            >
-              90° L
-            </button>
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(Math.PI / 2, 0, 0)}
-            >
-              90° R
-            </button>
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(Math.PI, 0, 0)}
-            >
-              180°
-            </button>
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(0, -Math.PI / 2, 0)}
-            >
-              90° ↓
-            </button>
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(0, Math.PI / 2, 0)}
-            >
-              90° ↑
-            </button>
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(0, 0, -Math.PI / 2)}
-            >
-              Y 90° L
-            </button>
-            <button
-              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-700 rounded text-xs font-medium transition-colors"
-              onClick={() => splatRotate(0, 0, Math.PI / 2)}
-            >
-              Y 90° R
-            </button>
-          </div>
-        </div>
+            {/* ─────── ROTATION ─────── */}
+            <div className="mb-2">
+              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+                Rotation (×{SPLAT_MULT})
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-500 w-3">R</span>
+                  <SplatBtn icon="⟳" onClick={() => splatRotate(ROT, 0, 0)} />
+                  <SplatBtn icon="⟲" onClick={() => splatRotate(-ROT, 0, 0)} />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-500 w-3">P</span>
+                  <SplatBtn icon="↑" onClick={() => splatRotate(0, ROT, 0)} />
+                  <SplatBtn icon="↓" onClick={() => splatRotate(0, -ROT, 0)} />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-500 w-3">Y</span>
+                  <SplatBtn icon="↺" onClick={() => splatRotate(0, 0, -ROT)} />
+                  <SplatBtn icon="↻" onClick={() => splatRotate(0, 0, ROT)} />
+                </div>
+              </div>
+            </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          <button
-            className="flex-1 px-3 py-2 bg-blue-800 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-            onClick={splatFit}
-          >
-            画面内に収める
-          </button>
-          <button
-            className="flex-1 px-3 py-2 bg-green-800 hover:bg-green-700 rounded text-xs font-medium transition-colors"
-            onClick={splatReset}
-          >
-            初期位置にリセット
-          </button>
-        </div>
+            {/* ─────── PRESET ROTATION ─────── */}
+            <div className="mb-2">
+              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+                Preset Rotation
+              </div>
+              <div className="flex flex-wrap gap-1">
+                <PresetBtn
+                  label="90° L"
+                  onClick={() => splatRotate(-Math.PI / 2, 0, 0)}
+                />
+                <PresetBtn
+                  label="90° R"
+                  onClick={() => splatRotate(Math.PI / 2, 0, 0)}
+                />
+                <PresetBtn
+                  label="180°"
+                  onClick={() => splatRotate(Math.PI, 0, 0)}
+                />
+                <PresetBtn
+                  label="90° ↓"
+                  onClick={() => splatRotate(0, -Math.PI / 2, 0)}
+                />
+                <PresetBtn
+                  label="90° ↑"
+                  onClick={() => splatRotate(0, Math.PI / 2, 0)}
+                />
+                <PresetBtn
+                  label="Y 90° L"
+                  onClick={() => splatRotate(0, 0, -Math.PI / 2)}
+                />
+                <PresetBtn
+                  label="Y 90° R"
+                  onClick={() => splatRotate(0, 0, Math.PI / 2)}
+                />
+              </div>
+            </div>
 
-        {/* HDRI Rotation slider */}
-        <div className="mt-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            HDRI Rotation
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              className="flex-1 accent-cyan-400 bg-gray-700 rounded appearance-none cursor-pointer"
-              min={-180}
-              max={180}
-              step={1}
-              defaultValue={0}
-              onChange={(e) => splatHdriRotate(parseInt(e.target.value, 10))}
-            />
-            <span className="text-xs text-cyan-300 w-10 text-right font-mono">
-              0°
-            </span>
-          </div>
+            {/* ─────── ACTION BUTTONS ─────── */}
+            <div className="flex gap-1.5 mb-2">
+              <button
+                className="flex-1 px-2 py-1.5 bg-blue-800 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                onClick={splatFit}
+              >
+                画面内に収める
+              </button>
+              <button
+                className="flex-1 px-2 py-1.5 bg-green-800 hover:bg-green-700 rounded text-xs font-medium transition-colors"
+                onClick={splatReset}
+              >
+                初期位置にリセット
+              </button>
+            </div>
+
+            {/* ─────── HDRI ROTATION (step=10) ─────── */}
+            <div>
+              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+                HDRI Rotation (10° steps)
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="range"
+                  className="flex-1 accent-cyan-400 bg-gray-700 rounded appearance-none cursor-pointer"
+                  min={-180}
+                  max={180}
+                  step={10}
+                  value={hdriDeg}
+                  onChange={(e) => {
+                    const deg = parseInt(e.target.value, 10)
+                    setHdriDeg(deg)
+                    splatHdriRotate(deg)
+                  }}
+                />
+                <span className="text-[10px] text-cyan-300 w-10 text-right font-mono tabular-nums">
+                  {hdriDeg}°
+                </span>
+              </div>
+            </div>
+          </Section>
         </div>
-      </Section>
+      </div>
 
       {/* Footer */}
-      <div className="mt-8 pt-4 border-t border-gray-700 text-center text-xs text-gray-500">
-        EJ Controller v1.0 · Remote control for AITuberKit
+      <div className="mt-2 pt-1 border-t border-gray-700 text-center text-[9px] text-gray-500 shrink-0">
+        EJ Controller · Remote control for AITuberKit
       </div>
     </div>
   )
@@ -805,8 +817,8 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="mb-6 p-4 bg-gray-900 rounded-xl border border-gray-800">
-      <h2 className="text-lg font-bold mb-3">{title}</h2>
+    <div className="p-3 bg-gray-900 rounded-xl border border-gray-800">
+      <h2 className="text-sm font-bold mb-2">{title}</h2>
       {children}
     </div>
   )
@@ -822,8 +834,8 @@ function SettingToggle({
   onChange: (v: boolean) => void
 }) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 bg-gray-800 rounded-lg">
-      <span className="text-sm text-gray-300">{label}</span>
+    <div className="flex items-center justify-between px-2 py-1.5 bg-gray-800 rounded-lg">
+      <span className="text-[11px] text-gray-300">{label}</span>
       <ToggleSwitch enabled={enabled} onChange={onChange} />
     </div>
   )
@@ -841,10 +853,10 @@ function SettingSelect({
   onChange: (v: string) => void
 }) {
   return (
-    <div className="px-3 py-2 bg-gray-800 rounded-lg">
-      <div className="text-xs text-gray-400 mb-1">{label}</div>
+    <div className="px-2 py-1.5 bg-gray-800 rounded-lg">
+      <div className="text-[9px] text-gray-400 mb-0.5">{label}</div>
       <select
-        className="w-full bg-transparent border border-gray-700 rounded px-2 py-1 text-sm text-white"
+        className="w-full bg-transparent border border-gray-700 rounded px-1 py-0.5 text-[11px] text-white"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -869,14 +881,25 @@ function SplatBtn({
 }) {
   return (
     <button
-      className="w-10 h-10 rounded bg-gray-700 hover:bg-gray-600 active:bg-gray-500
-                 flex items-center justify-center text-white text-base
+      className="w-9 h-9 rounded bg-gray-700 hover:bg-gray-600 active:bg-gray-500
+                 flex items-center justify-center text-white text-sm
                  transition-colors select-none"
       onClick={onClick}
       title={label}
       aria-label={label || icon}
     >
       {icon}
+    </button>
+  )
+}
+
+function PresetBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      className="px-2 py-1 bg-amber-800 hover:bg-amber-700 rounded text-[10px] font-medium transition-colors"
+      onClick={onClick}
+    >
+      {label}
     </button>
   )
 }
