@@ -29,7 +29,7 @@ export const handleSendChatFn =
   () => async (text: string, userName?: string) => {
     const inputReceivedAt =
       typeof performance !== 'undefined' ? performance.now() : Date.now()
-    let newMessage = text
+    const newMessage = text
     const timestamp = new Date().toISOString()
 
     if (newMessage === null) return
@@ -164,12 +164,6 @@ export const handleSendChatFn =
       // 思考中プレアンブル発話 — @hermes を含むメッセージのみ（Gateway 経由の応答待ち間を埋める）
       // @hermes なし → oMLX/Gemma への高速ルーティングのためプレアンブル不要
       if (/@hermes/i.test(newMessage)) {
-        // @hermes プレフィックスを除去し、続くテキストのみをタスクとして Gateway に送る
-        // 例: "@hermes 天気を調べて" → "天気を調べて"
-        const commandText = newMessage.replace(/@hermes\s*/i, '').trim()
-        if (commandText) {
-          newMessage = commandText
-        }
         const preambleText = i18next.t(
           'ThinkingPreamble',
           'わかりました。これからじっくり考えますので、しばらくお待ちください。'

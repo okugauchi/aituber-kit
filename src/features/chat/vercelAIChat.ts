@@ -224,9 +224,18 @@ export async function getVercelAIChatResponseStream(
   // サービスタイプに応じてリクエストデータを追加
   if (selectAIService === 'custom-api') {
     // カスタムAPI用データ
-    const filteredMessages = getAIConfig().includeSystemMessagesInCustomApi
+    let filteredMessages = getAIConfig().includeSystemMessagesInCustomApi
       ? messages
       : messages.filter((message) => message.role !== 'system')
+
+    // @hermes プレフィックスをユーザーメッセージから除去（Gateway に純粋なコマンドテキストを送る）
+    filteredMessages = filteredMessages.map((msg) => {
+      if (msg.role === 'user' && typeof msg.content === 'string') {
+        const stripped = msg.content.replace(/@hermes\s*/i, '').trim()
+        return stripped ? { ...msg, content: stripped } : msg
+      }
+      return msg
+    })
 
     Object.assign(requestData, {
       customApiUrl,
