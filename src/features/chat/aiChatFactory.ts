@@ -48,7 +48,10 @@ export async function getAIChatResponseStream(
         customApiBody:
           process.env.NEXT_PUBLIC_CUSTOM_API_BODY ||
           '{"model": "hermes-agent"}',
-        includeSystemMessagesInCustomApi: true,
+        // @hermes コマンドでは AITuberKit のキャラクター system prompt を送らない
+        // → Gateway 側のエージェント system prompt（ツール使用命令を含む）のみを使い、
+        //   コマンドをタスクとして実行させる
+        includeSystemMessagesInCustomApi: false,
       })
     } else {
       // oMLX 直接（軽量クイック応答）— system prompt 不要
