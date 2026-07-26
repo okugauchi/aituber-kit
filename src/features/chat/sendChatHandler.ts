@@ -268,16 +268,28 @@ export const handleSendChatFn =
 
       const currentChatLog = homeStore.getState().chatLog
 
-      const messages: Message[] = [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        ...messageSelectors.getProcessedMessages(
-          currentChatLog,
-          ss.includeTimestampInUserMessage
-        ),
-      ]
+      let messages: Message[]
+
+      if (/@hermes/i.test(text)) {
+        // @hermes コマンド: 最新のユーザーメッセージ1件のみを送信し、Gateway で
+        // 新しい独立したセッションを開始させる。会話履歴・system prompt は含めない。
+        const lastUserMsg = [...currentChatLog]
+          .reverse()
+          .find((m) => m.role === 'user')
+        const userContent: Message['content'] = lastUserMsg?.content ?? text
+        messages = [{ role: 'user', content: userContent }]
+      } else {
+        messages = [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          ...messageSelectors.getProcessedMessages(
+            currentChatLog,
+            ss.includeTimestampInUserMessage
+          ),
+        ]
+      }
 
       try {
         await processAIResponse(messages, { inputReceivedAt })
