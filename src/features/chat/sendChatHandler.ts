@@ -19,6 +19,8 @@ import {
   createV2ExternalLinkageChatEvent,
 } from '@/features/externalLinkage/externalLinkageProtocol'
 import { processAIResponse } from './speechPipeline/processAIResponse'
+import { speakCharacter } from '@/features/messages/speakCharacter'
+import { generateMessageId } from '@/utils/messageUtils'
 
 /**
  * アシスタントとの会話を行う
@@ -181,16 +183,18 @@ export const handleSendChatFn =
 
       // 思考中プレアンブル発話 — @hermes を含むメッセージのみ（Gateway 経由の応答待ち間を埋める）
       // @hermes なし → oMLX/Gemma への高速ルーティングのためプレアンブル不要
+      // speakCharacter を直接呼ぶことで chatLog への書き込みを避ける
+      // （speakMessageHandler 経由だと preamble が chatLog に追加され、
+      //   Gateway 側で preamble を最新のユーザー入力と誤認識するため）
       if (/@hermes/i.test(newMessage)) {
         const preambleText = i18next.t(
           'ThinkingPreamble',
           'わかりました。これからじっくり考えますので、しばらくお待ちください。'
         )
-        import('./speechPipeline/speakMessageHandler')
-          .then(({ speakMessageHandler }) => {
-            speakMessageHandler(preambleText)
-          })
-          .catch(() => {})
+        speakCharacter(generateMessageId(), {
+          message: preambleText,
+          emotion: 'neutral' as const,
+        })
       }
 
       // マルチモーダル対応チェック
