@@ -161,6 +161,24 @@ export const handleSendChatFn =
 
       homeStore.setState({ chatProcessing: true })
 
+      // @hermes ルーティング: 入力テキストの段階で Gateway へ向ける
+      // （speakMessageHandler が chatLog に前置されると isHermesRequest が
+      //   ユーザーメッセージを検出できず、ルーティングが失敗する問題の対策）
+      if (/@hermes/i.test(newMessage)) {
+        settingsStore.setState({
+          customApiUrl:
+            process.env.NEXT_PUBLIC_CUSTOM_API_URL ||
+            'http://127.0.0.1:8642/v1/chat/completions',
+          customApiHeaders:
+            process.env.NEXT_PUBLIC_CUSTOM_API_HEADERS ||
+            '{"Authorization": "Bearer change-me-local-dev"}',
+          customApiBody:
+            process.env.NEXT_PUBLIC_CUSTOM_API_BODY ||
+            '{"model": "hermes-agent"}',
+          includeSystemMessagesInCustomApi: false,
+        })
+      }
+
       // 思考中プレアンブル発話 — @hermes を含むメッセージのみ（Gateway 経由の応答待ち間を埋める）
       // @hermes なし → oMLX/Gemma への高速ルーティングのためプレアンブル不要
       if (/@hermes/i.test(newMessage)) {

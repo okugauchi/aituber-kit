@@ -34,7 +34,8 @@ export async function getAIChatResponseStream(
   }
 
   // @hermes ルーティング: 含む → Gateway (8642), 含まない → oMLX (9000)
-  if (ss.selectAIService === 'custom-api') {
+  // sendChatHandler.ts が既に Gateway 設定を投入している場合はスキップ
+  if (ss.selectAIService === 'custom-api' && !ss.customApiUrl.includes('8642')) {
     const useGateway = isHermesRequest(messages)
     if (useGateway) {
       // Gateway ルート: .env のデフォルト設定にリセット（oMLX ルートで上書きされた場合に備えて）
