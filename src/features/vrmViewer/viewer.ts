@@ -241,8 +241,7 @@ export class Viewer {
   /** Callback fired every frame with the VRM character's screen-space position
    *  (normalized -1..1 coordinates, or pixel coordinates). Used by CSS Anchor
    *  Positioning bridge in vrmViewer.tsx. */
-  public onCharacterScreenPosition?:
-    ((x: number, y: number) => void) | null
+  public onCharacterScreenPosition?: ((x: number, y: number) => void) | null
 
   public update = () => {
     requestAnimationFrame(this.update)
@@ -254,6 +253,121 @@ export class Viewer {
 
     // Reposition HUD-style UI meshes to track the camera
     this._updateAllUi3dMeshPositions()
+
+    // ─── Animation loop ────────────────────────────────────────────────
+    // Read animation state from homeStore
+    const animState = homeStore.getState()
+    if (animState.animationPlaying) {
+      // HDRI background rotation animation
+      if (animState.hdriAnimationEnabled) {
+        const hdriDelta =
+          animState.hdriAnimationDirection *
+          animState.hdriAnimationSpeed *
+          delta
+        const newDeg =
+          homeStore.getState().gaussianSplatHdriRotation + hdriDelta
+        homeStore.setState({ gaussianSplatHdriRotation: newDeg })
+        this.setSplatHdriRotation(newDeg)
+      }
+
+      // 3DGS object rotation animation (per-axis)
+      if (this._splatMesh) {
+        const q = new THREE.Quaternion()
+        if (animState.splatRollAnimationEnabled) {
+          const roll =
+            animState.splatRollAnimationDirection *
+            ((animState.splatRollAnimationSpeed * Math.PI) / 180) *
+            delta
+          const qRoll = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 0, 1),
+            roll
+          )
+          q.multiply(qRoll)
+        }
+        if (animState.splatPitchAnimationEnabled) {
+          const pitch =
+            animState.splatPitchAnimationDirection *
+            ((animState.splatPitchAnimationSpeed * Math.PI) / 180) *
+            delta
+          const qPitch = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(1, 0, 0),
+            pitch
+          )
+          q.multiply(qPitch)
+        }
+        if (animState.splatYawAnimationEnabled) {
+          const yaw =
+            animState.splatYawAnimationDirection *
+            ((animState.splatYawAnimationSpeed * Math.PI) / 180) *
+            delta
+          const qYaw = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            yaw
+          )
+          q.multiply(qYaw)
+        }
+        if (q.length() > 0) {
+          this._splatMesh.quaternion.multiply(q)
+        }
+      }
+
+      // Camera movement animation (OrbitControls target orbit)
+      if (this._camera && this._cameraControls) {
+        const camSpeed = 0.05 // base speed factor for camera orbit
+        let camDx = 0,
+          camDy = 0,
+          camDz = 0
+        if (animState.cameraRollAnimationEnabled) {
+          // Camera roll: move target in X-Z plane (orbit around character)
+          camDx +=
+            animState.cameraRollAnimationDirection *
+            animState.cameraRollAnimationSpeed *
+            camSpeed *
+            delta
+          camDz +=
+            animState.cameraRollAnimationDirection *
+            animState.cameraRollAnimationSpeed *
+            camSpeed *
+            delta
+        }
+        if (animState.cameraPitchAnimationEnabled) {
+          // Camera pitch: move target vertically
+          camDy +=
+            animState.cameraPitchAnimationDirection *
+            animState.cameraPitchAnimationSpeed *
+            camSpeed *
+            delta
+        }
+        if (animState.cameraYawAnimationEnabled) {
+          // Camera yaw: orbit around Y axis
+          const yawAngle =
+            animState.cameraYawAnimationDirection *
+            animState.cameraYawAnimationSpeed *
+            0.01 *
+            delta
+          const target = this._cameraControls.target
+          const dir = new THREE.Vector3()
+          this._camera.getWorldDirection(dir)
+          const right = new THREE.Vector3()
+          right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize()
+          const orbitCenter = new THREE.Vector3(0, target.y, 0)
+          const offset = new THREE.Vector3().subVectors(
+            this._camera.position,
+            orbitCenter
+          )
+          offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawAngle)
+          this._camera.position.copy(orbitCenter.clone().add(offset))
+          target.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawAngle)
+        }
+        // Apply accumulated camera target movement
+        if (camDx !== 0 || camDy !== 0 || camDz !== 0) {
+          this._cameraControls.target.x += camDx
+          this._cameraControls.target.y += camDy
+          this._cameraControls.target.z += camDz
+        }
+        this._cameraControls.update()
+      }
+    }
 
     if (this._renderer && this._camera) {
       this._renderer.render(this._scene, this._camera)
@@ -766,20 +880,24 @@ export class Viewer {
    * to stay at that camera-relative position (HUD style).
    * Returns the created mesh, or null if renderer is not ready.
    */
-  public addUi3dMesh(domElement: HTMLElement, options?: {
-    position?: THREE.Vector3
-    scale?: number
-    rotation?: THREE.Euler
-    /** Camera-space offset — mesh tracks the camera every frame */
-    cameraOffset?: THREE.Vector3
-    /** Avatar-space offset — mesh tracks the VRM head bone every frame */
-    avatarOffset?: THREE.Vector3
-  }): HTMLMesh | null {
+  public addUi3dMesh(
+    domElement: HTMLElement,
+    options?: {
+      position?: THREE.Vector3
+      scale?: number
+      rotation?: THREE.Euler
+      /** Camera-space offset — mesh tracks the camera every frame */
+      cameraOffset?: THREE.Vector3
+      /** Avatar-space offset — mesh tracks the VRM head bone every frame */
+      avatarOffset?: THREE.Vector3
+    }
+  ): HTMLMesh | null {
     if (!this._renderer) return null
 
     const mesh = new HTMLMesh(domElement)
     if (options?.position) mesh.position.copy(options.position)
-    if (options?.scale) mesh.scale.set(options.scale, options.scale, options.scale)
+    if (options?.scale)
+      mesh.scale.set(options.scale, options.scale, options.scale)
     if (options?.rotation) mesh.rotation.copy(options.rotation)
 
     this._scene.add(mesh)
@@ -947,12 +1065,15 @@ export class Viewer {
    */
   public syncUi3dMode(
     mode: 'css-overlay' | 'html-in-canvas' | 'hybrid',
-    elements: Record<string, {
-      dom: HTMLElement
-      position: THREE.Vector3
-      scale?: number
-      rotation?: THREE.Euler
-    }>
+    elements: Record<
+      string,
+      {
+        dom: HTMLElement
+        position: THREE.Vector3
+        scale?: number
+        rotation?: THREE.Euler
+      }
+    >
   ): void {
     // If mode didn't change and meshes already exist, skip
     if (mode === this._currentUi3dMode && this._ui3dMeshes.length > 0) return
@@ -974,9 +1095,7 @@ export class Viewer {
         scale: cfg.scale,
         rotation: cfg.rotation,
         cameraOffset: isAvatarAttached ? undefined : cfg.position,
-        avatarOffset: isAvatarAttached
-          ? cfg.position
-          : undefined,
+        avatarOffset: isAvatarAttached ? cfg.position : undefined,
       })
       if (mesh) {
         // Store element id on the mesh for future reference

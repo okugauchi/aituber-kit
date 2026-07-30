@@ -24,7 +24,7 @@ export const config = {
 
 type CommandBody = {
   clientId?: string
-  command: 'pose' | 'splat' | 'setting' | 'chat-reset' | 'stop'
+  command: 'pose' | 'splat' | 'setting' | 'chat-reset' | 'stop' | 'animation'
   mode?: 'speech' | 'queue' | 'all'
   reason?: string
   poseId?: string
@@ -32,6 +32,8 @@ type CommandBody = {
   splatArgs?: Record<string, unknown>
   settingKey?: string
   settingValue?: unknown
+  animationAction?: string
+  animationArgs?: Record<string, unknown>
 }
 
 const handler = (req: NextApiRequest, res: NextApiResponse) => {
@@ -111,6 +113,22 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
         command: 'chat-reset',
       })
       return res.status(200).json({ ok: true, command: 'chat-reset' })
+    }
+
+    case 'animation': {
+      if (!body.animationAction) {
+        return res.status(400).json({ error: 'animationAction is required' })
+      }
+      enqueueCommand({
+        clientId,
+        command: 'animation',
+        splat: { action: body.animationAction, args: body.animationArgs },
+      })
+      return res.status(200).json({
+        ok: true,
+        command: 'animation',
+        action: body.animationAction,
+      })
     }
 
     default:

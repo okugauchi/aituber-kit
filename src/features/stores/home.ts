@@ -59,6 +59,29 @@ export interface TransientState {
   gaussianSplatHdriRotation: number
   gaussianSplatRotationOffset: [number, number, number]
   gaussianSplatControlsVisible: boolean
+  /** Animation control state */
+  animationPlaying: boolean
+  hdriAnimationEnabled: boolean
+  hdriAnimationDirection: 1 | -1
+  hdriAnimationSpeed: number
+  splatRollAnimationEnabled: boolean
+  splatRollAnimationDirection: 1 | -1
+  splatRollAnimationSpeed: number
+  splatPitchAnimationEnabled: boolean
+  splatPitchAnimationDirection: 1 | -1
+  splatPitchAnimationSpeed: number
+  splatYawAnimationEnabled: boolean
+  splatYawAnimationDirection: 1 | -1
+  splatYawAnimationSpeed: number
+  cameraRollAnimationEnabled: boolean
+  cameraRollAnimationDirection: 1 | -1
+  cameraRollAnimationSpeed: number
+  cameraPitchAnimationEnabled: boolean
+  cameraPitchAnimationDirection: 1 | -1
+  cameraPitchAnimationSpeed: number
+  cameraYawAnimationEnabled: boolean
+  cameraYawAnimationDirection: 1 | -1
+  cameraYawAnimationSpeed: number
   /** HTMLMesh instances for 3D UI rendering (html-in-canvas / hybrid mode) */
   ui3dMeshes: any[]
   modalImage: string
@@ -303,6 +326,28 @@ const homeStore = create<HomeState>()(
       gaussianSplatHdriRotation: 0,
       gaussianSplatRotationOffset: [0, 0, 0],
       gaussianSplatControlsVisible: true,
+      animationPlaying: false,
+      hdriAnimationEnabled: false,
+      hdriAnimationDirection: 1,
+      hdriAnimationSpeed: 10,
+      splatRollAnimationEnabled: false,
+      splatRollAnimationDirection: 1,
+      splatRollAnimationSpeed: 10,
+      splatPitchAnimationEnabled: false,
+      splatPitchAnimationDirection: 1,
+      splatPitchAnimationSpeed: 10,
+      splatYawAnimationEnabled: false,
+      splatYawAnimationDirection: 1,
+      splatYawAnimationSpeed: 10,
+      cameraRollAnimationEnabled: false,
+      cameraRollAnimationDirection: 1,
+      cameraRollAnimationSpeed: 10,
+      cameraPitchAnimationEnabled: false,
+      cameraPitchAnimationDirection: 1,
+      cameraPitchAnimationSpeed: 10,
+      cameraYawAnimationEnabled: false,
+      cameraYawAnimationDirection: 1,
+      cameraYawAnimationSpeed: 10,
       ui3dMeshes: [],
       modalImage: '',
       triggerShutter: false,

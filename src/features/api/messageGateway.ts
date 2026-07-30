@@ -2,7 +2,13 @@ import { logger } from '@/lib/logger'
 
 export type MessageType = 'direct_send' | 'ai_generate' | 'user_input'
 
-export type ApiCommandType = 'stop' | 'pose' | 'splat' | 'setting' | 'chat-reset'
+export type ApiCommandType =
+  | 'stop'
+  | 'pose'
+  | 'splat'
+  | 'setting'
+  | 'chat-reset'
+  | 'animation'
 
 export type ApiStopMode = 'speech' | 'queue' | 'all'
 

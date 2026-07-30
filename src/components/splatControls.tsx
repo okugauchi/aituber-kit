@@ -80,6 +80,7 @@ export default function SplatControls() {
   const assistantTextStyle = settingsStore((s) => s.assistantTextStyle)
 
   const [multiplier, setMultiplier] = useState(1)
+  const [animationExpanded, setAnimationExpanded] = useState(false)
   const [splatFiles, setSplatFiles] = useState<
     { name: string; size: number; url: string }[] | null
   >(null)
@@ -225,7 +226,7 @@ export default function SplatControls() {
   return (
     <div className="absolute bottom-6 right-6 z-30">
       {/* Glass-style panel */}
-      <div className="flex flex-col items-center gap-1.5 bg-gray-900/70 backdrop-blur-sm rounded-xl p-2 shadow-lg border border-white/10">
+      <div className="flex flex-col items-center gap-1 bg-gray-900/70 backdrop-blur-sm rounded-xl p-1.5 shadow-lg border border-white/10">
         {/* Header row with label and close button */}
         <div className="flex items-center justify-between w-full">
           <div className="text-[9px] text-gray-400 tracking-wider uppercase text-center flex-1">
@@ -246,29 +247,25 @@ export default function SplatControls() {
         </div>
 
         {/* ─────── 3D UI MODE TOGGLE ─────── */}
-        <div className="flex items-center justify-between w-full px-1 py-1 rounded bg-gray-800/40">
-          <span className="text-[9px] text-gray-300 leading-tight mr-1">
-            {ui3dMode === 'html-in-canvas'
-              ? 'HTML-in-Canvas'
-              : 'CSS Overlay'}
+        <div className="flex items-center justify-between w-full px-1 py-0.5 rounded bg-gray-800/40">
+          <span className="text-[9px] text-gray-300 mr-1">
+            {ui3dMode === 'html-in-canvas' ? 'HTML-in-Canvas' : 'CSS Overlay'}
           </span>
-          <div className="flex items-center gap-1">
-            <ToggleSwitch
-              enabled={ui3dMode === 'html-in-canvas'}
-              onChange={(v) => {
-                settingsStore.setState({
-                  ui3dMode: v ? 'html-in-canvas' : 'css-overlay',
-                })
-              }}
-            />
-          </div>
+          <ToggleSwitch
+            enabled={ui3dMode === 'html-in-canvas'}
+            onChange={(v) => {
+              settingsStore.setState({
+                ui3dMode: v ? 'html-in-canvas' : 'css-overlay',
+              })
+            }}
+          />
         </div>
 
         {/* ─────── LOCAL SPLAT FILE PICKER ─────── */}
         {splatFiles && splatFiles.length > 0 && (
           <div className="flex items-center gap-1 w-full">
             <select
-              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-1 text-[9px] text-white"
+              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-0.5 text-[9px] text-white"
               value={gaussianSplatUrl}
               onChange={(e) => {
                 const url = e.target.value
@@ -329,7 +326,7 @@ export default function SplatControls() {
 
         {/* === MOVEMENT (3-axis) === */}
         {/* 4×3 grid with explicit row/col placement */}
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-3 gap-0.5">
           {/* Row 1: Y+ up (col 2) */}
           <div className="col-start-2 row-start-1">
             <SplatButton
@@ -346,10 +343,10 @@ export default function SplatControls() {
               label="Move left"
             />
           </div>
-          <div className="col-start-2 row-start-2 flex items-center justify-center w-9 h-9">
+          <div className="col-start-2 row-start-2 flex items-center justify-center w-8 h-8">
             <button
               className="w-full h-full rounded bg-gray-700/60 hover:bg-gray-600/80 active:bg-gray-500/80
-                         flex items-center justify-center text-[9px] text-gray-300 font-bold leading-tight
+                         flex items-center justify-center text-[9px] text-gray-300 font-bold
                          transition-colors duration-150"
               onClick={fitViewport}
               title="Fit in screen (R key)"
@@ -391,18 +388,18 @@ export default function SplatControls() {
         </div>
 
         {/* === ZOOM === */}
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           <SplatButton icon="−" onClick={() => zoom(0.9)} label="Zoom out" />
           <SplatButton icon="+" onClick={() => zoom(1.1)} label="Zoom in" />
         </div>
 
         {/* === MULTIPLIER === */}
-        <div className="flex items-center gap-1 w-full">
+        <div className="flex items-center gap-0.5 w-full">
           <span className="text-[9px] text-gray-500">
             {multiplier === 1 ? '1×' : `×${multiplier}`}
           </span>
           <button
-            className="flex-1 h-6 rounded bg-purple-800/40 hover:bg-purple-700/60 active:bg-purple-600/70
+            className="flex-1 h-5 rounded bg-purple-800/40 hover:bg-purple-700/60 active:bg-purple-600/70
                        flex items-center justify-center text-[9px] text-purple-300 font-medium
                        transition-colors duration-150"
             onClick={() => setMultiplier(10)}
@@ -411,7 +408,7 @@ export default function SplatControls() {
             x10
           </button>
           <button
-            className="flex-1 h-6 rounded bg-purple-800/40 hover:bg-purple-700/60 active:bg-purple-600/70
+            className="flex-1 h-5 rounded bg-purple-800/40 hover:bg-purple-700/60 active:bg-purple-600/70
                        flex items-center justify-center text-[9px] text-purple-300 font-medium
                        transition-colors duration-150"
             onClick={() => setMultiplier(100)}
@@ -421,7 +418,7 @@ export default function SplatControls() {
           </button>
           {multiplier > 1 && (
             <button
-              className="h-6 w-6 rounded bg-gray-700/60 hover:bg-gray-600/80 active:bg-gray-500/80
+              className="h-5 w-5 rounded bg-gray-700/60 hover:bg-gray-600/80 active:bg-gray-500/80
                          flex items-center justify-center text-[9px] text-gray-300
                          transition-colors duration-150"
               onClick={() => setMultiplier(1)}
@@ -433,9 +430,9 @@ export default function SplatControls() {
         </div>
 
         {/* === FINE ROTATION === */}
-        <div className="flex flex-col gap-0.5 w-full">
-          <div className="flex items-center gap-1">
-            <span className="text-[9px] text-gray-500 w-6 text-right">R</span>
+        <div className="flex flex-col gap-0 w-full">
+          <div className="flex items-center gap-0.5">
+            <span className="text-[9px] text-gray-500 w-5 text-right">R</span>
             <SplatButton
               icon="⟳"
               onClick={() => rotate(ROT, 0, 0)}
@@ -447,8 +444,8 @@ export default function SplatControls() {
               label="Roll counter-clockwise (Q)"
             />
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[9px] text-gray-500 w-6 text-right">P</span>
+          <div className="flex items-center gap-0.5">
+            <span className="text-[9px] text-gray-500 w-5 text-right">P</span>
             <SplatButton
               icon="↑"
               onClick={() => rotate(0, ROT, 0)}
@@ -460,8 +457,8 @@ export default function SplatControls() {
               label="Pitch down (S)"
             />
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[9px] text-gray-500 w-6 text-right">Y</span>
+          <div className="flex items-center gap-0.5">
+            <span className="text-[9px] text-gray-500 w-5 text-right">Y</span>
             <SplatButton
               icon="↺"
               onClick={() => rotate(0, 0, -ROT)}
@@ -476,12 +473,12 @@ export default function SplatControls() {
         </div>
 
         {/* === PRESET ROTATION === */}
-        <div className="flex gap-1 w-full">
-          <span className="text-[9px] text-gray-500 w-6 text-right leading-7">
+        <div className="flex gap-0.5 w-full">
+          <span className="text-[9px] text-gray-500 w-5 text-right leading-6">
             R
           </span>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(-Math.PI / 2, 0, 0)}
@@ -490,7 +487,7 @@ export default function SplatControls() {
             90° L
           </button>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(Math.PI / 2, 0, 0)}
@@ -499,7 +496,7 @@ export default function SplatControls() {
             90° R
           </button>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(Math.PI, 0, 0)}
@@ -508,12 +505,12 @@ export default function SplatControls() {
             180°
           </button>
         </div>
-        <div className="flex gap-1 w-full">
-          <span className="text-[9px] text-gray-500 w-6 text-right leading-7">
+        <div className="flex gap-0.5 w-full">
+          <span className="text-[9px] text-gray-500 w-5 text-right leading-6">
             P
           </span>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(0, -Math.PI / 2, 0)}
@@ -522,7 +519,7 @@ export default function SplatControls() {
             90° ↓
           </button>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(0, Math.PI / 2, 0)}
@@ -531,7 +528,7 @@ export default function SplatControls() {
             90° ↑
           </button>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(0, Math.PI, 0)}
@@ -540,12 +537,12 @@ export default function SplatControls() {
             180°
           </button>
         </div>
-        <div className="flex gap-1 w-full">
-          <span className="text-[9px] text-gray-500 w-6 text-right leading-7">
+        <div className="flex gap-0.5 w-full">
+          <span className="text-[9px] text-gray-500 w-5 text-right leading-6">
             Y
           </span>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(0, 0, -Math.PI / 2)}
@@ -554,7 +551,7 @@ export default function SplatControls() {
             90° L
           </button>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(0, 0, Math.PI / 2)}
@@ -563,7 +560,7 @@ export default function SplatControls() {
             90° R
           </button>
           <button
-            className="flex-1 h-7 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
+            className="flex-1 h-6 rounded bg-amber-800/40 hover:bg-amber-700/60 active:bg-amber-600/70
                        flex items-center justify-center text-[9px] text-amber-300 font-medium
                        transition-colors duration-150"
             onClick={() => rotate(0, 0, Math.PI)}
@@ -577,7 +574,7 @@ export default function SplatControls() {
         {hdriFiles && hdriFiles.length > 0 && (
           <div className="flex items-center gap-1 w-full">
             <select
-              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-1 text-[9px] text-white"
+              className="flex-1 bg-transparent border border-white/30 rounded px-1 py-0.5 text-[9px] text-white"
               value={gaussianSplatHdriUrl}
               onChange={(e) => {
                 const url = e.target.value
@@ -599,7 +596,7 @@ export default function SplatControls() {
               })}
             </select>
             <button
-              className="text-[9px] bg-gray-600 hover:bg-gray-500 px-1.5 py-1 rounded transition-colors whitespace-nowrap"
+              className="text-[9px] bg-gray-600 hover:bg-gray-500 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
               onClick={() => {
                 const viewer = homeStore.getState().viewer
                 viewer?.unloadSplatHdri()
@@ -611,17 +608,176 @@ export default function SplatControls() {
           </div>
         )}
 
+        {/* ─────── ANIMATION CONTROLS ─────── */}
+        <div className="w-full">
+          <button
+            className="w-full flex items-center justify-between px-1 py-0.5 rounded bg-gray-800/40 hover:bg-gray-700/60 text-[9px] text-gray-300 transition-colors"
+            onClick={() => setAnimationExpanded(!animationExpanded)}
+          >
+            <span className="font-medium tracking-wider uppercase">
+              Animation
+            </span>
+            <span className="text-gray-500">
+              {animationExpanded ? '−' : '+'}
+            </span>
+          </button>
+          {animationExpanded && (
+            <div className="flex flex-col gap-0.5 mt-0.5">
+              {/* ─── Master Play/Stop ─── */}
+              <div className="flex items-center gap-1">
+                <button
+                  className={`flex-1 h-5 rounded text-[9px] font-bold transition-colors ${
+                    homeStore.getState().animationPlaying
+                      ? 'bg-red-700 hover:bg-red-600 text-white'
+                      : 'bg-green-700 hover:bg-green-600 text-white'
+                  }`}
+                  onClick={() => {
+                    const playing = !homeStore.getState().animationPlaying
+                    homeStore.setState({ animationPlaying: playing })
+                  }}
+                >
+                  {homeStore.getState().animationPlaying ? '⏹ Stop' : '▶ Play'}
+                </button>
+              </div>
+
+              {/* HDRI Animation */}
+              <AnimationAxisRow
+                label="HDRI"
+                enabled={homeStore.getState().hdriAnimationEnabled}
+                direction={homeStore.getState().hdriAnimationDirection}
+                speed={homeStore.getState().hdriAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ hdriAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ hdriAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ hdriAnimationSpeed: v })
+                }
+              />
+
+              {/* 3DGS Roll Animation */}
+              <AnimationAxisRow
+                label="Rol"
+                enabled={homeStore.getState().splatRollAnimationEnabled}
+                direction={homeStore.getState().splatRollAnimationDirection}
+                speed={homeStore.getState().splatRollAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ splatRollAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ splatRollAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ splatRollAnimationSpeed: v })
+                }
+              />
+
+              {/* 3DGS Pitch Animation */}
+              <AnimationAxisRow
+                label="Pit"
+                enabled={homeStore.getState().splatPitchAnimationEnabled}
+                direction={homeStore.getState().splatPitchAnimationDirection}
+                speed={homeStore.getState().splatPitchAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ splatPitchAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ splatPitchAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ splatPitchAnimationSpeed: v })
+                }
+              />
+
+              {/* 3DGS Yaw Animation */}
+              <AnimationAxisRow
+                label="Yaw"
+                enabled={homeStore.getState().splatYawAnimationEnabled}
+                direction={homeStore.getState().splatYawAnimationDirection}
+                speed={homeStore.getState().splatYawAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ splatYawAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ splatYawAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ splatYawAnimationSpeed: v })
+                }
+              />
+
+              {/* Camera Roll Animation */}
+              <AnimationAxisRow
+                label="CamR"
+                enabled={homeStore.getState().cameraRollAnimationEnabled}
+                direction={homeStore.getState().cameraRollAnimationDirection}
+                speed={homeStore.getState().cameraRollAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ cameraRollAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ cameraRollAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ cameraRollAnimationSpeed: v })
+                }
+              />
+
+              {/* Camera Pitch Animation */}
+              <AnimationAxisRow
+                label="CamP"
+                enabled={homeStore.getState().cameraPitchAnimationEnabled}
+                direction={homeStore.getState().cameraPitchAnimationDirection}
+                speed={homeStore.getState().cameraPitchAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ cameraPitchAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ cameraPitchAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ cameraPitchAnimationSpeed: v })
+                }
+              />
+
+              {/* Camera Yaw Animation */}
+              <AnimationAxisRow
+                label="CamY"
+                enabled={homeStore.getState().cameraYawAnimationEnabled}
+                direction={homeStore.getState().cameraYawAnimationDirection}
+                speed={homeStore.getState().cameraYawAnimationSpeed}
+                onEnabledChange={(v) =>
+                  homeStore.setState({ cameraYawAnimationEnabled: v })
+                }
+                onDirectionChange={(v) =>
+                  homeStore.setState({ cameraYawAnimationDirection: v })
+                }
+                onSpeedChange={(v) =>
+                  homeStore.setState({ cameraYawAnimationSpeed: v })
+                }
+              />
+            </div>
+          )}
+        </div>
+
         {/* === HDRI ROTATION === */}
-        <div className="flex flex-col gap-1 w-full">
-          <div className="text-[9px] text-gray-400 tracking-wider uppercase">
-            HDRI Rotation
+        <div className="flex flex-col gap-0.5 w-full">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] text-gray-400 tracking-wider uppercase">
+              HDRI
+            </span>
+            <span className="text-[10px] text-cyan-300 font-mono tabular-nums">
+              {gaussianSplatHdriRotation}°
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <input
               type="range"
-              className="flex-1 h-5 accent-cyan-400 bg-gray-700/60 rounded appearance-none cursor-pointer
-                         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-                         [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+              className="flex-1 h-4 accent-cyan-400 bg-gray-700/60 rounded appearance-none cursor-pointer
+                         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5
+                         [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full
                          [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-md"
               min={-180}
               max={180}
@@ -634,41 +790,36 @@ export default function SplatControls() {
                 viewer?.setSplatHdriRotation(deg)
               }}
             />
-            <span className="text-[10px] text-cyan-300 w-10 text-right font-mono tabular-nums">
-              {gaussianSplatHdriRotation}°
-            </span>
           </div>
         </div>
 
         {/* === ACTION BUTTONS === */}
         <div className="flex gap-1 w-full">
           <button
-            className="flex-1 h-7 rounded bg-blue-800/40 hover:bg-blue-700/60 active:bg-blue-600/70
+            className="flex-1 h-6 rounded bg-blue-800/40 hover:bg-blue-700/60 active:bg-blue-600/70
                        flex items-center justify-center text-[9px] text-blue-300 font-medium
                        transition-colors duration-150"
             onClick={fitViewport}
             title="Fit in screen (R key)"
           >
-            画面内に収める
+            画面内
           </button>
           <button
-            className="flex-1 h-7 rounded bg-green-800/40 hover:bg-green-700/60 active:bg-green-600/70
+            className="flex-1 h-6 rounded bg-green-800/40 hover:bg-green-700/60 active:bg-green-600/70
                        flex items-center justify-center text-[9px] text-green-300 font-medium
                        transition-colors duration-150"
             onClick={resetInitialPosition}
             title="Reset to initial position (G key)"
           >
-            初期位置にリセット
+            リセット
           </button>
         </div>
 
         {/* ─────── ASSISTANT TEXT STYLE ─────── */}
-        <div className="flex items-center justify-between w-full px-1 py-1 rounded bg-gray-800/40">
-          <span className="text-[9px] text-gray-300 leading-tight mr-1">
-            Bubble Style
-          </span>
+        <div className="flex items-center justify-between w-full px-1 py-0.5 rounded bg-gray-800/40">
+          <span className="text-[9px] text-gray-300 mr-1">Bubble</span>
           <select
-            className="bg-transparent border border-white/30 rounded px-1 py-1 text-[9px] text-white"
+            className="bg-transparent border border-white/30 rounded px-1 py-0.5 text-[9px] text-white"
             value={assistantTextStyle}
             onChange={(e) => {
               settingsStore.setState({
@@ -676,14 +827,14 @@ export default function SplatControls() {
               })
             }}
           >
-            <option value="bubble">Bubble (Glass)</option>
-            <option value="borderless">Borderless</option>
+            <option value="bubble">Glass</option>
+            <option value="borderless">None</option>
           </select>
         </div>
 
         {/* Keyboard hint */}
-        <div className="text-[8px] text-gray-500 text-center leading-tight">
-          ↑↓←→ move · +/- zoom · QWES/AD rotate · R/G reset · H toggle
+        <div className="text-[7px] text-gray-500 text-center leading-none">
+          ↑↓←→ mv · +/- zm · QWES/AD rot · R/G rst · H tg
         </div>
       </div>
     </div>
@@ -701,8 +852,8 @@ function SplatButton({
 }) {
   return (
     <button
-      className="w-9 h-9 rounded bg-gray-700/60 hover:bg-gray-600/80 active:bg-gray-500/80
-                 flex items-center justify-center text-white text-base
+      className="w-8 h-8 rounded bg-gray-700/60 hover:bg-gray-600/80 active:bg-gray-500/80
+                 flex items-center justify-center text-white text-sm
                  transition-colors duration-150 select-none"
       onClick={onClick}
       title={label}
@@ -710,5 +861,75 @@ function SplatButton({
     >
       {icon}
     </button>
+  )
+}
+
+/** Compact row for animation axis control: label, direction radio, speed slider, enabled toggle. */
+function AnimationAxisRow({
+  label,
+  enabled,
+  direction,
+  speed,
+  onEnabledChange,
+  onDirectionChange,
+  onSpeedChange,
+}: {
+  label: string
+  enabled: boolean
+  direction: 1 | -1
+  speed: number
+  onEnabledChange: (v: boolean) => void
+  onDirectionChange: (v: 1 | -1) => void
+  onSpeedChange: (v: number) => void
+}) {
+  return (
+    <div className="flex items-center gap-0.5 bg-gray-800/30 rounded px-1 py-0.5">
+      <span className="text-[9px] text-gray-400 w-7 leading-none">{label}</span>
+      <div className="flex items-center gap-0.5">
+        <button
+          className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] leading-none transition-colors ${
+            direction === -1
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-700 text-gray-400'
+          }`}
+          onClick={() => onDirectionChange(-1)}
+          title="Negative direction"
+        >
+          −
+        </button>
+        <button
+          className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] leading-none transition-colors ${
+            direction === 1
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-700 text-gray-400'
+          }`}
+          onClick={() => onDirectionChange(1)}
+          title="Positive direction"
+        >
+          +
+        </button>
+      </div>
+      <input
+        type="range"
+        className="flex-1 h-3 accent-purple-400 bg-gray-700/60 rounded appearance-none cursor-pointer
+                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2
+                   [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full
+                   [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-md"
+        min={1}
+        max={60}
+        step={1}
+        value={speed}
+        onChange={(e) => onSpeedChange(parseInt(e.target.value, 10))}
+      />
+      <span className="text-[8px] text-purple-300 w-6 text-right font-mono tabular-nums leading-none">
+        {speed}°/s
+      </span>
+      <input
+        type="checkbox"
+        className="accent-emerald-400 w-3 h-3 cursor-pointer"
+        checked={enabled}
+        onChange={(e) => onEnabledChange(e.target.checked)}
+      />
+    </div>
   )
 }

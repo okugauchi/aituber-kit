@@ -60,6 +60,7 @@ async function executeCommand(cmd: {
   pose?: { poseId: string }
   splat?: { action: string; args?: Record<string, unknown> }
   setting?: { key: string; value: unknown }
+  animation?: { action: string; args?: Record<string, unknown> }
 }) {
   const store = homeStore.getState()
   const viewer = store.viewer
@@ -191,6 +192,41 @@ async function executeCommand(cmd: {
           const url = homeStore.getState().gaussianSplatUrl
           if (url) viewer?.loadSplatScene(url)
         }
+      }
+      break
+    }
+
+    case 'animation': {
+      if (!cmd.animation) break
+      const { action, args } = cmd.animation
+      if (args) {
+        // Animation commands directly update homeStore animation state
+        homeStore.setState(
+          args as Partial<{
+            animationPlaying: boolean
+            hdriAnimationEnabled: boolean
+            hdriAnimationDirection: 1 | -1
+            hdriAnimationSpeed: number
+            splatRollAnimationEnabled: boolean
+            splatRollAnimationDirection: 1 | -1
+            splatRollAnimationSpeed: number
+            splatPitchAnimationEnabled: boolean
+            splatPitchAnimationDirection: 1 | -1
+            splatPitchAnimationSpeed: number
+            splatYawAnimationEnabled: boolean
+            splatYawAnimationDirection: 1 | -1
+            splatYawAnimationSpeed: number
+            cameraRollAnimationEnabled: boolean
+            cameraRollAnimationDirection: 1 | -1
+            cameraRollAnimationSpeed: number
+            cameraPitchAnimationEnabled: boolean
+            cameraPitchAnimationDirection: 1 | -1
+            cameraPitchAnimationSpeed: number
+            cameraYawAnimationEnabled: boolean
+            cameraYawAnimationDirection: 1 | -1
+            cameraYawAnimationSpeed: number
+          }>
+        )
       }
       break
     }
