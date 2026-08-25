@@ -6,24 +6,36 @@ import Image from 'next/image'
 import { Language } from '@/features/constants/settings'
 import homeStore from '@/features/stores/home'
 import menuStore from '@/features/stores/menu'
-import settingsStore from '@/features/stores/settings'
+import settingsStore, { type ChatLogMode } from '@/features/stores/settings'
 import { TextButton } from '../textButton'
 import { ToggleSwitch } from '../toggleSwitch'
 import { IMAGE_CONSTANTS } from '@/constants/images'
 import { useRestrictedMode } from '@/hooks/useRestrictedMode'
 import { languageOptions } from '@/components/settings/languageOptions'
 import { settingsControlClass } from '@/components/settings/formStyles'
+import { KeyboardShortcutInput } from '@/components/settings/KeyboardShortcutInput'
+import {
+  DEFAULT_SETTINGS_TOGGLE_SHORTCUT,
+  DEFAULT_VOICE_INPUT_SHORTCUT,
+} from '@/utils/keyboardShortcut'
 
 const Based = () => {
   const { t } = useTranslation()
   const { isRestrictedMode } = useRestrictedMode()
   const selectLanguage = settingsStore((s) => s.selectLanguage)
   const showAssistantText = settingsStore((s) => s.showAssistantText)
+  const chatLogMode = settingsStore((s) => s.chatLogMode)
   const assistantTextStyle = settingsStore((s) => s.assistantTextStyle)
   const chatLogPosition = settingsStore((s) => s.chatLogPosition)
   const chatLogStyle = settingsStore((s) => s.chatLogStyle)
   const showCharacterName = settingsStore((s) => s.showCharacterName)
   const showControlPanel = settingsStore((s) => s.showControlPanel)
+  const showInputForm = settingsStore((s) => s.showInputForm)
+  const settingsToggleShortcut =
+    settingsStore((s) => s.settingsToggleShortcut) ||
+    DEFAULT_SETTINGS_TOGGLE_SHORTCUT
+  const voiceInputShortcut =
+    settingsStore((s) => s.voiceInputShortcut) || DEFAULT_VOICE_INPUT_SHORTCUT
   const useVideoAsBackground = settingsStore((s) => s.useVideoAsBackground)
   const changeEnglishToJapanese = settingsStore(
     (s) => s.changeEnglishToJapanese
@@ -34,7 +46,7 @@ const Based = () => {
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const backgroundImageUrl = homeStore((s) => s.backgroundImageUrl)
+  const backgroundImageUrl = settingsStore((s) => s.backgroundImageUrl)
 
   useEffect(() => {
     setIsLoading(true)
@@ -82,7 +94,7 @@ const Based = () => {
       }
 
       const { path } = await response.json()
-      homeStore.setState({ backgroundImageUrl: path })
+      settingsStore.setState({ backgroundImageUrl: path })
 
       // バックグラウンドリストを更新
       setIsLoading(true)
@@ -177,7 +189,7 @@ const Based = () => {
             value={backgroundImageUrl}
             onChange={(e) => {
               const path = e.target.value
-              homeStore.setState({ backgroundImageUrl: path })
+              settingsStore.setState({ backgroundImageUrl: path })
             }}
             disabled={isLoading || isUploading || isRestrictedMode}
           >
@@ -254,6 +266,30 @@ const Based = () => {
         </div>
       )}
 
+      {/* 会話ログ表示状態設定 */}
+      <div className="my-6">
+        <div className="my-4 text-xl font-bold">{t('ChatLogMode')}</div>
+        <div className="my-2 text-sm whitespace-pre-wrap">
+          {t('ChatLogModeInfo')}
+        </div>
+        <div className="flex flex-col mb-4">
+          <select
+            aria-label={t('ChatLogMode')}
+            className={settingsControlClass.compact}
+            value={chatLogMode}
+            onChange={(e) =>
+              settingsStore.setState({
+                chatLogMode: e.target.value as ChatLogMode,
+              })
+            }
+          >
+            <option value="assistant">{t('ChatLogModeAssistant')}</option>
+            <option value="chat-log">{t('ChatLogModeChatLog')}</option>
+            <option value="hidden">{t('ChatLogModeHidden')}</option>
+          </select>
+        </div>
+      </div>
+
       {/* 会話ログデザイン設定 */}
       <div className="my-6">
         <div className="my-4 text-xl font-bold">{t('ChatLogStyle')}</div>
@@ -309,6 +345,21 @@ const Based = () => {
         </div>
       </div>
 
+      {/* 入力フォーム表示設定 */}
+      <div className="border-t border-gray-300 pt-6 my-6">
+        <div className="my-4 text-xl font-bold">{t('ShowInputForm')}</div>
+        <div className="my-2 text-sm whitespace-pre-wrap">
+          {t('ShowInputFormInfo')}
+        </div>
+        <div className="my-2">
+          <ToggleSwitch
+            ariaLabel={t('ShowInputForm')}
+            enabled={showInputForm}
+            onChange={(v) => settingsStore.setState({ showInputForm: v })}
+          />
+        </div>
+      </div>
+
       {/* コントロールパネル表示設定 */}
       <div className="border-t border-gray-300 pt-6 my-6">
         <div className="my-4 text-xl font-bold">{t('ShowControlPanel')}</div>
@@ -320,6 +371,21 @@ const Based = () => {
           <ToggleSwitch
             enabled={showControlPanel}
             onChange={(v) => settingsStore.setState({ showControlPanel: v })}
+          />
+        </div>
+        <div className="mt-6">
+          <div className="mb-2 font-bold">{t('SettingsToggleShortcut')}</div>
+          <div className="mb-3 text-sm whitespace-pre-wrap">
+            {t('SettingsToggleShortcutInfo')}
+          </div>
+          <KeyboardShortcutInput
+            value={settingsToggleShortcut}
+            defaultValue={DEFAULT_SETTINGS_TOGGLE_SHORTCUT}
+            onChange={(shortcut) =>
+              settingsStore.setState({ settingsToggleShortcut: shortcut })
+            }
+            conflictsWith={[voiceInputShortcut]}
+            testId="settings-toggle-shortcut-input"
           />
         </div>
       </div>
